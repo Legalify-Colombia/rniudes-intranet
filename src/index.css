@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,7 +16,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 210 84% 20%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -32,25 +33,23 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 210 84% 20%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
+    --sidebar-background: 210 84% 20%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 210 84% 20%;
+    --sidebar-accent: 210 74% 25%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 210 74% 25%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom institutional colors */
+    --institutional-blue: 210 84% 20%;
+    --institutional-blue-light: 210 74% 25%;
+    --institutional-blue-dark: 210 94% 15%;
   }
 
   .dark {
@@ -100,4 +99,13 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Custom styles for institutional theme */
+.institutional-gradient {
+  background: linear-gradient(135deg, hsl(var(--institutional-blue)) 0%, hsl(var(--institutional-blue-light)) 100%);
+}
+
+.institutional-card {
+  @apply bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow;
 }
