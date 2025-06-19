@@ -6,11 +6,27 @@ import { Dashboard } from "@/components/Dashboard";
 import { UserManagement } from "@/components/UserManagement";
 import { CampusManagement } from "@/components/CampusManagement";
 import { InternationalizationManagers } from "@/components/InternationalizationManagers";
-import { Bell } from "lucide-react";
+import { StrategicConfiguration } from "@/components/StrategicConfiguration";
+import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeView, setActiveView] = useState("dashboard");
+  const { profile, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error al cerrar sesión",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -20,8 +36,25 @@ const Index = () => {
         return <CampusManagement />;
       case "managers":
         return <InternationalizationManagers />;
+      case "strategic":
+        return <StrategicConfiguration />;
       default:
         return <Dashboard />;
+    }
+  };
+
+  const canAccessSection = (section: string) => {
+    if (!profile) return false;
+    
+    switch (section) {
+      case "users":
+      case "programs":
+      case "strategic":
+        return profile.role === "Administrador";
+      case "managers":
+        return ["Administrador", "Coordinador"].includes(profile.role);
+      default:
+        return true;
     }
   };
 
@@ -46,36 +79,58 @@ const Index = () => {
                 >
                   Dashboard
                 </button>
-                <button
-                  onClick={() => setActiveView("users")}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeView === "users"
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  Usuarios
-                </button>
-                <button
-                  onClick={() => setActiveView("programs")}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeView === "programs"
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  Campus y Programas
-                </button>
-                <button
-                  onClick={() => setActiveView("managers")}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeView === "managers"
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  Gestores
-                </button>
+                
+                {canAccessSection("users") && (
+                  <button
+                    onClick={() => setActiveView("users")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === "users"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    Usuarios
+                  </button>
+                )}
+                
+                {canAccessSection("programs") && (
+                  <button
+                    onClick={() => setActiveView("programs")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === "programs"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    Campus y Programas
+                  </button>
+                )}
+                
+                {canAccessSection("managers") && (
+                  <button
+                    onClick={() => setActiveView("managers")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === "managers"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    Gestores
+                  </button>
+                )}
+
+                {canAccessSection("strategic") && (
+                  <button
+                    onClick={() => setActiveView("strategic")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === "strategic"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    Configuración Estratégica
+                  </button>
+                )}
               </nav>
             </div>
             
@@ -85,9 +140,13 @@ const Index = () => {
                 Notificaciones
               </Button>
               <div className="text-sm text-gray-600">
-                <p className="font-medium">Admin DRNI</p>
-                <p className="text-xs">Administrador</p>
+                <p className="font-medium">{profile?.full_name}</p>
+                <p className="text-xs">{profile?.position}</p>
               </div>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Salir
+              </Button>
             </div>
           </header>
 
