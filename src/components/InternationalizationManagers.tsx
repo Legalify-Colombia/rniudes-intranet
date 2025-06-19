@@ -85,7 +85,7 @@ export function InternationalizationManagers() {
 
     try {
       const updates = {
-        status: approved ? 'approved' : 'rejected',
+        status: (approved ? 'approved' : 'rejected') as 'approved' | 'rejected',
         coordinator_approval_date: new Date().toISOString(),
         coordinator_comments: approvalComments,
         approved_by: profile?.id
