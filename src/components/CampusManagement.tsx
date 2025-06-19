@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,40 +10,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Building, GraduationCap, School } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Campus {
-  id: string;
-  name: string;
-  address: string;
-}
-
-interface Faculty {
-  id: string;
-  name: string;
-  deanName: string;
-  campusId: string;
-  campusName: string;
-}
-
-interface AcademicProgram {
-  id: string;
-  name: string;
-  campusId: string;
-  campusName: string;
-  facultyId: string;
-  facultyName: string;
-  directorName: string;
-  directorEmail: string;
-  managerId?: string;
-  managerName?: string;
-}
+import { useSupabaseData, Campus, Faculty, AcademicProgram } from "@/hooks/useSupabaseData";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function CampusManagement() {
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [programs, setPrograms] = useState<AcademicProgram[]>([]);
+  const [managers, setManagers] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("campuses");
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  const {
+    fetchCampus,
+    createCampus,
+    updateCampus,
+    deleteCampus,
+    fetchFaculties,
+    createFaculty,
+    updateFaculty,
+    deleteFaculty,
+    fetchAcademicPrograms,
+    createAcademicProgram,
+    updateAcademicProgram,
+    deleteAcademicProgram,
+    fetchManagers
+  } = useSupabaseData();
 
   // Campus Management
   const [campusDialog, setCampusDialog] = useState(false);
@@ -52,98 +45,290 @@ export function CampusManagement() {
 
   // Faculty Management
   const [facultyDialog, setFacultyDialog] = useState(false);
-  const [facultyForm, setFacultyForm] = useState({ name: "", deanName: "", campusId: "" });
+  const [facultyForm, setFacultyForm] = useState({ name: "", dean_name: "", campus_ids: [] as string[] });
   const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
 
   // Program Management
   const [programDialog, setProgramDialog] = useState(false);
   const [programForm, setProgramForm] = useState({
     name: "",
-    campusId: "",
-    facultyId: "",
-    directorName: "",
-    directorEmail: ""
+    campus_id: "",
+    faculty_id: "",
+    director_name: "",
+    director_email: "",
+    manager_id: ""
   });
   const [editingProgram, setEditingProgram] = useState<AcademicProgram | null>(null);
 
-  // Campus Functions
-  const handleCampusSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newCampus: Campus = {
-      id: editingCampus?.id || Date.now().toString(),
-      name: campusForm.name,
-      address: campusForm.address,
-    };
+  useEffect(() => {
+    loadData();
+  }, []);
 
-    if (editingCampus) {
-      setCampuses(campuses.map(campus => campus.id === editingCampus.id ? newCampus : campus));
-      toast({ title: "Campus actualizado exitosamente" });
-    } else {
-      setCampuses([...campuses, newCampus]);
-      toast({ title: "Campus creado exitosamente" });
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [campusResult, facultiesResult, programsResult, managersResult] = await Promise.all([
+        fetchCampus(),
+        fetchFaculties(),
+        fetchAcademicPrograms(),
+        fetchManagers()
+      ]);
+
+      if (campusResult.error) console.error('Error loading campus:', campusResult.error);
+      else setCampuses(campusResult.data || []);
+
+      if (facultiesResult.error) console.error('Error loading faculties:', facultiesResult.error);
+      else setFaculties(facultiesResult.data || []);
+
+      if (programsResult.error) console.error('Error loading programs:', programsResult.error);
+      else setPrograms(programsResult.data || []);
+
+      if (managersResult.error) console.error('Error loading managers:', managersResult.error);
+      else setManagers(managersResult.data || []);
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setCampusForm({ name: "", address: "" });
-    setEditingCampus(null);
-    setCampusDialog(false);
+  // Campus Functions
+  const handleCampusSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (editingCampus) {
+        const { error } = await updateCampus(editingCampus.id, {
+          name: campusForm.name,
+          address: campusForm.address,
+        });
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo actualizar el campus",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Campus actualizado exitosamente" });
+      } else {
+        const { error } = await createCampus({
+          name: campusForm.name,
+          address: campusForm.address,
+        });
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo crear el campus",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Campus creado exitosamente" });
+      }
+
+      setCampusForm({ name: "", address: "" });
+      setEditingCampus(null);
+      setCampusDialog(false);
+      loadData();
+    } catch (error) {
+      console.error('Error submitting campus:', error);
+    }
   };
 
   // Faculty Functions
-  const handleFacultySubmit = (e: React.FormEvent) => {
+  const handleFacultySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedCampus = campuses.find(c => c.id === facultyForm.campusId);
-    const newFaculty: Faculty = {
-      id: editingFaculty?.id || Date.now().toString(),
-      name: facultyForm.name,
-      deanName: facultyForm.deanName,
-      campusId: facultyForm.campusId,
-      campusName: selectedCampus?.name || "",
-    };
+    
+    try {
+      // For now, we'll use the first selected campus as the main campus
+      // In a future iteration, we could support multiple campus associations
+      const mainCampusId = facultyForm.campus_ids[0];
+      
+      if (editingFaculty) {
+        const { error } = await updateFaculty(editingFaculty.id, {
+          name: facultyForm.name,
+          dean_name: facultyForm.dean_name,
+          campus_id: mainCampusId,
+        });
 
-    if (editingFaculty) {
-      setFaculties(faculties.map(faculty => faculty.id === editingFaculty.id ? newFaculty : faculty));
-      toast({ title: "Facultad actualizada exitosamente" });
-    } else {
-      setFaculties([...faculties, newFaculty]);
-      toast({ title: "Facultad creada exitosamente" });
+        if (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo actualizar la facultad",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Facultad actualizada exitosamente" });
+      } else {
+        const { error } = await createFaculty({
+          name: facultyForm.name,
+          dean_name: facultyForm.dean_name,
+          campus_id: mainCampusId,
+        });
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo crear la facultad",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Facultad creada exitosamente" });
+      }
+
+      setFacultyForm({ name: "", dean_name: "", campus_ids: [] });
+      setEditingFaculty(null);
+      setFacultyDialog(false);
+      loadData();
+    } catch (error) {
+      console.error('Error submitting faculty:', error);
     }
-
-    setFacultyForm({ name: "", deanName: "", campusId: "" });
-    setEditingFaculty(null);
-    setFacultyDialog(false);
   };
 
   // Program Functions
-  const handleProgramSubmit = (e: React.FormEvent) => {
+  const handleProgramSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedCampus = campuses.find(c => c.id === programForm.campusId);
-    const selectedFaculty = faculties.find(f => f.id === programForm.facultyId);
     
-    const newProgram: AcademicProgram = {
-      id: editingProgram?.id || Date.now().toString(),
-      name: programForm.name,
-      campusId: programForm.campusId,
-      campusName: selectedCampus?.name || "",
-      facultyId: programForm.facultyId,
-      facultyName: selectedFaculty?.name || "",
-      directorName: programForm.directorName,
-      directorEmail: programForm.directorEmail,
-    };
+    try {
+      const programData = {
+        name: programForm.name,
+        campus_id: programForm.campus_id,
+        faculty_id: programForm.faculty_id,
+        director_name: programForm.director_name,
+        director_email: programForm.director_email,
+        manager_id: programForm.manager_id || undefined,
+      };
 
-    if (editingProgram) {
-      setPrograms(programs.map(program => program.id === editingProgram.id ? newProgram : program));
-      toast({ title: "Programa actualizado exitosamente" });
-    } else {
-      setPrograms([...programs, newProgram]);
-      toast({ title: "Programa creado exitosamente" });
+      if (editingProgram) {
+        const { error } = await updateAcademicProgram(editingProgram.id, programData);
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo actualizar el programa",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Programa actualizado exitosamente" });
+      } else {
+        const { error } = await createAcademicProgram(programData);
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: "No se pudo crear el programa",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Programa creado exitosamente" });
+      }
+
+      setProgramForm({ 
+        name: "", 
+        campus_id: "", 
+        faculty_id: "", 
+        director_name: "", 
+        director_email: "",
+        manager_id: ""
+      });
+      setEditingProgram(null);
+      setProgramDialog(false);
+      loadData();
+    } catch (error) {
+      console.error('Error submitting program:', error);
     }
-
-    setProgramForm({ name: "", campusId: "", facultyId: "", directorName: "", directorEmail: "" });
-    setEditingProgram(null);
-    setProgramDialog(false);
   };
 
-  const availableFaculties = faculties.filter(f => f.campusId === programForm.campusId);
+  const handleDeleteCampus = async (id: string) => {
+    try {
+      const { error } = await deleteCampus(id);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el campus",
+          variant: "destructive"
+        });
+        return;
+      }
+      toast({ title: "Campus eliminado" });
+      loadData();
+    } catch (error) {
+      console.error('Error deleting campus:', error);
+    }
+  };
+
+  const handleDeleteFaculty = async (id: string) => {
+    try {
+      const { error } = await deleteFaculty(id);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar la facultad",
+          variant: "destructive"
+        });
+        return;
+      }
+      toast({ title: "Facultad eliminada" });
+      loadData();
+    } catch (error) {
+      console.error('Error deleting faculty:', error);
+    }
+  };
+
+  const handleDeleteProgram = async (id: string) => {
+    try {
+      const { error } = await deleteAcademicProgram(id);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el programa",
+          variant: "destructive"
+        });
+        return;
+      }
+      toast({ title: "Programa eliminado" });
+      loadData();
+    } catch (error) {
+      console.error('Error deleting program:', error);
+    }
+  };
+
+  const availableFaculties = faculties.filter(f => f.campus_id === programForm.campus_id);
+  const availableManagers = managers.filter(m => m.role === 'Gestor');
+
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardContent className="p-8">
+          <div className="flex justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+              <p className="mt-4 text-gray-600">Cargando datos...</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
@@ -237,10 +422,7 @@ export function CampusManagement() {
                         }}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setCampuses(campuses.filter(c => c.id !== campus.id));
-                          toast({ title: "Campus eliminado" });
-                        }}>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteCampus(campus.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -280,31 +462,52 @@ export function CampusManagement() {
                       <Label htmlFor="deanName">Nombre del Decano</Label>
                       <Input
                         id="deanName"
-                        value={facultyForm.deanName}
-                        onChange={(e) => setFacultyForm(prev => ({ ...prev, deanName: e.target.value }))}
+                        value={facultyForm.dean_name}
+                        onChange={(e) => setFacultyForm(prev => ({ ...prev, dean_name: e.target.value }))}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="facultyCampus">Campus</Label>
-                      <Select value={facultyForm.campusId} onValueChange={(value) => setFacultyForm(prev => ({ ...prev, campusId: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar campus" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {campuses.map((campus) => (
-                            <SelectItem key={campus.id} value={campus.id}>
+                      <Label>Campus Asociados</Label>
+                      <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
+                        {campuses.map((campus) => (
+                          <div key={campus.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`campus-${campus.id}`}
+                              checked={facultyForm.campus_ids.includes(campus.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setFacultyForm(prev => ({
+                                    ...prev,
+                                    campus_ids: [...prev.campus_ids, campus.id]
+                                  }));
+                                } else {
+                                  setFacultyForm(prev => ({
+                                    ...prev,
+                                    campus_ids: prev.campus_ids.filter(id => id !== campus.id)
+                                  }));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`campus-${campus.id}`} className="text-sm">
                               {campus.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      {facultyForm.campus_ids.length === 0 && (
+                        <p className="text-sm text-gray-500">Seleccione al menos un campus</p>
+                      )}
                     </div>
                     <div className="flex justify-end space-x-2">
                       <Button type="button" variant="outline" onClick={() => setFacultyDialog(false)}>
                         Cancelar
                       </Button>
-                      <Button type="submit" className="institutional-gradient text-white">
+                      <Button 
+                        type="submit" 
+                        className="institutional-gradient text-white"
+                        disabled={facultyForm.campus_ids.length === 0}
+                      >
                         {editingFaculty ? "Actualizar" : "Crear"}
                       </Button>
                     </div>
@@ -326,25 +529,22 @@ export function CampusManagement() {
                 {faculties.map((faculty) => (
                   <TableRow key={faculty.id}>
                     <TableCell className="font-medium">{faculty.name}</TableCell>
-                    <TableCell>{faculty.deanName}</TableCell>
-                    <TableCell>{faculty.campusName}</TableCell>
+                    <TableCell>{faculty.dean_name}</TableCell>
+                    <TableCell>{faculty.campus?.name}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button size="sm" variant="outline" onClick={() => {
                           setEditingFaculty(faculty);
                           setFacultyForm({ 
                             name: faculty.name, 
-                            deanName: faculty.deanName, 
-                            campusId: faculty.campusId 
+                            dean_name: faculty.dean_name, 
+                            campus_ids: [faculty.campus_id] 
                           });
                           setFacultyDialog(true);
                         }}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setFaculties(faculties.filter(f => f.id !== faculty.id));
-                          toast({ title: "Facultad eliminada" });
-                        }}>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteFaculty(faculty.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -373,8 +573,8 @@ export function CampusManagement() {
                   <form onSubmit={handleProgramSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="programCampus">Campus de Oferta</Label>
-                      <Select value={programForm.campusId} onValueChange={(value) => {
-                        setProgramForm(prev => ({ ...prev, campusId: value, facultyId: "" }));
+                      <Select value={programForm.campus_id} onValueChange={(value) => {
+                        setProgramForm(prev => ({ ...prev, campus_id: value, faculty_id: "" }));
                       }}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar campus" />
@@ -391,7 +591,7 @@ export function CampusManagement() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="programFaculty">Facultad Asociada</Label>
-                      <Select value={programForm.facultyId} onValueChange={(value) => setProgramForm(prev => ({ ...prev, facultyId: value }))}>
+                      <Select value={programForm.faculty_id} onValueChange={(value) => setProgramForm(prev => ({ ...prev, faculty_id: value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar facultad" />
                         </SelectTrigger>
@@ -419,8 +619,8 @@ export function CampusManagement() {
                       <Label htmlFor="directorName">Director de Programa</Label>
                       <Input
                         id="directorName"
-                        value={programForm.directorName}
-                        onChange={(e) => setProgramForm(prev => ({ ...prev, directorName: e.target.value }))}
+                        value={programForm.director_name}
+                        onChange={(e) => setProgramForm(prev => ({ ...prev, director_name: e.target.value }))}
                         required
                       />
                     </div>
@@ -430,10 +630,27 @@ export function CampusManagement() {
                       <Input
                         id="directorEmail"
                         type="email"
-                        value={programForm.directorEmail}
-                        onChange={(e) => setProgramForm(prev => ({ ...prev, directorEmail: e.target.value }))}
+                        value={programForm.director_email}
+                        onChange={(e) => setProgramForm(prev => ({ ...prev, director_email: e.target.value }))}
                         required
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="managerId">Gestor Asignado (Opcional)</Label>
+                      <Select value={programForm.manager_id} onValueChange={(value) => setProgramForm(prev => ({ ...prev, manager_id: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar gestor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sin asignar</SelectItem>
+                          {availableManagers.map((manager) => (
+                            <SelectItem key={manager.id} value={manager.id}>
+                              {manager.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     
                     <div className="flex justify-end space-x-2">
@@ -463,13 +680,13 @@ export function CampusManagement() {
               <TableBody>
                 {programs.map((program) => (
                   <TableRow key={program.id}>
-                    <TableCell>{program.facultyName}</TableCell>
+                    <TableCell>{program.faculty?.name}</TableCell>
                     <TableCell className="font-medium">{program.name}</TableCell>
-                    <TableCell>{program.campusName}</TableCell>
-                    <TableCell>{program.directorName}</TableCell>
+                    <TableCell>{program.campus?.name}</TableCell>
+                    <TableCell>{program.director_name}</TableCell>
                     <TableCell>
-                      {program.managerName ? (
-                        <span className="text-green-600 font-medium">{program.managerName}</span>
+                      {program.manager ? (
+                        <span className="text-green-600 font-medium">{program.manager.full_name}</span>
                       ) : (
                         <span className="text-gray-400">Sin asignar</span>
                       )}
@@ -480,19 +697,17 @@ export function CampusManagement() {
                           setEditingProgram(program);
                           setProgramForm({
                             name: program.name,
-                            campusId: program.campusId,
-                            facultyId: program.facultyId,
-                            directorName: program.directorName,
-                            directorEmail: program.directorEmail
+                            campus_id: program.campus_id,
+                            faculty_id: program.faculty_id,
+                            director_name: program.director_name,
+                            director_email: program.director_email,
+                            manager_id: program.manager_id || ""
                           });
                           setProgramDialog(true);
                         }}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setPrograms(programs.filter(p => p.id !== program.id));
-                          toast({ title: "Programa eliminado" });
-                        }}>
+                        <Button size="sm" variant="outline" onClick={() => handleDeleteProgram(program.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

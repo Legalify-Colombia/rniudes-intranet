@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,29 +9,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
-  fullName: string;
-  documentNumber: string;
+  full_name: string;
+  document_number: string;
   email: string;
   position: string;
   role: string;
-  weeklyHours?: number;
-  numberOfWeeks?: number;
-  totalHours?: number;
+  weekly_hours?: number;
+  number_of_weeks?: number;
+  total_hours?: number;
 }
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     fullName: "",
     documentNumber: "",
     email: "",
+    password: "",
     position: "",
     weeklyHours: 0,
     numberOfWeeks: 16,
@@ -58,6 +62,35 @@ export function UserManagement() {
     }
   };
 
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('full_name');
+      
+      if (error) {
+        console.error('Error loading users:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los usuarios",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePositionChange = (position: string) => {
     setFormData(prev => ({
       ...prev,
@@ -69,60 +102,159 @@ export function UserManagement() {
     return formData.weeklyHours * formData.numberOfWeeks;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newUser: User = {
-      id: editingUser?.id || Date.now().toString(),
-      fullName: formData.fullName,
-      documentNumber: formData.documentNumber,
-      email: formData.email,
-      position: formData.position,
-      role: getRoleFromPosition(formData.position),
-      ...(formData.position === "Gestor de Internacionalización" && {
-        weeklyHours: formData.weeklyHours,
-        numberOfWeeks: formData.numberOfWeeks,
-        totalHours: calculateTotalHours(),
-      }),
-    };
-
-    if (editingUser) {
-      setUsers(users.map(user => user.id === editingUser.id ? newUser : user));
-      toast({ title: "Usuario actualizado exitosamente" });
-    } else {
-      setUsers([...users, newUser]);
-      toast({ title: "Usuario creado exitosamente" });
+    if (!editingUser && !formData.password) {
+      toast({
+        title: "Error",
+        description: "La contraseña es requerida para nuevos usuarios",
+        variant: "destructive"
+      });
+      return;
     }
 
-    setFormData({
-      fullName: "",
-      documentNumber: "",
-      email: "",
-      position: "",
-      weeklyHours: 0,
-      numberOfWeeks: 16,
-    });
-    setEditingUser(null);
-    setIsDialogOpen(false);
+    try {
+      if (editingUser) {
+        // Update existing user
+        const updates = {
+          full_name: formData.fullName,
+          document_number: formData.documentNumber,
+          email: formData.email,
+          position: formData.position,
+          role: getRoleFromPosition(formData.position),
+          ...(formData.position === "Gestor de Internacionalización" && {
+            weekly_hours: formData.weeklyHours,
+            number_of_weeks: formData.numberOfWeeks,
+            total_hours: calculateTotalHours(),
+          }),
+        };
+
+        const { error } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', editingUser.id);
+
+        if (error) {
+          console.error('Error updating user:', error);
+          toast({
+            title: "Error",
+            description: "No se pudo actualizar el usuario",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Usuario actualizado exitosamente" });
+      } else {
+        // Create new user
+        const totalHours = formData.position === "Gestor de Internacionalización" 
+          ? calculateTotalHours() 
+          : undefined;
+
+        const { error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.fullName,
+              document_number: formData.documentNumber,
+              position: formData.position,
+              role: getRoleFromPosition(formData.position),
+              weekly_hours: formData.weeklyHours,
+              number_of_weeks: formData.numberOfWeeks,
+              total_hours: totalHours,
+            }
+          }
+        });
+
+        if (error) {
+          console.error('Error creating user:', error);
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+
+        toast({ title: "Usuario creado exitosamente" });
+      }
+
+      setFormData({
+        fullName: "",
+        documentNumber: "",
+        email: "",
+        password: "",
+        position: "",
+        weeklyHours: 0,
+        numberOfWeeks: 16,
+      });
+      setEditingUser(null);
+      setIsDialogOpen(false);
+      loadUsers();
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error inesperado",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
     setFormData({
-      fullName: user.fullName,
-      documentNumber: user.documentNumber,
+      fullName: user.full_name,
+      documentNumber: user.document_number,
       email: user.email,
+      password: "",
       position: user.position,
-      weeklyHours: user.weeklyHours || 0,
-      numberOfWeeks: user.numberOfWeeks || 16,
+      weeklyHours: user.weekly_hours || 0,
+      numberOfWeeks: user.number_of_weeks || 16,
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setUsers(users.filter(user => user.id !== id));
-    toast({ title: "Usuario eliminado exitosamente" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting user:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar el usuario",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({ title: "Usuario eliminado exitosamente" });
+      loadUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardContent className="p-8">
+          <div className="flex justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+              <p className="mt-4 text-gray-600">Cargando usuarios...</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
@@ -172,6 +304,20 @@ export function UserManagement() {
                   required
                 />
               </div>
+
+              {!editingUser && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    required
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="position">Cargo</Label>
@@ -264,8 +410,8 @@ export function UserManagement() {
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.fullName}</TableCell>
-                <TableCell>{user.documentNumber}</TableCell>
+                <TableCell className="font-medium">{user.full_name}</TableCell>
+                <TableCell>{user.document_number}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.position}</TableCell>
                 <TableCell>
@@ -277,7 +423,7 @@ export function UserManagement() {
                     {user.role}
                   </span>
                 </TableCell>
-                <TableCell>{user.totalHours || '-'}</TableCell>
+                <TableCell>{user.total_hours || '-'}</TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleEdit(user)}>
