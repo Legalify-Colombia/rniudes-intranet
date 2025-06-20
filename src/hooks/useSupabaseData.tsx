@@ -173,11 +173,11 @@ export interface ManagerReportVersion {
 export interface DocumentTemplate {
   id: string;
   name: string;
-  description?: string;
-  template_type: 'pdf' | 'doc';
+  description: string | null;
+  template_type: "pdf" | "doc";
   template_content: string;
-  file_url?: string;
-  file_name?: string;
+  file_url: string | null;
+  file_name: string | null;
   is_active: boolean;
   created_by: string;
   created_at: string;
@@ -997,46 +997,103 @@ export function useSupabaseData() {
 
   // Document Templates functions
   const fetchDocumentTemplates = async () => {
-    const { data, error } = await supabase
-      .from('document_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('name');
-    return { data, error };
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      // Type assertion to ensure correct types
+      const typedData = data?.map(template => ({
+        ...template,
+        template_type: template.template_type as "pdf" | "doc"
+      })) as DocumentTemplate[];
+
+      return { data: typedData, error: null };
+    } catch (error) {
+      console.error('Error fetching document templates:', error);
+      return { data: null, error };
+    }
   };
 
-  const createDocumentTemplate = async (templateData: Omit<DocumentTemplate, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!profile?.id) return { data: null, error: { message: 'No user profile' } };
-    
-    const { data, error } = await supabase
-      .from('document_templates')
-      .insert([{ ...templateData, created_by: profile.id }])
-      .select()
-      .single();
-    return { data, error };
+  const createDocumentTemplate = async (templateData: {
+    name: string;
+    description: string;
+    template_type: "pdf" | "doc";
+    template_content: string;
+  }) => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .insert({
+          ...templateData,
+          created_by: 'current-user-id', // TODO: Replace with actual user ID
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      const typedData = data ? {
+        ...data,
+        template_type: data.template_type as "pdf" | "doc"
+      } as DocumentTemplate : null;
+
+      return { data: typedData, error: null };
+    } catch (error) {
+      console.error('Error creating document template:', error);
+      return { data: null, error };
+    }
   };
 
-  const updateDocumentTemplate = async (id: string, updates: Partial<DocumentTemplate>) => {
-    const { data, error } = await supabase
-      .from('document_templates')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    return { data, error };
+  const updateDocumentTemplate = async (id: string, templateData: {
+    name: string;
+    description: string;
+    template_type: "pdf" | "doc";
+    template_content: string;
+  }) => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .update({
+          ...templateData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      const typedData = data ? {
+        ...data,
+        template_type: data.template_type as "pdf" | "doc"
+      } as DocumentTemplate : null;
+
+      return { data: typedData, error: null };
+    } catch (error) {
+      console.error('Error updating document template:', error);
+      return { data: null, error };
+    }
   };
 
   const deleteDocumentTemplate = async (id: string) => {
-    const { data, error } = await supabase
-      .from('document_templates')
-      .update({ is_active: false })
-      .eq('id', id)
-      .select()
-      .single();
-    return { data, error };
+    try {
+      const { error } = await supabase
+        .from('document_templates')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting document template:', error);
+      return { error };
+    }
   };
 
   // Report Document Templates functions

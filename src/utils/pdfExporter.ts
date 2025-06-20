@@ -1,129 +1,150 @@
 
+// @ts-ignore - jsPDF types may not be fully compatible
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 export interface ExportData {
   // Datos del gestor
-  manager_name?: string;
-  manager_email?: string;
-  manager_position?: string;
-  manager_weekly_hours?: number;
-  manager_total_hours?: number;
-  
+  manager_name: string;
+  manager_email: string;
+  manager_position: string;
+  manager_weekly_hours: number;
+  manager_total_hours: number;
+
   // Datos del programa
-  program_name?: string;
-  campus_name?: string;
-  faculty_name?: string;
-  director_name?: string;
-  director_email?: string;
-  
+  program_name: string;
+  campus_name: string;
+  faculty_name: string;
+  director_name: string;
+  director_email: string;
+
   // Datos del plan de trabajo
-  work_plan_objectives?: string;
-  work_plan_total_hours?: number;
-  work_plan_status?: string;
-  work_plan_submitted_date?: string;
-  work_plan_approved_date?: string;
-  
+  work_plan_objectives: string;
+  work_plan_total_hours: number;
+  work_plan_status: string;
+  work_plan_submitted_date: string;
+  work_plan_approved_date: string;
+
   // Datos del informe
-  report_title?: string;
-  report_period?: string;
-  report_total_progress?: number;
-  report_submitted_date?: string;
-  
+  report_title: string;
+  report_period: string;
+  report_total_progress: number;
+  report_submitted_date: string;
+
   // Datos de productos
-  products_list?: string;
-  products_total_count?: number;
-  products_completed_count?: number;
-  
+  products_list: string;
+  products_total_count: number;
+  products_completed_count: number;
+
   // Fechas
-  current_date?: string;
-  current_year?: number;
-  current_month?: string;
+  current_date: string;
+  current_year: number;
+  current_month: string;
 }
 
 export class PDFExporter {
-  private static replacePlaceholders(template: string, data: ExportData): string {
-    let content = template;
-    
-    // Reemplazar todos los placeholders
-    Object.entries(data).forEach(([key, value]) => {
-      const placeholder = `<${key}>`;
-      const replacement = value?.toString() || '';
-      content = content.replace(new RegExp(placeholder, 'g'), replacement);
-    });
-    
-    // Agregar fechas automáticas si no se proporcionaron
+  static extractDataFromReport(report: any, workPlan: any, products?: any[]): ExportData {
     const now = new Date();
-    if (!data.current_date) {
-      content = content.replace(/<current_date>/g, now.toLocaleDateString('es-ES'));
-    }
-    if (!data.current_year) {
-      content = content.replace(/<current_year>/g, now.getFullYear().toString());
-    }
-    if (!data.current_month) {
-      content = content.replace(/<current_month>/g, now.toLocaleDateString('es-ES', { month: 'long' }));
-    }
-    
-    return content;
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    // Calcular productos completados
+    const completedProducts = products?.filter(p => p.progress_percentage >= 100).length || 0;
+
+    return {
+      // Datos del gestor
+      manager_name: workPlan?.profiles?.full_name || 'N/A',
+      manager_email: workPlan?.profiles?.email || 'N/A',
+      manager_position: workPlan?.profiles?.position || 'N/A',
+      manager_weekly_hours: workPlan?.weekly_hours || 0,
+      manager_total_hours: workPlan?.total_hours || 0,
+
+      // Datos del programa
+      program_name: workPlan?.academic_programs?.name || 'N/A',
+      campus_name: workPlan?.academic_programs?.campus?.name || 'N/A',
+      faculty_name: workPlan?.academic_programs?.campus?.faculty?.name || 'N/A',
+      director_name: workPlan?.academic_programs?.director_name || 'N/A',
+      director_email: workPlan?.academic_programs?.director_email || 'N/A',
+
+      // Datos del plan de trabajo
+      work_plan_objectives: workPlan?.objectives || 'N/A',
+      work_plan_total_hours: workPlan?.total_hours || 0,
+      work_plan_status: workPlan?.status || 'N/A',
+      work_plan_submitted_date: workPlan?.submitted_date ? new Date(workPlan.submitted_date).toLocaleDateString('es-ES') : 'N/A',
+      work_plan_approved_date: workPlan?.approved_date ? new Date(workPlan.approved_date).toLocaleDateString('es-ES') : 'N/A',
+
+      // Datos del informe
+      report_title: report?.title || 'N/A',
+      report_period: report?.period || 'N/A',
+      report_total_progress: report?.total_progress_percentage || 0,
+      report_submitted_date: report?.submitted_date ? new Date(report.submitted_date).toLocaleDateString('es-ES') : 'N/A',
+
+      // Datos de productos
+      products_list: products?.map(p => `${p.name}: ${p.progress_percentage || 0}%`).join(', ') || 'N/A',
+      products_total_count: products?.length || 0,
+      products_completed_count: completedProducts,
+
+      // Fechas
+      current_date: now.toLocaleDateString('es-ES'),
+      current_year: now.getFullYear(),
+      current_month: monthNames[now.getMonth()],
+    };
   }
 
-  public static async exportToPDF(
-    templateContent: string,
-    data: ExportData,
-    fileName: string = 'documento.pdf'
-  ): Promise<void> {
+  static replaceTemplateVariables(template: string, data: ExportData): string {
+    let processedTemplate = template;
+
+    // Reemplazar todas las variables del formato <variable_name>
+    Object.entries(data).forEach(([key, value]) => {
+      const placeholder = `<${key}>`;
+      const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      processedTemplate = processedTemplate.replace(regex, String(value));
+    });
+
+    return processedTemplate;
+  }
+
+  static async exportToPDF(template: string, data: ExportData, fileName: string): Promise<void> {
     try {
-      // Reemplazar placeholders
-      const processedContent = this.replacePlaceholders(templateContent, data);
-      
-      // Crear elemento temporal para renderizar el contenido
+      // Reemplazar variables en la plantilla
+      const processedContent = this.replaceTemplateVariables(template, data);
+
+      // Crear un elemento temporal para renderizar el contenido
       const tempDiv = document.createElement('div');
-      tempDiv.style.cssText = `
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
-        width: 794px;
-        padding: 40px;
-        font-family: Arial, sans-serif;
-        font-size: 12px;
-        line-height: 1.6;
-        color: #333;
-        background: white;
-      `;
-      
-      // Convertir saltos de línea y formatear el texto
-      tempDiv.innerHTML = processedContent
-        .replace(/\n/g, '<br>')
-        .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
-      
+      tempDiv.innerHTML = processedContent;
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm'; // Ancho A4
+      tempDiv.style.padding = '20mm';
+      tempDiv.style.fontFamily = 'Arial, sans-serif';
+      tempDiv.style.fontSize = '12pt';
+      tempDiv.style.lineHeight = '1.5';
+      tempDiv.style.backgroundColor = 'white';
       document.body.appendChild(tempDiv);
-      
-      // Generar canvas del contenido
+
+      // Convertir a canvas
       const canvas = await html2canvas(tempDiv, {
-        width: 794,
-        height: tempDiv.scrollHeight,
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff'
       });
-      
-      // Remover elemento temporal
-      document.body.removeChild(tempDiv);
-      
+
       // Crear PDF
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 295; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
-      
+
       let position = 0;
-      
-      // Agregar primera página
+
+      // Agregar la primera página
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-      
+
       // Agregar páginas adicionales si es necesario
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
@@ -131,76 +152,16 @@ export class PDFExporter {
         pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      
-      // Descargar el PDF
+
+      // Guardar el PDF
       pdf.save(fileName);
-      
+
+      // Limpiar el elemento temporal
+      document.body.removeChild(tempDiv);
+
     } catch (error) {
-      console.error('Error al exportar PDF:', error);
-      throw new Error('Error al generar el documento PDF');
+      console.error('Error exporting PDF:', error);
+      throw new Error('Error al exportar el PDF');
     }
-  }
-
-  public static extractDataFromWorkPlan(workPlan: any, manager: any, program: any): ExportData {
-    return {
-      // Datos del gestor
-      manager_name: manager?.full_name,
-      manager_email: manager?.email,
-      manager_position: manager?.position,
-      manager_weekly_hours: manager?.weekly_hours,
-      manager_total_hours: manager?.total_hours,
-      
-      // Datos del programa
-      program_name: program?.name,
-      campus_name: program?.campus?.name,
-      faculty_name: program?.faculty?.name,
-      director_name: program?.director_name,
-      director_email: program?.director_email,
-      
-      // Datos del plan de trabajo
-      work_plan_objectives: workPlan?.objectives,
-      work_plan_total_hours: workPlan?.total_hours_assigned,
-      work_plan_status: workPlan?.status,
-      work_plan_submitted_date: workPlan?.submitted_date ? 
-        new Date(workPlan.submitted_date).toLocaleDateString('es-ES') : undefined,
-      work_plan_approved_date: workPlan?.approved_date ? 
-        new Date(workPlan.approved_date).toLocaleDateString('es-ES') : undefined,
-    };
-  }
-
-  public static extractDataFromReport(report: any, workPlan: any, products?: any[]): ExportData {
-    const workPlanData = this.extractDataFromWorkPlan(
-      workPlan, 
-      report?.manager || workPlan?.manager, 
-      workPlan?.program
-    );
-    
-    // Generar lista de productos
-    let productsList = '';
-    let completedCount = 0;
-    
-    if (products && products.length > 0) {
-      productsList = products.map((product, index) => {
-        const progress = product.progress_percentage || 0;
-        if (progress >= 100) completedCount++;
-        return `${index + 1}. ${product.product?.name || product.name} - ${progress}% completado`;
-      }).join('\n');
-    }
-    
-    return {
-      ...workPlanData,
-      
-      // Datos del informe
-      report_title: report?.title,
-      report_period: report?.report_period?.name,
-      report_total_progress: report?.total_progress_percentage,
-      report_submitted_date: report?.submitted_date ? 
-        new Date(report.submitted_date).toLocaleDateString('es-ES') : undefined,
-      
-      // Datos de productos
-      products_list: productsList,
-      products_total_count: products?.length || 0,
-      products_completed_count: completedCount,
-    };
   }
 }
