@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -230,6 +229,16 @@ export function PlanTypesManagement() {
       return;
     }
 
+    // Validar que para dropdown se hayan proporcionado opciones
+    if (newField.field_type === 'dropdown' && (!newField.dropdown_options || newField.dropdown_options.length === 0)) {
+      toast({
+        title: "Error",
+        description: "Para campos de lista desplegable debes proporcionar al menos una opción",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Calcular el siguiente order basado en los campos existentes
       const nextOrder = planFields.length > 0 
@@ -237,12 +246,14 @@ export function PlanTypesManagement() {
         : 1;
 
       const fieldData = {
-        ...newField,
         plan_type_id: selectedPlanType.id,
-        field_order: nextOrder,
+        field_name: newField.field_name.trim(),
+        field_type: newField.field_type,
         dropdown_options: newField.field_type === 'dropdown' && newField.dropdown_options 
-          ? newField.dropdown_options 
-          : null
+          ? newField.dropdown_options.filter(opt => opt.trim()) 
+          : null,
+        is_required: newField.is_required,
+        field_order: nextOrder
       };
 
       console.log('Creating field with data:', fieldData);
@@ -277,7 +288,7 @@ export function PlanTypesManagement() {
       console.error('Error creating field:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear el campo. Verifique los datos.",
+        description: `No se pudo crear el campo: ${error instanceof Error ? error.message : 'Error desconocido'}`,
         variant: "destructive",
       });
     }
@@ -558,7 +569,7 @@ export function PlanTypesManagement() {
                   
                   {newField.field_type === 'dropdown' && (
                     <div>
-                      <Label htmlFor="dropdownOptions">Opciones (una por línea)</Label>
+                      <Label htmlFor="dropdownOptions">Opciones (una por línea) *</Label>
                       <Textarea
                         id="dropdownOptions"
                         placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
@@ -569,6 +580,9 @@ export function PlanTypesManagement() {
                         })}
                         rows={4}
                       />
+                      <p className="text-xs text-gray-600 mt-1">
+                        Escribe cada opción en una línea separada
+                      </p>
                     </div>
                   )}
 
@@ -586,7 +600,16 @@ export function PlanTypesManagement() {
                       <Save className="h-4 w-4 mr-1" />
                       Guardar Campo
                     </Button>
-                    <Button variant="outline" onClick={() => setIsCreatingField(false)}>
+                    <Button variant="outline" onClick={() => {
+                      setIsCreatingField(false);
+                      setNewField({
+                        field_name: "",
+                        field_type: "short_text",
+                        dropdown_options: [],
+                        is_required: false,
+                        field_order: 0
+                      });
+                    }}>
                       <X className="h-4 w-4 mr-1" />
                       Cancelar
                     </Button>
