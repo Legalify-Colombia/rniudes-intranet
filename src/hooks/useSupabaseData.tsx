@@ -899,6 +899,38 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Indicators
+  const fetchIndicators = async () => {
+    return await supabase
+      .from('indicators')
+      .select('*')
+      .order('created_at', { ascending: false });
+  };
+
+  const createIndicator = async (data: any) => {
+    return await supabase
+      .from('indicators')
+      .insert(data)
+      .select()
+      .single();
+  };
+
+  const updateIndicator = async (id: string, data: any) => {
+    return await supabase
+      .from('indicators')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+  };
+
+  const deleteIndicator = async (id: string) => {
+    return await supabase
+      .from('indicators')
+      .delete()
+      .eq('id', id);
+  };
+
   return {
     fetchStrategicAxes,
     createStrategicAxis,
@@ -969,5 +1001,9 @@ export function useSupabaseData() {
     deleteTemplateBasedReport,
     fetchTemplateReportResponses,
     upsertTemplateReportResponse,
+    fetchIndicators,
+    createIndicator,
+    updateIndicator,
+    deleteIndicator,
   };
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, StrategicAxis, Action, Product } from "@/hooks/useSupabaseData";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { ReportTemplatesManagement } from "./ReportTemplatesManagement";
 import { DocumentTemplatesManagement } from "./DocumentTemplatesManagement";
+import { IndicatorsManagement } from "./IndicatorsManagement";
+import { StrategicAxis, Action, Product } from "@/types";
 
 export function StrategicConfiguration() {
   const [strategicAxes, setStrategicAxes] = useState<StrategicAxis[]>([]);
@@ -136,16 +137,17 @@ export function StrategicConfiguration() {
           Configuración Estratégica
         </CardTitle>
         <p className="text-gray-600">
-          Gestión de ejes estratégicos, acciones, productos, plantillas de informe y plantillas de documentos
+          Gestión de ejes estratégicos, acciones, productos, indicadores, plantillas de informe y plantillas de documentos
         </p>
       </CardHeader>
       
       <CardContent>
         <Tabs defaultValue="axes" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="axes">Ejes Estratégicos</TabsTrigger>
             <TabsTrigger value="actions">Acciones</TabsTrigger>
             <TabsTrigger value="products">Productos</TabsTrigger>
+            <TabsTrigger value="indicators">Consolidado de Cifras</TabsTrigger>
             <TabsTrigger value="templates">Plantillas de Informe</TabsTrigger>
             <TabsTrigger value="documents">Plantillas PDF/DOC</TabsTrigger>
           </TabsList>
@@ -406,6 +408,11 @@ export function StrategicConfiguration() {
                 ))}
               </TableBody>
             </Table>
+          </TabsContent>
+
+          {/* Consolidado de Cifras */}
+          <TabsContent value="indicators" className="space-y-4">
+            <IndicatorsManagement />
           </TabsContent>
 
           {/* Plantillas de Informe */}
