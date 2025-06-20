@@ -39,9 +39,13 @@ export function IndicatorReportSelector({ onReportCreated, existingReports }: In
           variant: "destructive",
         });
       } else {
-        // Filtrar períodos activos
+        // Filtrar períodos activos y validar que tengan ID válido
         const activePeriods = (data || []).filter(period => 
-          period.is_active && new Date(period.end_date) >= new Date()
+          period.is_active && 
+          new Date(period.end_date) >= new Date() &&
+          period.id && 
+          typeof period.id === 'string' && 
+          period.id.trim().length > 0
         );
         setPeriods(activePeriods);
       }
@@ -147,11 +151,18 @@ export function IndicatorReportSelector({ onReportCreated, existingReports }: In
                 <SelectValue placeholder="Selecciona un período" />
               </SelectTrigger>
               <SelectContent>
-                {periods.map((period) => (
-                  <SelectItem key={period.id} value={period.id}>
-                    {period.name} ({new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()})
-                  </SelectItem>
-                ))}
+                {periods.map((period) => {
+                  // Validate period ID before rendering
+                  if (!period.id || typeof period.id !== 'string' || period.id.trim().length === 0) {
+                    console.warn('IndicatorReportSelector - Skipping invalid period:', period);
+                    return null;
+                  }
+                  return (
+                    <SelectItem key={period.id} value={period.id}>
+                      {period.name} ({new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()})
+                    </SelectItem>
+                  );
+                }).filter(Boolean)}
               </SelectContent>
             </Select>
           </div>

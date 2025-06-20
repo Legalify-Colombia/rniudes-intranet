@@ -41,11 +41,18 @@ export function CampusSelector({
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
-            {campuses.map((campus) => (
-              <SelectItem key={campus.id} value={campus.id}>
-                {campus.name}
-              </SelectItem>
-            ))}
+            {campuses.map((campus) => {
+              // Validate campus ID before rendering
+              if (!campus.id || typeof campus.id !== 'string' || campus.id.trim().length === 0) {
+                console.warn('CampusSelector - Skipping invalid campus:', campus);
+                return null;
+              }
+              return (
+                <SelectItem key={campus.id} value={campus.id}>
+                  {campus.name}
+                </SelectItem>
+              );
+            }).filter(Boolean)}
           </SelectContent>
         </Select>
       </div>

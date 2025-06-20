@@ -35,7 +35,13 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
     try {
       const result = await fetchPlanTypes();
       if (result.data) {
-        setPlanTypes(result.data);
+        // Filter plan types with valid IDs
+        const validPlanTypes = result.data.filter(planType => 
+          planType.id && 
+          typeof planType.id === 'string' && 
+          planType.id.trim().length > 0
+        );
+        setPlanTypes(validPlanTypes);
       }
     } catch (error) {
       console.error('Error loading plan types:', error);
@@ -114,11 +120,18 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
               <SelectValue placeholder="Selecciona un tipo de plan" />
             </SelectTrigger>
             <SelectContent>
-              {planTypes.map((planType) => (
-                <SelectItem key={planType.id} value={planType.id}>
-                  {planType.name}
-                </SelectItem>
-              ))}
+              {planTypes.map((planType) => {
+                // Validate plan type ID before rendering
+                if (!planType.id || typeof planType.id !== 'string' || planType.id.trim().length === 0) {
+                  console.warn('CustomPlanSelector - Skipping invalid plan type:', planType);
+                  return null;
+                }
+                return (
+                  <SelectItem key={planType.id} value={planType.id}>
+                    {planType.name}
+                  </SelectItem>
+                );
+              }).filter(Boolean)}
             </SelectContent>
           </Select>
           {selectedPlanType && (
