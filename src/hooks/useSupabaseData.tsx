@@ -429,61 +429,55 @@ export function useSupabaseData() {
   };
 
   const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
+    // Use a different approach to avoid relationship ambiguity
     const { data, error } = await supabase
-      .from("work_plan_assignments")
+      .from("work_plans")
       .select(`
-        work_plan:work_plan_id!inner (
+        id,
+        status,
+        objectives,
+        total_hours_assigned,
+        submitted_date,
+        approval_comments,
+        manager:manager_id (
           id,
-          status,
-          objectives,
-          total_hours_assigned,
-          submitted_date,
-          approval_comments,
-          manager:manager_id (
+          full_name,
+          email
+        ),
+        program:program_id (
+          id,
+          name,
+          campus:campus_id (
             id,
-            full_name,
-            email
+            name
           ),
-          program:program_id (
+          faculty:faculty_id (
             id,
-            name,
-            campus:campus_id (
-              id,
-              name
-            ),
-            faculty:faculty_id (
-              id,
-              name
-            )
+            name
           )
         )
       `)
-      .eq("work_plan.status", "pending")
-      .order("work_plan.submitted_date", { ascending: true });
+      .eq("status", "pending")
+      .order("submitted_date", { ascending: true });
 
     if (error) return { data: null, error };
 
-    // Transform data to flatten work_plan structure
+    // Transform data to match expected format
     const transformedData = data?.map(item => ({
-      id: item.work_plan.id,
-      status: item.work_plan.status,
-      objectives: item.work_plan.objectives,
-      total_hours_assigned: item.work_plan.total_hours_assigned,
-      submitted_date: item.work_plan.submitted_date,
-      approval_comments: item.work_plan.approval_comments,
-      manager_name: item.work_plan.manager?.full_name,
-      manager_email: item.work_plan.manager?.email,
-      program_name: item.work_plan.program?.name,
-      campus_name: item.work_plan.program?.campus?.name,
-      faculty_name: item.work_plan.program?.faculty?.name,
+      id: item.id,
+      status: item.status,
+      objectives: item.objectives,
+      total_hours_assigned: item.total_hours_assigned,
+      submitted_date: item.submitted_date,
+      approval_comments: item.approval_comments,
+      manager_name: item.manager?.full_name,
+      manager_email: item.manager?.email,
+      program_name: item.program?.name,
+      campus_name: item.program?.campus?.name,
+      faculty_name: item.program?.faculty?.name,
     })) || [];
 
-    // Remove duplicates by work plan id
-    const uniqueWorkPlans = transformedData.filter((plan, index, self) => 
-      index === self.findIndex(p => p.id === plan.id)
-    );
-
-    return { data: uniqueWorkPlans, error: null };
+    return { data: transformedData, error: null };
   };
 
   const fetchWorkPlanDetails = async (workPlanId: string): Promise<Result<any>> => {
@@ -564,9 +558,12 @@ export function useSupabaseData() {
   };
 
   const upsertWorkPlanAssignment = async (assignment: any): Promise<Result<any>> => {
+    // Remove any properties that don't exist in the work_plan_assignments table
+    const { status, ...cleanAssignment } = assignment;
+    
     const { data, error } = await supabase
       .from("work_plan_assignments")
-      .upsert(assignment)
+      .upsert(cleanAssignment)
       .select()
       .single();
     return { data, error };
@@ -574,13 +571,13 @@ export function useSupabaseData() {
 
   const approveWorkPlan = async (workPlanId: string, status: 'approved' | 'rejected', comments?: string): Promise<Result<any>> => {
     const { data, error } = await supabase
-      .from("work_plan_assignments")
+      .from("work_plans")
       .update({
         status,
         approval_comments: comments,
         approved_date: new Date().toISOString()
       })
-      .eq("work_plan_id", workPlanId)
+      .eq("id", workPlanId)
       .select()
       .single();
     return { data, error };
