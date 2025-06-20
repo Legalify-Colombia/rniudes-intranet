@@ -1,4 +1,5 @@
 
+
 import { PostgrestError } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,6 +9,34 @@ import { supabase } from "@/integrations/supabase/client";
 interface Result<T> {
   data: T | null;
   error: PostgrestError | Error | null;
+}
+
+// Types for campus management
+export interface Campus {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Faculty {
+  id: string;
+  name: string;
+  description?: string;
+  campus_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AcademicProgram {
+  id: string;
+  name: string;
+  description?: string;
+  faculty_id: string;
+  campus_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useSupabaseData() {
@@ -271,7 +300,285 @@ export function useSupabaseData() {
     }
   };
 
-  // Nuevas funciones para informes basados en plantillas
+  // Campus management functions
+  const fetchCampus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('campus')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error("Error fetching campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const createCampus = async (campusData: Omit<Campus, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('campus')
+        .insert(campusData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error creating campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const updateCampus = async (campusId: string, updates: Partial<Campus>) => {
+    try {
+      const { data, error } = await supabase
+        .from('campus')
+        .update(updates)
+        .eq('id', campusId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error updating campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const deleteCampus = async (campusId: string) => {
+    try {
+      const { error } = await supabase
+        .from('campus')
+        .delete()
+        .eq('id', campusId);
+
+      if (error) {
+        console.error("Error deleting campus:", error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error("Unexpected error deleting campus:", error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const fetchFaculties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .select('*, campus(id, name)')
+        .order('name');
+
+      if (error) {
+        console.error("Error fetching faculties:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching faculties:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const fetchFacultiesByCampus = async (campusId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .select('*')
+        .eq('campus_id', campusId)
+        .order('name');
+
+      if (error) {
+        console.error("Error fetching faculties by campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching faculties by campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const createFaculty = async (facultyData: Omit<Faculty, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .insert(facultyData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating faculty:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error creating faculty:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const updateFaculty = async (facultyId: string, updates: Partial<Faculty>) => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .update(updates)
+        .eq('id', facultyId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating faculty:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error updating faculty:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const deleteFaculty = async (facultyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('faculties')
+        .delete()
+        .eq('id', facultyId);
+
+      if (error) {
+        console.error("Error deleting faculty:", error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error("Unexpected error deleting faculty:", error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const fetchAcademicPrograms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('academic_programs')
+        .select('*, faculty(id, name, campus(id, name))')
+        .order('name');
+
+      if (error) {
+        console.error("Error fetching academic programs:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching academic programs:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const fetchAcademicProgramsByCampus = async (campusId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('academic_programs')
+        .select('*, faculty(id, name)')
+        .eq('campus_id', campusId)
+        .order('name');
+
+      if (error) {
+        console.error("Error fetching academic programs by campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching academic programs by campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const createAcademicProgram = async (programData: Omit<AcademicProgram, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('academic_programs')
+        .insert(programData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating academic program:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error creating academic program:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const updateAcademicProgram = async (programId: string, updates: Partial<AcademicProgram>) => {
+    try {
+      const { data, error } = await supabase
+        .from('academic_programs')
+        .update(updates)
+        .eq('id', programId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating academic program:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error updating academic program:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const deleteAcademicProgram = async (programId: string) => {
+    try {
+      const { error } = await supabase
+        .from('academic_programs')
+        .delete()
+        .eq('id', programId);
+
+      if (error) {
+        console.error("Error deleting academic program:", error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error("Unexpected error deleting academic program:", error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  // Template-based reports functions
   const fetchReportTemplates = async () => {
     try {
       const { data, error } = await supabase
@@ -432,6 +739,22 @@ export function useSupabaseData() {
     upsertProductProgressReport,
     uploadEvidenceFile,
     deleteEvidenceFile,
+    // Campus management
+    fetchCampus,
+    createCampus,
+    updateCampus,
+    deleteCampus,
+    fetchFaculties,
+    fetchFacultiesByCampus,
+    createFaculty,
+    updateFaculty,
+    deleteFaculty,
+    fetchAcademicPrograms,
+    fetchAcademicProgramsByCampus,
+    createAcademicProgram,
+    updateAcademicProgram,
+    deleteAcademicProgram,
+    // Template-based reports
     fetchReportTemplates,
     fetchReportPeriods,
     fetchTemplateBasedReports,
