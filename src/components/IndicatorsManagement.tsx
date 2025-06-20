@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,7 +41,12 @@ export function IndicatorsManagement() {
         variant: "destructive",
       });
     } else {
-      setIndicators(data || []);
+      // Cast the data_type to the expected union type
+      const typedIndicators = (data || []).map(indicator => ({
+        ...indicator,
+        data_type: indicator.data_type as "numeric" | "short_text" | "long_text" | "file" | "link"
+      }));
+      setIndicators(typedIndicators);
     }
   };
 
