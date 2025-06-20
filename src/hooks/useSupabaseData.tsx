@@ -49,6 +49,8 @@ export interface StrategicAxis {
   id: string;
   code: string;
   name: string;
+  usage_type?: string[];
+  description?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -58,6 +60,8 @@ export interface Action {
   id: string;
   code: string;
   name: string;
+  usage_type?: string[];
+  description?: string;
   strategic_axis_id: string;
   created_by: string;
   created_at: string;
@@ -68,6 +72,8 @@ export interface Action {
 export interface Product {
   id: string;
   name: string;
+  usage_type?: string[];
+  description?: string;
   action_id: string;
   created_by: string;
   created_at: string;
@@ -1026,7 +1032,13 @@ export function useSupabaseData() {
       .select('*')
       .eq('is_active', true)
       .order('name');
-    return { data: data || [], error };
+    return { 
+      data: data ? data.map(item => ({ 
+        ...item, 
+        data_type: item.data_type as 'numeric' | 'short_text' | 'long_text' | 'file' | 'link'
+      })) : [], 
+      error 
+    };
   };
 
   const createIndicator = async (indicatorData: Omit<Indicator, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Indicator>> => {
@@ -1038,7 +1050,13 @@ export function useSupabaseData() {
       })
       .select()
       .single();
-    return { data, error };
+    return { 
+      data: data ? { 
+        ...data, 
+        data_type: data.data_type as 'numeric' | 'short_text' | 'long_text' | 'file' | 'link'
+      } : null, 
+      error 
+    };
   };
 
   const updateIndicator = async (id: string, indicatorData: Partial<Indicator>): Promise<Result<Indicator>> => {
@@ -1048,7 +1066,13 @@ export function useSupabaseData() {
       .eq('id', id)
       .select()
       .single();
-    return { data, error };
+    return { 
+      data: data ? { 
+        ...data, 
+        data_type: data.data_type as 'numeric' | 'short_text' | 'long_text' | 'file' | 'link'
+      } : null, 
+      error 
+    };
   };
 
   const deleteIndicator = async (id: string): Promise<Result<null>> => {
@@ -1076,7 +1100,13 @@ export function useSupabaseData() {
         partner_institutions:project_partner_institutions(*)
       `)
       .order('created_at', { ascending: false });
-    return { data: data || [], error };
+    return { 
+      data: data ? data.map(item => ({ 
+        ...item, 
+        status: item.status as 'draft' | 'submitted' | 'approved' | 'rejected'
+      })) : [], 
+      error 
+    };
   };
 
   const fetchInternationalizationProjectsByManager = async (managerId: string): Promise<Result<any[]>> => {
@@ -1096,19 +1126,28 @@ export function useSupabaseData() {
       `)
       .eq('manager_id', managerId)
       .order('created_at', { ascending: false });
-    return { data: data || [], error };
+    return { 
+      data: data ? data.map(item => ({ 
+        ...item, 
+        status: item.status as 'draft' | 'submitted' | 'approved' | 'rejected'
+      })) : [], 
+      error 
+    };
   };
 
   const createInternationalizationProject = async (projectData: Omit<InternationalizationProject, 'id' | 'created_at' | 'updated_at'>): Promise<Result<InternationalizationProject>> => {
     const { data, error } = await supabase
       .from('internationalization_projects')
-      .insert({
-        ...projectData,
-        manager_id: profile?.id || ''
-      })
+      .insert(projectData)
       .select()
       .single();
-    return { data, error };
+    return { 
+      data: data ? { 
+        ...data, 
+        status: data.status as 'draft' | 'submitted' | 'approved' | 'rejected'
+      } : null, 
+      error 
+    };
   };
 
   const updateInternationalizationProject = async (id: string, projectData: Partial<InternationalizationProject>): Promise<Result<InternationalizationProject>> => {
@@ -1118,7 +1157,13 @@ export function useSupabaseData() {
       .eq('id', id)
       .select()
       .single();
-    return { data, error };
+    return { 
+      data: data ? { 
+        ...data, 
+        status: data.status as 'draft' | 'submitted' | 'approved' | 'rejected'
+      } : null, 
+      error 
+    };
   };
 
   const approveInternationalizationProject = async (id: string, status: 'approved' | 'rejected', comments?: string): Promise<Result<InternationalizationProject>> => {
@@ -1138,7 +1183,13 @@ export function useSupabaseData() {
       .eq('id', id)
       .select()
       .single();
-    return { data, error };
+    return { 
+      data: data ? { 
+        ...data, 
+        status: data.status as 'draft' | 'submitted' | 'approved' | 'rejected'
+      } : null, 
+      error 
+    };
   };
 
   // Partner Institutions Management
@@ -1180,7 +1231,15 @@ export function useSupabaseData() {
         report_period:report_periods(*)
       `)
       .order('created_at', { ascending: false });
-    return { data: data || [], error };
+    return { 
+      data: data ? data.map(item => ({ 
+        ...item, 
+        project_timing: item.project_timing as 'ahead' | 'on_time' | 'delayed' | undefined,
+        project_status: item.project_status as 'normal' | 'abnormal' | undefined,
+        status: item.status as 'draft' | 'submitted' | 'reviewed'
+      })) : [], 
+      error 
+    };
   };
 
   const fetchInternationalizationReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
@@ -1194,19 +1253,32 @@ export function useSupabaseData() {
       `)
       .eq('manager_id', managerId)
       .order('created_at', { ascending: false });
-    return { data: data || [], error };
+    return { 
+      data: data ? data.map(item => ({ 
+        ...item, 
+        project_timing: item.project_timing as 'ahead' | 'on_time' | 'delayed' | undefined,
+        project_status: item.project_status as 'normal' | 'abnormal' | undefined,
+        status: item.status as 'draft' | 'submitted' | 'reviewed'
+      })) : [], 
+      error 
+    };
   };
 
   const createInternationalizationReport = async (reportData: Omit<InternationalizationReport, 'id' | 'created_at' | 'updated_at'>): Promise<Result<InternationalizationReport>> => {
     const { data, error } = await supabase
       .from('internationalization_reports')
-      .insert({
-        ...reportData,
-        manager_id: profile?.id || ''
-      })
+      .insert(reportData)
       .select()
       .single();
-    return { data, error };
+    return { 
+      data: data ? { 
+        ...data, 
+        project_timing: data.project_timing as 'ahead' | 'on_time' | 'delayed' | undefined,
+        project_status: data.project_status as 'normal' | 'abnormal' | undefined,
+        status: data.status as 'draft' | 'submitted' | 'reviewed'
+      } : null, 
+      error 
+    };
   };
 
   const updateInternationalizationReport = async (id: string, reportData: Partial<InternationalizationReport>): Promise<Result<InternationalizationReport>> => {
@@ -1216,7 +1288,15 @@ export function useSupabaseData() {
       .eq('id', id)
       .select()
       .single();
-    return { data, error };
+    return { 
+      data: data ? { 
+        ...data, 
+        project_timing: data.project_timing as 'ahead' | 'on_time' | 'delayed' | undefined,
+        project_status: data.project_status as 'normal' | 'abnormal' | undefined,
+        status: data.status as 'draft' | 'submitted' | 'reviewed'
+      } : null, 
+      error 
+    };
   };
 
   // Enhanced Strategic Management with usage types

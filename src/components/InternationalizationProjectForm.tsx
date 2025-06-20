@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/hooks/useAuth';
@@ -218,6 +217,7 @@ const InternationalizationProjectForm: React.FC = () => {
     try {
       const projectData = {
         ...formData,
+        manager_id: profile?.id || '',
         status,
         submitted_date: status === 'submitted' ? new Date().toISOString() : undefined
       };
