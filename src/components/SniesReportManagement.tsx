@@ -10,16 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Send, FileText, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, SniesReport, SniesReportTemplate } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
+import { useSniesReports } from "@/hooks/useSniesReports";
 import { SniesReportForm } from "./SniesReportForm";
 
 export function SniesReportManagement() {
-  const [reports, setReports] = useState<SniesReport[]>([]);
-  const [templates, setTemplates] = useState<SniesReportTemplate[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isReportFormOpen, setIsReportFormOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<SniesReport | null>(null);
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
   
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -28,7 +28,7 @@ export function SniesReportManagement() {
     fetchSniesReportTemplates,
     createSniesReport,
     updateSniesReport
-  } = useSupabaseData();
+  } = useSniesReports();
 
   const [reportForm, setReportForm] = useState({
     title: '',
@@ -46,8 +46,17 @@ export function SniesReportManagement() {
         fetchSniesReportTemplates()
       ]);
 
-      setReports(reportsResult.data || []);
-      setTemplates(templatesResult.data || []);
+      if (reportsResult.error) {
+        console.error('Error loading reports:', reportsResult.error);
+      } else {
+        setReports(reportsResult.data || []);
+      }
+
+      if (templatesResult.error) {
+        console.error('Error loading templates:', templatesResult.error);
+      } else {
+        setTemplates(templatesResult.data || []);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -61,11 +70,29 @@ export function SniesReportManagement() {
   const handleCreateReport = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      const result = await createSniesReport(reportForm);
-      if (result.error) throw result.error;
+    if (!reportForm.title || !reportForm.template_id) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      toast({ title: "Reporte creado correctamente" });
+    try {
+      console.log('Creating report with data:', reportForm);
+      const result = await createSniesReport(reportForm);
+      
+      if (result.error) {
+        console.error('Error creating report:', result.error);
+        throw result.error;
+      }
+
+      toast({ 
+        title: "Éxito",
+        description: "Reporte creado correctamente" 
+      });
+      
       setReportForm({ title: '', template_id: '' });
       setIsCreateDialogOpen(false);
       loadData();
@@ -87,7 +114,10 @@ export function SniesReportManagement() {
       });
       if (result.error) throw result.error;
 
-      toast({ title: "Reporte enviado correctamente" });
+      toast({ 
+        title: "Éxito",
+        description: "Reporte enviado correctamente" 
+      });
       loadData();
     } catch (error) {
       console.error('Error submitting report:', error);
@@ -112,7 +142,7 @@ export function SniesReportManagement() {
     }
   };
 
-  const openReportForm = (report: SniesReport) => {
+  const openReportForm = (report: any) => {
     setSelectedReport(report);
     setIsReportFormOpen(true);
   };
@@ -138,6 +168,49 @@ export function SniesReportManagement() {
                     Nuevo Reporte
                   </Button>
                 </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Crear Nuevo Reporte SNIES</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateReport} className="space-y-4">
+                    <div>
+                      <Label htmlFor="reportTitle">Título del Reporte</Label>
+                      <Input
+                        id="reportTitle"
+                        value={reportForm.title}
+                        onChange={(e) => setReportForm(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="Título del reporte"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="reportTemplate">Plantilla</Label>
+                      <Select 
+                        value={reportForm.template_id} 
+                        onValueChange={(value) => setReportForm(prev => ({ ...prev, template_id: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar plantilla" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {templates.map(template => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" className="institutional-gradient text-white">
+                        Crear Reporte
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
               </Dialog>
             )}
           </div>
@@ -150,6 +223,7 @@ export function SniesReportManagement() {
                 <TableHead>Plantilla</TableHead>
                 {profile?.role !== 'Gestor' && <TableHead>Gestor</TableHead>}
                 <TableHead>Estado</TableHead>
+                <TableHead>Fecha Creación</TableHead>
                 <TableHead>Fecha Envío</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -158,11 +232,14 @@ export function SniesReportManagement() {
               {userReports.map((report: any) => (
                 <TableRow key={report.id}>
                   <TableCell className="font-medium">{report.title}</TableCell>
-                  <TableCell>{report.template?.name}</TableCell>
+                  <TableCell>{report.template?.name || 'Sin plantilla'}</TableCell>
                   {profile?.role !== 'Gestor' && (
-                    <TableCell>{report.manager?.full_name}</TableCell>
+                    <TableCell>{report.manager?.full_name || 'Sin asignar'}</TableCell>
                   )}
                   <TableCell>{getStatusBadge(report.status)}</TableCell>
+                  <TableCell>
+                    {new Date(report.created_at).toLocaleDateString('es-ES')}
+                  </TableCell>
                   <TableCell>
                     {report.submitted_date ? 
                       new Date(report.submitted_date).toLocaleDateString('es-ES') : 
@@ -194,53 +271,9 @@ export function SniesReportManagement() {
         </CardContent>
       </Card>
 
-      {/* Create Report Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Crear Nuevo Reporte SNIES</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleCreateReport} className="space-y-4">
-            <div>
-              <Label htmlFor="reportTitle">Título del Reporte</Label>
-              <Input
-                id="reportTitle"
-                value={reportForm.title}
-                onChange={(e) => setReportForm(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Título del reporte"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="reportTemplate">Plantilla</Label>
-              <Select value={reportForm.template_id} onValueChange={(value) => setReportForm(prev => ({ ...prev, template_id: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar plantilla" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map(template => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="institutional-gradient text-white">
-                Crear Reporte
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       {/* Report Form Dialog */}
       <Dialog open={isReportFormOpen} onOpenChange={setIsReportFormOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-7xl max-h-[95vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedReport?.title}

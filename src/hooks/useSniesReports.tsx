@@ -1,5 +1,4 @@
 
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
@@ -7,7 +6,11 @@ export function useSniesReports() {
   const fetchSniesReports = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("snies_reports")
-      .select("*")
+      .select(`
+        *,
+        template:snies_report_templates(name),
+        manager:profiles(full_name)
+      `)
       .order("created_at", { ascending: false });
     return { data, error };
   };
@@ -31,10 +34,22 @@ export function useSniesReports() {
   };
 
   const createSniesReport = async (report: any): Promise<Result<any>> => {
+    const { data: userData } = await supabase.auth.getUser();
+    
+    const reportData = {
+      ...report,
+      manager_id: userData.user?.id,
+      status: 'draft'
+    };
+
     const { data, error } = await supabase
       .from("snies_reports")
-      .insert(report)
-      .select()
+      .insert(reportData)
+      .select(`
+        *,
+        template:snies_report_templates(name),
+        manager:profiles(full_name)
+      `)
       .single();
     return { data, error };
   };
@@ -44,7 +59,11 @@ export function useSniesReports() {
       .from("snies_reports")
       .update(updates)
       .eq("id", id)
-      .select()
+      .select(`
+        *,
+        template:snies_report_templates(name),
+        manager:profiles(full_name)
+      `)
       .single();
     return { data, error };
   };
@@ -117,4 +136,3 @@ export function useSniesReports() {
     deleteSniesTemplateField,
   };
 }
-

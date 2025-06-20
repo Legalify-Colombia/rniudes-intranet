@@ -7,16 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, SniesReport, SniesTemplateField } from "@/hooks/useSupabaseData";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 
 interface SniesReportFormProps {
-  report: SniesReport;
+  report: any;
   onSave: () => void;
 }
 
 export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
-  const [fields, setFields] = useState<SniesTemplateField[]>([]);
+  const [fields, setFields] = useState<any[]>([]);
   const [reportData, setReportData] = useState<any[]>([]);
   const [relationData, setRelationData] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -31,7 +31,11 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     fetchSniesCountries,
     fetchSniesMunicipalities,
     fetchSniesBiologicalSex,
-    fetchSniesMaritalStatus
+    fetchSniesMaritalStatus,
+    fetchSniesAcademicLevels,
+    fetchSniesProgramTypes,
+    fetchSniesRecognitionTypes,
+    fetchSniesDepartments
   } = useSupabaseData();
 
   useEffect(() => {
@@ -77,7 +81,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     }
   };
 
-  const loadRelationData = async (templateFields: SniesTemplateField[]) => {
+  const loadRelationData = async (templateFields: any[]) => {
     const relationTables = [...new Set(
       templateFields
         .filter(field => field.field_type === 'relation' && field.relation_table)
@@ -105,6 +109,18 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           case 'snies_marital_status':
             result = await fetchSniesMaritalStatus();
             break;
+          case 'snies_academic_levels':
+            result = await fetchSniesAcademicLevels();
+            break;
+          case 'snies_program_types':
+            result = await fetchSniesProgramTypes();
+            break;
+          case 'snies_recognition_types':
+            result = await fetchSniesRecognitionTypes();
+            break;
+          case 'snies_departments':
+            result = await fetchSniesDepartments();
+            break;
           default:
             continue;
         }
@@ -127,6 +143,14 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
   };
 
   const removeRow = (index: number) => {
+    if (reportData.length === 1) {
+      toast({
+        title: "Advertencia",
+        description: "Debe mantener al menos una fila",
+        variant: "destructive",
+      });
+      return;
+    }
     setReportData(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -165,7 +189,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     }
   };
 
-  const renderField = (field: SniesTemplateField, rowIndex: number, value: string) => {
+  const renderField = (field: any, rowIndex: number, value: string) => {
     const fieldId = `${field.field_name}_${rowIndex}`;
     
     if (field.field_type === 'relation' && field.relation_table) {
@@ -177,7 +201,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           onValueChange={(newValue) => updateCell(rowIndex, field.field_name, newValue)}
           disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full h-8 text-xs">
             <SelectValue placeholder="Seleccionar..." />
           </SelectTrigger>
           <SelectContent>
@@ -199,7 +223,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
         onChange={(e) => updateCell(rowIndex, field.field_name, e.target.value)}
         placeholder={field.field_label}
         disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
-        className="w-full"
+        className="w-full h-8 text-xs border-gray-300 focus:border-blue-500"
       />
     );
   };
@@ -211,23 +235,24 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
   const canEdit = report.status === 'draft' && profile?.role === 'Gestor';
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
         <div>
-          <h3 className="text-lg font-semibold">Datos del Reporte</h3>
+          <h3 className="text-lg font-semibold text-gray-800">Datos del Reporte</h3>
           <p className="text-sm text-gray-600">
-            {reportData.length} registro{reportData.length !== 1 ? 's' : ''}
+            {reportData.length} registro{reportData.length !== 1 ? 's' : ''} • 
+            Estado: <span className="font-medium">{report.status === 'draft' ? 'Borrador' : 'Enviado'}</span>
           </p>
         </div>
         
         <div className="flex space-x-2">
           {canEdit && (
             <>
-              <Button onClick={addRow} variant="outline">
+              <Button onClick={addRow} variant="outline" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Agregar Fila
               </Button>
-              <Button onClick={handleSave} className="institutional-gradient text-white">
+              <Button onClick={handleSave} className="institutional-gradient text-white" size="sm">
                 <Save className="w-4 h-4 mr-2" />
                 Guardar
               </Button>
@@ -237,51 +262,66 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
       </div>
 
       {fields.length > 0 && (
-        <div className="overflow-auto max-h-96">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {fields.map((field) => (
-                  <TableHead key={field.id} className="min-w-32">
-                    {field.field_label}
-                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                  </TableHead>
-                ))}
-                {canEdit && <TableHead className="w-16">Acciones</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reportData.map((row, rowIndex) => (
-                <TableRow key={rowIndex}>
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-auto max-h-[60vh]" style={{ maxWidth: '100%' }}>
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="bg-gray-100">
+                  <TableHead className="w-12 text-center font-semibold border-r">#</TableHead>
                   {fields.map((field) => (
-                    <TableCell key={field.id} className="p-2">
-                      {renderField(field, rowIndex, row[field.field_name] || '')}
-                    </TableCell>
+                    <TableHead 
+                      key={field.id} 
+                      className="min-w-40 max-w-60 font-semibold border-r text-center bg-gray-50"
+                      style={{ fontSize: '12px' }}
+                    >
+                      <div className="flex flex-col">
+                        <span>{field.field_label}</span>
+                        {field.is_required && <span className="text-red-500 text-xs">*</span>}
+                      </div>
+                    </TableHead>
                   ))}
-                  {canEdit && (
-                    <TableCell className="p-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => removeRow(rowIndex)}
-                        disabled={reportData.length === 1}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  )}
+                  {canEdit && <TableHead className="w-16 text-center font-semibold">Acciones</TableHead>}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reportData.map((row, rowIndex) => (
+                  <TableRow 
+                    key={rowIndex} 
+                    className={`hover:bg-gray-50 ${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}
+                  >
+                    <TableCell className="text-center font-medium border-r bg-gray-50 text-xs">
+                      {rowIndex + 1}
+                    </TableCell>
+                    {fields.map((field) => (
+                      <TableCell key={field.id} className="p-1 border-r">
+                        {renderField(field, rowIndex, row[field.field_name] || '')}
+                      </TableCell>
+                    ))}
+                    {canEdit && (
+                      <TableCell className="p-1 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeRow(rowIndex)}
+                          className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 
       {reportData.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <p>No hay datos en este reporte</p>
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <p className="text-gray-500 mb-4">No hay datos en este reporte</p>
           {canEdit && (
-            <Button onClick={addRow} className="mt-4">
+            <Button onClick={addRow} className="institutional-gradient text-white">
               <Plus className="w-4 h-4 mr-2" />
               Agregar Primera Fila
             </Button>
