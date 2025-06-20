@@ -16,12 +16,13 @@ export const validatePosition = (position: unknown): position is Position => {
 };
 
 export const getValidPositions = (): Position[] => {
-  // Return a clean copy with additional validation
+  // Return a clean copy with strict validation to prevent empty strings
   return VALID_POSITIONS.filter(position => 
     position && 
     typeof position === 'string' && 
-    position.trim().length > 0
-  ).map(position => position.trim() as Position);
+    position.trim().length > 0 &&
+    validatePosition(position)
+  );
 };
 
 export const getRoleFromPosition = (position: string): string => {

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,8 +27,13 @@ export default function Auth() {
     numberOfWeeks: 16,
   });
 
-  // Get positions and ensure they're all valid
-  const positions = getValidPositions().filter(pos => pos && pos.trim().length > 0);
+  // Get positions with more robust validation
+  const positions = getValidPositions().filter(pos => 
+    pos && 
+    typeof pos === 'string' && 
+    pos.trim().length > 0 && 
+    validatePosition(pos)
+  );
 
   const handlePositionChange = (position: string) => {
     console.log('Auth - Position change called with:', position, 'Type:', typeof position);
@@ -161,9 +167,9 @@ export default function Auth() {
                     </SelectTrigger>
                     <SelectContent>
                       {positions.map((position) => {
-                        // Additional safety check for each item
-                        if (!position || typeof position !== 'string' || position.trim().length === 0) {
-                          console.warn('Auth - Skipping invalid position:', position);
+                        // Triple validation to prevent empty values
+                        if (!validatePosition(position)) {
+                          console.warn('Auth - Skipping invalid position in render:', position);
                           return null;
                         }
                         return (
