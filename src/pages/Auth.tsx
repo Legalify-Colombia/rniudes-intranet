@@ -31,7 +31,7 @@ export default function Auth() {
     'Coordinador de Campus', 
     'Director de Programa',
     'Gestor de Internacionalización'
-  ];
+  ].filter(Boolean); // Remove any falsy values
 
   const getRoleFromPosition = (position: string) => {
     switch (position) {
@@ -48,8 +48,8 @@ export default function Auth() {
   };
 
   const handlePositionChange = (position: string) => {
-    // Only set position if it's not empty
-    if (position && position.trim() !== "") {
+    // Only set position if it's not empty and is a valid position
+    if (position && position.trim() !== "" && positions.includes(position)) {
       setFormData(prev => ({ ...prev, position }));
     }
   };
@@ -156,12 +156,15 @@ export default function Auth() {
                 
                 <div>
                   <Label htmlFor="position">Cargo</Label>
-                  <Select value={formData.position} onValueChange={handlePositionChange}>
+                  <Select 
+                    value={formData.position || ""} 
+                    onValueChange={handlePositionChange}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar cargo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.filter(position => position && position.trim() !== "").map((position) => (
+                      {positions.map((position) => (
                         <SelectItem key={position} value={position}>
                           {position}
                         </SelectItem>
