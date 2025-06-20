@@ -60,7 +60,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         if (mounted) {
-          setProfile(profileData);
+          // Ensure the role is properly typed by casting it to the expected union type
+          const typedProfile: Profile = {
+            ...profileData,
+            role: profileData.role as "Administrador" | "Coordinador" | "Gestor"
+          };
+          setProfile(typedProfile);
         }
       } catch (error) {
         console.error('Error in loadUserProfile:', error);
