@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
@@ -164,12 +163,16 @@ export function SniesConfigurationManagement() {
     }
 
     try {
-      const itemData = {
+      const itemData: any = {
         id: newItem.id,
         name: newItem.name,
-        description: newItem.description || null,
         is_active: true
       };
+
+      // Para países, agregar description si existe
+      if (type === 'countries' && newItem.description) {
+        itemData.description = newItem.description;
+      }
 
       // Para municipios, agregar department_id y country_id por defecto (Colombia)
       if (type === 'municipalities') {
@@ -316,72 +319,76 @@ export function SniesConfigurationManagement() {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Formulario individual */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
-            <div>
-              <Label htmlFor={`${type}_id`}>ID</Label>
-              <Input
-                id={`${type}_id`}
-                value={newItem.id}
-                onChange={(e) => setNewItem(prev => ({ ...prev, id: e.target.value }))}
-                placeholder="ID único"
-              />
-            </div>
-            <div>
-              <Label htmlFor={`${type}_name`}>Nombre</Label>
-              <Input
-                id={`${type}_name`}
-                value={newItem.name}
-                onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nombre"
-              />
-            </div>
-            {type === 'municipalities' ? (
+          {/* Formulario individual - Solo para países y municipios */}
+          {(type === 'countries' || type === 'municipalities') && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
               <div>
-                <Label htmlFor={`${type}_department`}>ID Departamento</Label>
+                <Label htmlFor={`${type}_id`}>ID</Label>
                 <Input
-                  id={`${type}_department`}
-                  value={newItem.department_id}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, department_id: e.target.value }))}
-                  placeholder="ID del departamento"
+                  id={`${type}_id`}
+                  value={newItem.id}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, id: e.target.value }))}
+                  placeholder="ID único"
                 />
               </div>
-            ) : (
               <div>
-                <Label htmlFor={`${type}_description`}>Descripción</Label>
+                <Label htmlFor={`${type}_name`}>Nombre</Label>
                 <Input
-                  id={`${type}_description`}
-                  value={newItem.description}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción (opcional)"
+                  id={`${type}_name`}
+                  value={newItem.name}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nombre"
                 />
               </div>
-            )}
-            <div className="flex items-end">
-              <Button onClick={() => handleCreateItem(type)} className="w-full">
-                <Plus className="w-4 h-4 mr-2" />
-                Crear
+              {type === 'municipalities' ? (
+                <div>
+                  <Label htmlFor={`${type}_department`}>ID Departamento</Label>
+                  <Input
+                    id={`${type}_department`}
+                    value={newItem.department_id}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, department_id: e.target.value }))}
+                    placeholder="ID del departamento"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <Label htmlFor={`${type}_description`}>Descripción</Label>
+                  <Input
+                    id={`${type}_description`}
+                    value={newItem.description}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Descripción (opcional)"
+                  />
+                </div>
+              )}
+              <div className="flex items-end">
+                <Button onClick={() => handleCreateItem(type)} className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Importación CSV - Solo para países y municipios */}
+          {(type === 'countries' || type === 'municipalities') && (
+            <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+              <h4 className="font-medium">Importación Masiva (CSV)</h4>
+              <div>
+                <Label htmlFor={`${type}_csv`}>Archivo CSV</Label>
+                <Input
+                  id={`${type}_csv`}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                />
+              </div>
+              <Button onClick={() => handleBulkCreate(type)} disabled={!csvData}>
+                <Upload className="w-4 h-4 mr-2" />
+                Importar CSV
               </Button>
             </div>
-          </div>
-
-          {/* Importación CSV */}
-          <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
-            <h4 className="font-medium">Importación Masiva (CSV)</h4>
-            <div>
-              <Label htmlFor={`${type}_csv`}>Archivo CSV</Label>
-              <Input
-                id={`${type}_csv`}
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-              />
-            </div>
-            <Button onClick={() => handleBulkCreate(type)} disabled={!csvData}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar CSV
-            </Button>
-          </div>
+          )}
 
           {/* Lista de elementos con paginación */}
           {type === 'countries' && (
@@ -390,7 +397,6 @@ export function SniesConfigurationManagement() {
               columns={[
                 { key: 'id', label: 'ID' },
                 { key: 'name', label: 'Nombre' },
-                { key: 'description', label: 'Descripción' },
                 { key: 'alpha_2', label: 'Alpha-2' },
                 { key: 'alpha_3', label: 'Alpha-3' },
                 { 
