@@ -10,6 +10,7 @@ import { StrategicConfiguration } from "@/components/StrategicConfiguration";
 import { ManagerReports } from "@/components/ManagerReports";
 import { ManagerWorkPlan } from "@/components/ManagerWorkPlan";
 import { WorkPlanApproval } from "@/components/WorkPlanApproval";
+import { MyReport } from "@/components/MyReport";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,7 +36,7 @@ const Index = () => {
       case "work-plan-approval":
         return <WorkPlanApproval />;
       case "my-report":
-        return <div className="p-6"><h1>Mi Informe - En desarrollo</h1></div>;
+        return <MyReport />;
       default:
         return <Dashboard />;
     }
