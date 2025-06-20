@@ -31,7 +31,7 @@ export default function Auth() {
     'Coordinador de Campus', 
     'Director de Programa',
     'Gestor de Internacionalización'
-  ].filter(Boolean); // Remove any falsy values
+  ].filter(position => position && position.trim() !== ''); // Ensure no empty strings
 
   const getRoleFromPosition = (position: string) => {
     switch (position) {
@@ -48,6 +48,7 @@ export default function Auth() {
   };
 
   const handlePositionChange = (position: string) => {
+    console.log('Auth - Position selected:', position);
     // Only set position if it's not empty and is a valid position
     if (position && position.trim() !== "" && positions.includes(position)) {
       setFormData(prev => ({ ...prev, position }));
@@ -164,11 +165,18 @@ export default function Auth() {
                       <SelectValue placeholder="Seleccionar cargo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((position) => (
-                        <SelectItem key={position} value={position}>
-                          {position}
-                        </SelectItem>
-                      ))}
+                      {positions.map((position) => {
+                        console.log('Auth - Rendering SelectItem with value:', position);
+                        if (!position || position.trim() === '') {
+                          console.error('Auth - Empty position found:', position);
+                          return null;
+                        }
+                        return (
+                          <SelectItem key={position} value={position}>
+                            {position}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
