@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,12 +9,10 @@ import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { FileText, Eye, Edit, Plus, Clock, CheckCircle, AlertCircle } from "lucide-react";
-import { DetailedReportForm } from "./DetailedReportForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ReportTemplateForm } from "./ReportTemplateForm";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
-import { ImprovedDetailedReportForm } from "./ImprovedDetailedReportForm";
+import { EditableReportForm } from "./EditableReportForm";
 
 export function MyReport() {
   const { 
@@ -21,8 +20,6 @@ export function MyReport() {
     fetchWorkPlans,
     fetchReportPeriods,
     fetchReportSystemConfig,
-    fetchReportTemplates,
-    fetchManagerReportVersions,
     createManagerReport
   } = useSupabaseData();
   const { profile } = useAuth();
@@ -32,8 +29,6 @@ export function MyReport() {
   const [workPlans, setWorkPlans] = useState<any[]>([]);
   const [reportPeriods, setReportPeriods] = useState<any[]>([]);
   const [systemConfig, setSystemConfig] = useState<any>(null);
-  const [reportTemplates, setReportTemplates] = useState<any[]>([]);
-  const [reportVersions, setReportVersions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailFormOpen, setDetailFormOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
@@ -49,12 +44,11 @@ export function MyReport() {
     
     setLoading(true);
     try {
-      const [reportsResult, workPlansResult, periodsResult, configResult, templatesResult] = await Promise.all([
+      const [reportsResult, workPlansResult, periodsResult, configResult] = await Promise.all([
         fetchManagerReportsByManagerWithPeriods(profile.id),
         fetchWorkPlans(),
         fetchReportPeriods(),
-        fetchReportSystemConfig(),
-        fetchReportTemplates()
+        fetchReportSystemConfig()
       ]);
 
       setReports(reportsResult.data || []);
@@ -70,13 +64,6 @@ export function MyReport() {
       setReportPeriods(activePeriods);
       
       setSystemConfig(configResult.data);
-      setReportTemplates(templatesResult.data || []);
-
-      // Cargar versiones si hay un reporte seleccionado
-      if (selectedReport) {
-        const versionsResult = await fetchManagerReportVersions(selectedReport.id);
-        setReportVersions(versionsResult.data || []);
-      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -86,15 +73,6 @@ export function MyReport() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadReportVersions = async (reportId: string) => {
-    try {
-      const versionsResult = await fetchManagerReportVersions(reportId);
-      setReportVersions(versionsResult.data || []);
-    } catch (error) {
-      console.error('Error loading versions:', error);
     }
   };
 
@@ -147,7 +125,6 @@ export function MyReport() {
   const openDetailForm = async (report: any) => {
     setSelectedReport(report);
     setDetailFormOpen(true);
-    await loadReportVersions(report.id);
   };
 
   const handleDetailFormSave = async () => {
@@ -354,6 +331,7 @@ export function MyReport() {
                         </TableCell>
                         <TableCell>-</TableCell>
                         <TableCell>-</TableCell>
+                        <TableCell>-</TableCell>
                         <TableCell>
                           {canCreateNewReport ? (
                             <Button 
@@ -380,7 +358,7 @@ export function MyReport() {
       </Card>
 
       <Dialog open={detailFormOpen} onOpenChange={setDetailFormOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedReport?.title || 'Mi Informe Detallado'}
@@ -431,8 +409,7 @@ export function MyReport() {
                 </div>
               </div>
 
-              {/* Usar el nuevo componente mejorado */}
-              <ImprovedDetailedReportForm
+              <EditableReportForm
                 reportId={selectedReport.id}
                 workPlanId={selectedReport.work_plan_id}
                 reportStatus={selectedReport.status}
