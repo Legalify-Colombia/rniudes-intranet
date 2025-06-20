@@ -31,13 +31,11 @@ import {
 type Insert<T extends { id: any, created_at: any, updated_at?: any }> = Omit<T, 'id' | 'created_at' | 'updated_at'>;
 type Update<T> = Partial<T>;
 
-
 export const useSupabaseData = () => {
     // --- Fetch (Read) Operations ---
 
-    // Corregido: Usa la tabla 'academic_programs' y realiza un join para obtener detalles.
     const fetchAcademicPrograms = async () => {
-        return await supabase.from('academic_programs').select('*, campus(*), faculty(*)');
+        return await supabase.from('academic_programs').select('*, campus(*), faculty:faculties(*)');
     };
 
     const fetchStrategicAxes = async () => await supabase.from('strategic_axes').select('*');
@@ -45,7 +43,6 @@ export const useSupabaseData = () => {
     const fetchProducts = async () => await supabase.from('products').select('*, action:actions(*, strategic_axis:strategic_axes(*))');
     const fetchCampus = async () => await supabase.from('campus').select('*');
     
-    // Corregido: Usa la tabla 'faculties' y realiza un join para obtener el campus.
     const fetchFaculties = async () => {
         return await supabase.from('faculties').select('*, campus(*), faculty_campus(*, campus(*))');
     };
@@ -54,13 +51,12 @@ export const useSupabaseData = () => {
     const fetchSpecificLines = async () => await supabase.from('specific_lines').select('*');
     const fetchIndicators = async () => await supabase.from('indicators').select('*');
     
-    // Corregido: Obtiene perfiles con su campus asociado.
     const fetchProfiles = async () => {
         return await supabase.from('profiles').select('*, campus:campus_id(*)');
     };
     
     const fetchManagers = async () => {
-        return await supabase.from('profiles').select('*, campus:campus_id(*), academic_programs(*, campus(*), faculty(*))').eq('role', 'Gestor');
+        return await supabase.from('profiles').select('*, campus:campus_id(*), academic_programs(*, campus(*), faculty:faculties(*))').eq('role', 'Gestor');
     };
 
     const fetchReportTemplates = async () => await supabase.from('report_templates').select('*');
@@ -74,7 +70,7 @@ export const useSupabaseData = () => {
     const fetchInternationalizationProjects = async () => await supabase.from('internationalization_projects').select('*');
     const fetchTemplateReportResponses = async (templateReportId: string) => await supabase.from('template_report_responses').select('*').eq('template_report_id', templateReportId);
     const fetchPendingWorkPlans = async () => await supabase.from('work_plans_with_manager').select('*').eq('status', 'submitted');
-    const fetchWorkPlanDetails = async (workPlanId: string) => await supabase.from('work_plans').select('*, manager:profiles(*), program:academic_programs(*, campus(*), faculty(*)), work_plan_assignments(*,product:products(*))').eq('id', workPlanId).single();
+    const fetchWorkPlanDetails = async (workPlanId: string) => await supabase.from('work_plans').select('*, manager:profiles(*), program:academic_programs(*, campus(*), faculty:faculties(*)), work_plan_assignments(*,product:products(*))').eq('id', workPlanId).single();
 
     const fetchUsersByCampus = async (campusIds?: string[]) => {
         let query = supabase.from('profiles').select('*, campus:campus_id(id, name)');
@@ -176,6 +172,5 @@ export const useSupabaseData = () => {
         createManagerReportVersion: async (data: Insert<ManagerReportVersion>) => createRecord('manager_report_versions', data),
         updateManagerReportVersion: async (id: string, data: Update<ManagerReportVersion>) => updateRecord('manager_report_versions', id, data),
         getNextVersionNumber: async (managerReportId: string, templateId: string) => supabase.rpc('get_next_version_number', { p_manager_report_id: managerReportId, p_template_id: templateId }),
-
     };
 };
