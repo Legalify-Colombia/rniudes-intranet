@@ -1271,10 +1271,6 @@ export type Database = {
         Args: { report_id: string }
         Returns: number
       }
-      calculate_total_progress: {
-        Args: { report_id: string }
-        Returns: number
-      }
       can_manage_campus: {
         Args: { admin_id: string; target_campus_id: string }
         Returns: boolean
