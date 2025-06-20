@@ -51,10 +51,10 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "dashboard",
         icon: BarChart3,
         roles: ["Administrador", "Coordinador", "Gestor"],
-        gradient: "from-emerald-500 to-teal-600",
-        bgGradient: "from-emerald-50 to-teal-50",
-        iconColor: "text-emerald-600",
-        shadow: "shadow-emerald-200"
+        color: "text-emerald-600",
+        bgColor: "bg-emerald-50",
+        borderColor: "border-emerald-200",
+        hoverColor: "hover:bg-emerald-100"
       }
     ];
 
@@ -64,30 +64,30 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "users",
         icon: Users,
         roles: ["Administrador"],
-        gradient: "from-blue-500 to-indigo-600",
-        bgGradient: "from-blue-50 to-indigo-50",
-        iconColor: "text-blue-600",
-        shadow: "shadow-blue-200"
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+        borderColor: "border-blue-200",
+        hoverColor: "hover:bg-blue-100"
       },
       {
         title: "Campus y Programas",
         url: "programs",
         icon: Building,
         roles: ["Administrador"],
-        gradient: "from-purple-500 to-violet-600",
-        bgGradient: "from-purple-50 to-violet-50",
-        iconColor: "text-purple-600",
-        shadow: "shadow-purple-200"
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
+        borderColor: "border-purple-200",
+        hoverColor: "hover:bg-purple-100"
       },
       {
         title: "Configuración Estratégica",
         url: "strategic",
         icon: CheckSquare,
         roles: ["Administrador"],
-        gradient: "from-red-500 to-rose-600",
-        bgGradient: "from-red-50 to-rose-50",
-        iconColor: "text-red-600",
-        shadow: "shadow-red-200"
+        color: "text-red-600",
+        bgColor: "bg-red-50",
+        borderColor: "border-red-200",
+        hoverColor: "hover:bg-red-100"
       }
     ];
 
@@ -97,30 +97,30 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "managers",
         icon: UserCheck,
         roles: ["Administrador", "Coordinador"],
-        gradient: "from-amber-500 to-orange-600",
-        bgGradient: "from-amber-50 to-orange-50",
-        iconColor: "text-amber-600",
-        shadow: "shadow-amber-200"
+        color: "text-amber-600",
+        bgColor: "bg-amber-50",
+        borderColor: "border-amber-200",
+        hoverColor: "hover:bg-amber-100"
       },
       {
         title: "Informes de Gestores",
         url: "manager-reports",
         icon: FileText,
         roles: ["Administrador", "Coordinador"],
-        gradient: "from-cyan-500 to-sky-600",
-        bgGradient: "from-cyan-50 to-sky-50",
-        iconColor: "text-cyan-600",
-        shadow: "shadow-cyan-200"
+        color: "text-cyan-600",
+        bgColor: "bg-cyan-50",
+        borderColor: "border-cyan-200",
+        hoverColor: "hover:bg-cyan-100"
       },
       {
         title: "Aprobación de Planes",
         url: "work-plan-approval",
         icon: CheckSquare,
         roles: ["Administrador", "Coordinador"],
-        gradient: "from-teal-500 to-emerald-600",
-        bgGradient: "from-teal-50 to-emerald-50",
-        iconColor: "text-teal-600",
-        shadow: "shadow-teal-200"
+        color: "text-teal-600",
+        bgColor: "bg-teal-50",
+        borderColor: "border-teal-200",
+        hoverColor: "hover:bg-teal-100"
       }
     ];
 
@@ -130,20 +130,20 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "manager-work-plan",
         icon: Calendar,
         roles: ["Gestor"],
-        gradient: "from-pink-500 to-rose-600",
-        bgGradient: "from-pink-50 to-rose-50",
-        iconColor: "text-pink-600",
-        shadow: "shadow-pink-200"
+        color: "text-pink-600",
+        bgColor: "bg-pink-50",
+        borderColor: "border-pink-200",
+        hoverColor: "hover:bg-pink-100"
       },
       {
         title: "Mi Informe",
         url: "my-report",
         icon: FileText,
         roles: ["Gestor"],
-        gradient: "from-indigo-500 to-purple-600",
-        bgGradient: "from-indigo-50 to-purple-50",
-        iconColor: "text-indigo-600",
-        shadow: "shadow-indigo-200"
+        color: "text-indigo-600",
+        bgColor: "bg-indigo-50",
+        borderColor: "border-indigo-200",
+        hoverColor: "hover:bg-indigo-100"
       }
     ];
 
@@ -157,231 +157,128 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
   const menuItems = getMenuItems();
 
   return (
-    <>
-      <style>{`
-        @keyframes slideInFromLeft {
-          from {
-            opacity: 0;
-            transform: translateX(-30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.8;
-          }
-        }
-        
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-        
-        .menu-item-enter {
-          animation: slideInFromLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        .shimmer-effect {
-          position: relative;
-          overflow: hidden;
-        }
-        
-        .shimmer-effect::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          transition: left 0.5s;
-        }
-        
-        .shimmer-effect:hover::before {
-          left: 100%;
-        }
-      `}</style>
+    <Sidebar className="border-r border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700">
+      {/* Header con logo más limpio */}
+      <SidebarHeader className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-center">
+          <div className="transition-transform duration-300 hover:scale-105">
+            <img 
+              src="https://udes.edu.co/images/logo/logo-con-acreditada-color.png" 
+              alt="UDES Logo" 
+              className="h-10 w-auto max-w-full object-contain"
+            />
+          </div>
+        </div>
+      </SidebarHeader>
       
-      <Sidebar className="border-r border-gray-200/60 bg-gradient-to-b from-white via-slate-50/30 to-white dark:from-gray-900 dark:via-gray-800/30 dark:to-gray-900 dark:border-gray-700/60 backdrop-blur-sm">
-        
-        {/* Header con logo mejorado */}
-        <SidebarHeader className="p-8 bg-gradient-to-br from-slate-50/80 via-blue-50/50 to-indigo-50/80 dark:from-gray-800/80 dark:via-gray-700/50 dark:to-gray-600/80 border-b border-gray-200/40 dark:border-gray-700/40 backdrop-blur-sm">
-          <div className="flex items-center justify-center group">
-            <div className="relative">
-              <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-all duration-500 animate-pulse"></div>
-              <div className="relative bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg shadow-blue-500/10 group-hover:shadow-xl group-hover:shadow-blue-500/20 transition-all duration-500 border border-white/50">
-                <img 
-                  src="https://udes.edu.co/images/logo/logo-con-acreditada-color.png" 
-                  alt="UDES Logo" 
-                  className="h-12 w-auto transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
-                />
-              </div>
-            </div>
-          </div>
-        </SidebarHeader>
-        
-        <SidebarContent className="bg-gradient-to-b from-white/50 to-slate-50/30 dark:from-gray-900/50 dark:to-gray-800/30 p-6 backdrop-blur-sm">
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-slate-600 dark:text-slate-300 font-semibold text-sm mb-6 px-3 tracking-wide">
-              MENÚ PRINCIPAL
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-3">
-                {menuItems.map((item, index) => (
-                  <SidebarMenuItem key={item.title} className="relative menu-item-enter" style={{ animationDelay: `${index * 100}ms` }}>
-                    <SidebarMenuButton 
-                      asChild 
-                      className="p-0 hover:bg-transparent"
+      <SidebarContent className="bg-white dark:bg-gray-900 p-3">
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-gray-600 dark:text-gray-300 font-medium text-xs mb-3 px-2 uppercase tracking-wide">
+            Menú Principal
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton 
+                    asChild 
+                    className="p-0 hover:bg-transparent"
+                  >
+                    <button 
+                      onClick={() => handleMenuClick(item.url)}
+                      className={`
+                        w-full flex items-center gap-3 p-2.5 text-left rounded-lg 
+                        transition-all duration-200 ease-in-out relative
+                        ${activeView === item.url 
+                          ? `${item.bgColor} ${item.borderColor} border shadow-sm` 
+                          : `hover:bg-gray-50 dark:hover:bg-gray-800 ${item.hoverColor}`
+                        }
+                      `}
                     >
-                      <button 
-                        onClick={() => handleMenuClick(item.url)}
-                        className={`
-                          relative w-full p-4 text-left rounded-2xl transition-all duration-500 ease-out
-                          shimmer-effect group overflow-hidden
-                          ${activeView === item.url 
-                            ? `bg-gradient-to-r ${item.bgGradient} border-2 border-white/60 shadow-xl ${item.shadow}/30 scale-[1.02] translate-x-1` 
-                            : 'hover:bg-gradient-to-r hover:from-slate-50/80 hover:to-blue-50/60 hover:shadow-lg hover:scale-[1.01] hover:translate-x-0.5 border-2 border-transparent hover:border-white/40'
-                          }
-                          dark:hover:from-gray-800/80 dark:hover:to-gray-700/60
-                          backdrop-blur-sm
-                        `}
-                      >
-                        {/* Indicador activo mejorado */}
-                        {activeView === item.url && (
-                          <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1.5 bg-gradient-to-b ${item.gradient} rounded-r-full shadow-lg`} />
-                        )}
-                        
-                        <div className="flex items-center gap-4 relative z-10">
-                          {/* Contenedor del icono con efectos */}
-                          <div className={`
-                            relative p-3 rounded-xl transition-all duration-500
+                      {/* Indicador activo */}
+                      {activeView === item.url && (
+                        <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 ${item.color.replace('text-', 'bg-')} rounded-r`} />
+                      )}
+                      
+                      {/* Icono */}
+                      <div className={`
+                        flex-shrink-0 p-1.5 rounded-md transition-colors duration-200
+                        ${activeView === item.url 
+                          ? 'bg-white shadow-sm' 
+                          : 'group-hover:bg-white group-hover:shadow-sm'
+                        }
+                      `}>
+                        <item.icon 
+                          size={16} 
+                          className={`
+                            transition-colors duration-200
                             ${activeView === item.url 
-                              ? `bg-white/80 shadow-lg ${item.shadow}/20 backdrop-blur-sm` 
-                              : 'bg-white/60 group-hover:bg-white/80 group-hover:shadow-md backdrop-blur-sm'
+                              ? item.color 
+                              : 'text-gray-600 dark:text-gray-300'
                             }
-                          `}>
-                            {/* Efecto de brillo en el icono */}
-                            <div className={`
-                              absolute inset-0 rounded-xl transition-all duration-500
-                              ${activeView === item.url 
-                                ? `bg-gradient-to-br ${item.gradient} opacity-10` 
-                                : 'bg-gradient-to-br from-slate-400/10 to-blue-400/10 opacity-0 group-hover:opacity-20'
-                              }
-                            `} />
-                            
-                            <item.icon 
-                              size={22} 
-                              className={`
-                                relative z-10 transition-all duration-500
-                                ${activeView === item.url 
-                                  ? `${item.iconColor} drop-shadow-sm` 
-                                  : 'text-slate-600 dark:text-slate-300 group-hover:text-blue-600 group-hover:scale-110 group-hover:rotate-3'
-                                }
-                              `}
-                            />
-                          </div>
-                          
-                          {/* Texto mejorado */}
-                          <div className="flex-1">
-                            <span className={`
-                              font-semibold text-base transition-all duration-500 tracking-wide
-                              ${activeView === item.url 
-                                ? 'text-slate-800 dark:text-white drop-shadow-sm' 
-                                : 'text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white'
-                              }
-                            `}>
-                              {item.title}
-                            </span>
-                          </div>
-
-                          {/* Indicador de estado activo */}
-                          {activeView === item.url && (
-                            <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${item.gradient} shadow-md animate-pulse`} />
-                          )}
-                        </div>
-
-                        {/* Efecto de ondas en hover */}
-                        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/10 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                        </div>
-                      </button>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        
-        {/* Footer mejorado */}
-        <SidebarFooter className="p-6 bg-gradient-to-br from-slate-50/80 via-blue-50/50 to-indigo-50/80 dark:from-gray-800/80 dark:via-gray-700/50 dark:to-gray-600/80 border-t border-gray-200/40 dark:border-gray-700/40 backdrop-blur-sm">
-          <div className="space-y-4">
-            {/* Tarjeta de usuario mejorada */}
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-white/50 dark:border-gray-700/50 group hover:shadow-xl transition-all duration-500">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ring-4 ring-white/30 group-hover:ring-blue-200/50 transition-all duration-500">
-                    {profile?.full_name?.split(' ').map(name => name[0]).join('').slice(0, 2)}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm animate-pulse" />
-                </div>
-                <div className="flex-1 min-width-0">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-blue-700 transition-colors duration-300">
-                    {profile?.full_name}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-slate-700/50 px-2 py-1 rounded-full mt-1 inline-block">
-                    {profile?.role}
-                  </p>
-                </div>
+                          `}
+                        />
+                      </div>
+                      
+                      {/* Texto */}
+                      <span className={`
+                        flex-1 font-medium text-sm leading-tight truncate
+                        transition-colors duration-200
+                        ${activeView === item.url 
+                          ? 'text-gray-900 dark:text-white' 
+                          : 'text-gray-700 dark:text-gray-200'
+                        }
+                      `}>
+                        {item.title}
+                      </span>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      
+      {/* Footer más compacto */}
+      <SidebarFooter className="p-3 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 border-t border-gray-200 dark:border-gray-700">
+        <div className="space-y-3">
+          {/* Información del usuario compacta */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                {profile?.full_name?.split(' ').map(name => name[0]).join('').slice(0, 2)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                  {profile?.full_name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {profile?.role}
+                </p>
               </div>
             </div>
-
-            {/* Botón de salir mejorado */}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSignOut}
-              disabled={isLoggingOut}
-              className="
-                w-full bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm
-                border-2 border-slate-200/60 dark:border-gray-600/60 
-                hover:bg-gradient-to-r hover:from-red-50 hover:to-rose-50 
-                hover:border-red-300/60 hover:text-red-700 hover:shadow-lg hover:shadow-red-200/30
-                dark:hover:from-red-900/20 dark:hover:to-rose-900/20 
-                dark:hover:border-red-600/60 dark:hover:text-red-400
-                transition-all duration-500 ease-out font-semibold
-                hover:scale-105 hover:shadow-xl rounded-xl p-3
-                disabled:opacity-50 disabled:cursor-not-allowed
-                group relative overflow-hidden
-              "
-            >
-              <div className="flex items-center justify-center relative z-10">
-                <LogOut className={`
-                  h-4 w-4 mr-2 transition-all duration-500
-                  ${isLoggingOut ? 'animate-spin' : 'group-hover:rotate-12 group-hover:scale-110'}
-                `} />
-                <span className="tracking-wide">
-                  {isLoggingOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}
-                </span>
-              </div>
-              
-              {/* Efecto de ondas en el botón */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-            </Button>
           </div>
-        </SidebarFooter>
-      </Sidebar>
-    </>
+
+          {/* Botón de salir compacto */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            className="
+              w-full h-8 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 
+              hover:bg-red-50 hover:border-red-200 hover:text-red-700
+              dark:hover:bg-red-900/20 dark:hover:border-red-700 dark:hover:text-red-400
+              transition-all duration-200 text-xs font-medium
+              disabled:opacity-50 disabled:cursor-not-allowed
+            "
+          >
+            <LogOut className={`h-3 w-3 mr-1.5 ${isLoggingOut ? 'animate-spin' : ''}`} />
+            {isLoggingOut ? 'Cerrando...' : 'Salir'}
+          </Button>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
   )
 }
