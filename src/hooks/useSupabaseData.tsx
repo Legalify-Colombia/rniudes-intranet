@@ -95,10 +95,10 @@ export const useSupabaseData = () => {
     };
 
     // Generic CRUD functions
-    const createRecord = <T extends { id: any; created_at: any; updated_at?: any; }>(table: string, data: Insert<T>) => supabase.from(table).insert(data).select().single();
-    const updateRecord = <T>(table: string, id: string, data: Update<T>) => supabase.from(table).update(data).eq('id', id).select().single();
+    const createRecord = (table: string, data: any) => supabase.from(table).insert(data).select().single();
+    const updateRecord = (table: string, id: string, data: any) => supabase.from(table).update(data).eq('id', id).select().single();
     const deleteRecord = (table: string, id: string) => supabase.from(table).delete().eq('id', id);
-    const upsertRecord = <T extends { id: any; created_at: any; updated_at?: any; }>(table: string, data: Insert<T>) => supabase.from(table).upsert(data).select().single();
+    const upsertRecord = (table: string, data: any) => supabase.from(table).upsert(data).select().single();
 
     return {
         // Fetch
@@ -130,12 +130,18 @@ export const useSupabaseData = () => {
         deleteIndicator: (id: string) => deleteRecord('indicators', id),
 
         createStrategicAxis: (d: Insert<StrategicAxis>) => createRecord('strategic_axes', { ...d, usage_type: d.usage_type || ['work_plan'] }),
+        updateStrategicAxis: (id: string, d: Update<StrategicAxis>) => updateRecord('strategic_axes', id, d),
+        deleteStrategicAxis: (id: string) => deleteRecord('strategic_axes', id),
         updateStrategicAxisUsage: (id: string, usageType: string[]) => updateRecord('strategic_axes', id, { usage_type: usageType }),
         
         createAction: (d: Insert<Action>) => createRecord('actions', { ...d, usage_type: d.usage_type || ['work_plan'] }),
+        updateAction: (id: string, d: Update<Action>) => updateRecord('actions', id, d),
+        deleteAction: (id: string) => deleteRecord('actions', id),
         updateActionUsage: (id: string, usageType: string[]) => updateRecord('actions', id, { usage_type: usageType }),
 
         createProduct: (d: Insert<Product>) => createRecord('products', { ...d, usage_type: d.usage_type || ['work_plan'] }),
+        updateProduct: (id: string, d: Update<Product>) => updateRecord('products', id, d),
+        deleteProduct: (id: string) => deleteRecord('products', id),
         updateProductUsage: (id: string, usageType: string[]) => updateRecord('products', id, { usage_type: usageType }),
 
         createWorkPlan: (d: Insert<WorkPlan>) => createRecord('work_plans', d),
@@ -166,7 +172,6 @@ export const useSupabaseData = () => {
         createPartnerInstitution: (d: Insert<ProjectPartnerInstitution>) => createRecord('project_partner_institutions', d),
         createInternationalizationReport: (d: Insert<InternationalizationReport>) => createRecord('internationalization_reports', d),
         
-        // Faltantes de la versión original
         checkReportEditPermission: async (reportId: string) => supabase.rpc('is_period_active', { period_id: reportId }),
         updateReportSystemConfig: async (data: Update<ReportSystemConfig>) => updateRecord('report_system_config', data.id!, data),
         createManagerReportVersion: async (data: Insert<ManagerReportVersion>) => createRecord('manager_report_versions', data),
