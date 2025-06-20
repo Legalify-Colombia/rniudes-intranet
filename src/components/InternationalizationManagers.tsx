@@ -5,24 +5,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, CheckCircle, XCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileText, CheckCircle, XCircle, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { WorkPlanForm } from "./WorkPlanForm";
 
 export function InternationalizationManagers() {
-  const { fetchManagers, fetchWorkPlans, updateWorkPlan } = useSupabaseData();
+  const { fetchManagers, fetchWorkPlans, updateWorkPlan, fetchCampus } = useSupabaseData();
   const { profile } = useAuth();
   const { toast } = useToast();
 
   const [managers, setManagers] = useState<any[]>([]);
   const [workPlans, setWorkPlans] = useState<any[]>([]);
+  const [campus, setCampus] = useState<any[]>([]);
   const [selectedManager, setSelectedManager] = useState<any>(null);
   const [workPlanDialog, setWorkPlanDialog] = useState(false);
   const [approvalDialog, setApprovalDialog] = useState(false);
   const [approvalComments, setApprovalComments] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedCampus, setSelectedCampus] = useState<string>("all");
 
   useEffect(() => {
     loadData();
@@ -33,9 +36,11 @@ export function InternationalizationManagers() {
     try {
       const { data: managersData } = await fetchManagers();
       const { data: workPlansData } = await fetchWorkPlans();
+      const { data: campusData } = await fetchCampus();
       
       setManagers(managersData || []);
       setWorkPlans(workPlansData || []);
+      setCampus(campusData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -119,6 +124,12 @@ export function InternationalizationManagers() {
     return profile?.role === 'Administrador' || profile?.role === 'Coordinador';
   };
 
+  // Filtrar gestores por campus
+  const filteredManagers = managers.filter(manager => {
+    if (selectedCampus === "all") return true;
+    return manager.academic_programs?.[0]?.campus?.id === selectedCampus;
+  });
+
   if (loading) {
     return (
       <Card className="w-full">
@@ -140,12 +151,34 @@ export function InternationalizationManagers() {
         <CardTitle className="text-2xl font-bold text-primary">
           Gestores de Internacionalización
         </CardTitle>
+        
+        {/* Filtro por Campus */}
+        <div className="flex items-center space-x-4 mt-4">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">Filtrar por Campus:</span>
+          <Select value={selectedCampus} onValueChange={setSelectedCampus}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Seleccionar campus" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los Campus</SelectItem>
+              {campus.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       
       <CardContent>
-        {managers.length === 0 ? (
+        {filteredManagers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No hay gestores asignados a programas académicos.
+            {selectedCampus === "all" 
+              ? "No hay gestores asignados a programas académicos." 
+              : "No hay gestores asignados en el campus seleccionado."
+            }
             <br />
             Los gestores aparecerán aquí una vez que se les asigne un programa en el módulo de Campus y Programas.
           </div>
@@ -154,8 +187,9 @@ export function InternationalizationManagers() {
             <TableHeader>
               <TableRow>
                 <TableHead>Gestor</TableHead>
+                <TableHead>Campus</TableHead>
+                <TableHead>Facultad</TableHead>
                 <TableHead>Programa</TableHead>
-                <TableHead>Campus/Facultad</TableHead>
                 <TableHead>Horas Semanales</TableHead>
                 <TableHead>Total Horas</TableHead>
                 <TableHead>Estado del Plan</TableHead>
@@ -163,7 +197,7 @@ export function InternationalizationManagers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {managers.map((manager) => {
+              {filteredManagers.map((manager) => {
                 const workPlan = getManagerWorkPlan(manager.id);
                 const program = manager.academic_programs?.[0];
                 
@@ -175,13 +209,13 @@ export function InternationalizationManagers() {
                         <div className="text-sm text-gray-500">{manager.email}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{program?.name || 'Sin asignar'}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>{program?.campus?.name}</div>
-                        <div className="text-gray-500">{program?.faculty?.name}</div>
-                      </div>
+                    <TableCell className="font-medium">
+                      {program?.campus?.name || 'Sin asignar'}
                     </TableCell>
+                    <TableCell>
+                      {program?.faculty?.name || 'Sin asignar'}
+                    </TableCell>
+                    <TableCell>{program?.name || 'Sin asignar'}</TableCell>
                     <TableCell>{manager.weekly_hours || 0}</TableCell>
                     <TableCell>{manager.total_hours || 0}</TableCell>
                     <TableCell>
@@ -224,6 +258,9 @@ export function InternationalizationManagers() {
         {/* Work Plan Dialog */}
         <Dialog open={workPlanDialog} onOpenChange={setWorkPlanDialog}>
           <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Plan de Trabajo</DialogTitle>
+            </DialogHeader>
             {selectedManager && (
               <WorkPlanForm
                 manager={selectedManager}
@@ -246,6 +283,7 @@ export function InternationalizationManagers() {
             <div className="space-y-4">
               <div>
                 <p><strong>Gestor:</strong> {selectedManager?.full_name}</p>
+                <p><strong>Campus:</strong> {selectedManager?.academic_programs?.[0]?.campus?.name}</p>
                 <p><strong>Programa:</strong> {selectedManager?.academic_programs?.[0]?.name}</p>
                 <p><strong>Horas asignadas:</strong> {getManagerWorkPlan(selectedManager?.id)?.total_hours_assigned || 0}</p>
               </div>

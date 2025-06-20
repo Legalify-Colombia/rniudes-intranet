@@ -32,6 +32,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const [workPlan, setWorkPlan] = useState<any>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inputValues, setInputValues] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     loadData();
@@ -63,12 +64,28 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         // Cargar asignaciones existentes
         const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
         setAssignments(assignmentsData || []);
+        
+        // Inicializar valores de input
+        const initialValues: {[key: string]: string} = {};
+        assignmentsData?.forEach((assignment: any) => {
+          initialValues[assignment.product_id] = assignment.assigned_hours.toString();
+        });
+        setInputValues(initialValues);
       }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInputChange = (productId: string, value: string) => {
+    setInputValues(prev => ({ ...prev, [productId]: value }));
+  };
+
+  const handleInputBlur = async (productId: string, value: string) => {
+    const hours = parseInt(value) || 0;
+    await updateAssignment(productId, hours);
   };
 
   const updateAssignment = async (productId: string, hours: number) => {
@@ -130,8 +147,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   };
 
   const getAssignedHours = (productId: string) => {
-    const assignment = assignments.find(a => a.product_id === productId);
-    return assignment?.assigned_hours || 0;
+    return inputValues[productId] || '0';
   };
 
   const getTotalAssignedHours = () => {
@@ -222,7 +238,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
                           className="border border-gray-300 text-center font-medium bg-blue-50 align-middle"
                         >
                           <div className="writing-vertical text-sm font-bold">
-                            {axis.code}
+                            {axis.code} - {axis.name}
                           </div>
                         </TableCell>
                       )}
@@ -244,7 +260,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
                           type="number"
                           min="0"
                           value={getAssignedHours(product.id)}
-                          onChange={(e) => updateAssignment(product.id, parseInt(e.target.value) || 0)}
+                          onChange={(e) => handleInputChange(product.id, e.target.value)}
+                          onBlur={(e) => handleInputBlur(product.id, e.target.value)}
                           className="w-16 h-8 text-center"
                           disabled={workPlan?.status === 'submitted' || workPlan?.status === 'approved'}
                         />
