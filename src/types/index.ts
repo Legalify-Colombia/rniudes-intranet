@@ -1,12 +1,17 @@
-
 export interface Profile {
   id: string;
   created_at: string;
   updated_at: string;
   full_name: string;
-  avatar_url: string;
-  role: "Administrador" | "Coordinador" | "Gestor";
+  document_number: string;
   email: string;
+  position: string;
+  role: "Administrador" | "Coordinador" | "Gestor";
+  weekly_hours?: number;
+  number_of_weeks?: number;
+  total_hours?: number;
+  campus_id?: string;
+  managed_campus_ids?: string[];
   campus?: {
     name: string;
   };
