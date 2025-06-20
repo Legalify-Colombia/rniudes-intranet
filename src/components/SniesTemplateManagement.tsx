@@ -4,25 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Edit, Trash2, FileText, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, SniesReportTemplate, SniesTemplateField } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/hooks/useAuth";
+import { useSniesReports } from "@/hooks/useSniesReports";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 export function SniesTemplateManagement() {
-  const [templates, setTemplates] = useState<SniesReportTemplate[]>([]);
-  const [fields, setFields] = useState<SniesTemplateField[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<SniesReportTemplate | null>(null);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
+  const [templateFields, setTemplateFields] = useState<any[]>([]);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
-  const [isFieldDialogOpen, setIsFieldDialogOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<SniesReportTemplate | null>(null);
-  const [editingField, setEditingField] = useState<SniesTemplateField | null>(null);
+  const [isFieldsDialogOpen, setIsFieldsDialogOpen] = useState(false);
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
+  const { profile } = useAuth();
   const { toast } = useToast();
   const {
     fetchSniesReportTemplates,
@@ -33,7 +35,7 @@ export function SniesTemplateManagement() {
     createSniesTemplateField,
     updateSniesTemplateField,
     deleteSniesTemplateField
-  } = useSupabaseData();
+  } = useSniesReports();
 
   const [templateForm, setTemplateForm] = useState({
     name: '',
@@ -43,223 +45,339 @@ export function SniesTemplateManagement() {
   const [fieldForm, setFieldForm] = useState({
     field_name: '',
     field_label: '',
-    field_type: 'text' as 'text' | 'numeric' | 'relation',
-    relation_table: '',
-    relation_id_field: '',
-    relation_display_field: '',
+    field_type: 'text',
     is_required: false,
+    relation_table: '',
     field_order: 0
   });
-
-  const relationTables = [
-    { value: 'snies_document_types', label: 'Tipos de Documento', id_field: 'id', display_field: 'name' },
-    { value: 'snies_biological_sex', label: 'Sexo Biológico', id_field: 'id', display_field: 'name' },
-    { value: 'snies_marital_status', label: 'Estado Civil', id_field: 'id', display_field: 'name' },
-    { value: 'snies_countries', label: 'Países', id_field: 'id', display_field: 'name' },
-    { value: 'snies_municipalities', label: 'Municipios', id_field: 'id', display_field: 'name' }
-  ];
 
   useEffect(() => {
     loadTemplates();
   }, []);
 
-  useEffect(() => {
-    if (selectedTemplate) {
-      loadFields(selectedTemplate.id);
-    }
-  }, [selectedTemplate]);
-
   const loadTemplates = async () => {
     try {
+      setIsLoading(true);
       const result = await fetchSniesReportTemplates();
-      setTemplates(result.data || []);
+      if (result.error) {
+        console.error('Error loading templates:', result.error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las plantillas",
+          variant: "destructive",
+        });
+      } else {
+        setTemplates(result.data || []);
+      }
     } catch (error) {
       console.error('Error loading templates:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar las plantillas",
+        description: "Error inesperado al cargar las plantillas",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const loadFields = async (templateId: string) => {
+  const loadTemplateFields = async (templateId: string) => {
     try {
       const result = await fetchSniesTemplateFields(templateId);
-      setFields(result.data || []);
+      if (result.error) {
+        console.error('Error loading fields:', result.error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los campos",
+          variant: "destructive",
+        });
+      } else {
+        setTemplateFields(result.data || []);
+      }
     } catch (error) {
       console.error('Error loading fields:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los campos",
+        description: "Error inesperado al cargar los campos",
         variant: "destructive",
       });
     }
   };
 
-  const handleTemplateSubmit = async (e: React.FormEvent) => {
+  const handleCreateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!templateForm.name.trim()) {
+      toast({
+        title: "Error de validación",
+        description: "El nombre de la plantilla es obligatorio",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      if (editingTemplate) {
-        const result = await updateSniesReportTemplate(editingTemplate.id, templateForm);
-        if (result.error) throw result.error;
-        toast({ title: "Plantilla actualizada correctamente" });
-      } else {
-        const result = await createSniesReportTemplate(templateForm);
-        if (result.error) throw result.error;
-        toast({ title: "Plantilla creada correctamente" });
+      setIsLoading(true);
+      const result = await createSniesReportTemplate({
+        name: templateForm.name.trim(),
+        description: templateForm.description.trim() || null,
+        created_by: profile?.id,
+        is_active: true
+      });
+      
+      if (result.error) {
+        console.error('Error creating template:', result.error);
+        toast({
+          title: "Error",
+          description: "Error al crear la plantilla",
+          variant: "destructive",
+        });
+        return;
       }
 
-      resetTemplateForm();
+      toast({ 
+        title: "Éxito",
+        description: "Plantilla creada correctamente" 
+      });
+      
+      setTemplateForm({ name: '', description: '' });
       setIsTemplateDialogOpen(false);
-      loadTemplates();
+      await loadTemplates();
     } catch (error) {
-      console.error('Error saving template:', error);
+      console.error('Unexpected error creating template:', error);
       toast({
         title: "Error",
-        description: "Error al guardar la plantilla",
+        description: "Error inesperado al crear la plantilla",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleFieldSubmit = async (e: React.FormEvent) => {
+  const handleUpdateTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedTemplate) return;
-
-    try {
-      const fieldData = {
-        ...fieldForm,
-        template_id: selectedTemplate.id
-      };
-
-      if (editingField) {
-        const result = await updateSniesTemplateField(editingField.id, fieldData);
-        if (result.error) throw result.error;
-        toast({ title: "Campo actualizado correctamente" });
-      } else {
-        const result = await createSniesTemplateField(fieldData);
-        if (result.error) throw result.error;
-        toast({ title: "Campo creado correctamente" });
-      }
-
-      resetFieldForm();
-      setIsFieldDialogOpen(false);
-      loadFields(selectedTemplate.id);
-    } catch (error) {
-      console.error('Error saving field:', error);
+    if (!selectedTemplate || !templateForm.name.trim()) {
       toast({
-        title: "Error",
-        description: "Error al guardar el campo",
+        title: "Error de validación",
+        description: "El nombre de la plantilla es obligatorio",
         variant: "destructive",
       });
+      return;
     }
-  };
-
-  const resetTemplateForm = () => {
-    setTemplateForm({ name: '', description: '' });
-    setEditingTemplate(null);
-  };
-
-  const resetFieldForm = () => {
-    setFieldForm({
-      field_name: '',
-      field_label: '',
-      field_type: 'text',
-      relation_table: '',
-      relation_id_field: '',
-      relation_display_field: '',
-      is_required: false,
-      field_order: 0
-    });
-    setEditingField(null);
-  };
-
-  const handleDeleteTemplate = async (template: SniesReportTemplate) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar esta plantilla?")) return;
 
     try {
-      const result = await deleteSniesReportTemplate(template.id);
-      if (result.error) throw result.error;
+      setIsLoading(true);
+      const result = await updateSniesReportTemplate(selectedTemplate.id, {
+        name: templateForm.name.trim(),
+        description: templateForm.description.trim() || null
+      });
       
-      toast({ title: "Plantilla eliminada correctamente" });
-      loadTemplates();
-      if (selectedTemplate?.id === template.id) {
-        setSelectedTemplate(null);
-        setFields([]);
+      if (result.error) {
+        console.error('Error updating template:', result.error);
+        toast({
+          title: "Error",
+          description: "Error al actualizar la plantilla",
+          variant: "destructive",
+        });
+        return;
       }
+
+      toast({ 
+        title: "Éxito",
+        description: "Plantilla actualizada correctamente" 
+      });
+      
+      setTemplateForm({ name: '', description: '' });
+      setIsTemplateDialogOpen(false);
+      setIsEditingTemplate(false);
+      setSelectedTemplate(null);
+      await loadTemplates();
     } catch (error) {
-      console.error('Error deleting template:', error);
+      console.error('Unexpected error updating template:', error);
       toast({
         title: "Error",
-        description: "Error al eliminar la plantilla",
+        description: "Error inesperado al actualizar la plantilla",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDeleteField = async (field: SniesTemplateField) => {
-    if (!confirm("¿Estás seguro de que deseas eliminar este campo?")) return;
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('¿Está seguro de que desea eliminar esta plantilla?')) {
+      return;
+    }
 
     try {
-      const result = await deleteSniesTemplateField(field.id);
-      if (result.error) throw result.error;
+      setIsLoading(true);
+      const result = await deleteSniesReportTemplate(templateId);
       
-      toast({ title: "Campo eliminado correctamente" });
-      if (selectedTemplate) {
-        loadFields(selectedTemplate.id);
+      if (result.error) {
+        console.error('Error deleting template:', result.error);
+        toast({
+          title: "Error",
+          description: "Error al eliminar la plantilla",
+          variant: "destructive",
+        });
+        return;
       }
+
+      toast({ 
+        title: "Éxito",
+        description: "Plantilla eliminada correctamente" 
+      });
+      
+      await loadTemplates();
     } catch (error) {
-      console.error('Error deleting field:', error);
+      console.error('Unexpected error deleting template:', error);
       toast({
         title: "Error",
-        description: "Error al eliminar el campo",
+        description: "Error inesperado al eliminar la plantilla",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleEditTemplate = (template: SniesReportTemplate) => {
+  const openEditTemplate = (template: any) => {
+    setSelectedTemplate(template);
     setTemplateForm({
       name: template.name,
       description: template.description || ''
     });
-    setEditingTemplate(template);
+    setIsEditingTemplate(true);
     setIsTemplateDialogOpen(true);
   };
 
-  const handleEditField = (field: SniesTemplateField) => {
-    setFieldForm({
-      field_name: field.field_name,
-      field_label: field.field_label,
-      field_type: field.field_type,
-      relation_table: field.relation_table || '',
-      relation_id_field: field.relation_id_field || '',
-      relation_display_field: field.relation_display_field || '',
-      is_required: field.is_required,
-      field_order: field.field_order
-    });
-    setEditingField(field);
-    setIsFieldDialogOpen(true);
+  const openNewTemplate = () => {
+    setSelectedTemplate(null);
+    setTemplateForm({ name: '', description: '' });
+    setIsEditingTemplate(false);
+    setIsTemplateDialogOpen(true);
   };
 
-  const handleRelationTableChange = (tableName: string) => {
-    const table = relationTables.find(t => t.value === tableName);
-    if (table) {
-      setFieldForm(prev => ({
-        ...prev,
-        relation_table: tableName,
-        relation_id_field: table.id_field,
-        relation_display_field: table.display_field
-      }));
+  const openTemplateFields = async (template: any) => {
+    setSelectedTemplate(template);
+    await loadTemplateFields(template.id);
+    setIsFieldsDialogOpen(true);
+  };
+
+  const handleCreateField = async () => {
+    if (!selectedTemplate || !fieldForm.field_name.trim() || !fieldForm.field_label.trim()) {
+      toast({
+        title: "Error de validación",
+        description: "El nombre y etiqueta del campo son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const result = await createSniesTemplateField({
+        template_id: selectedTemplate.id,
+        field_name: fieldForm.field_name.trim(),
+        field_label: fieldForm.field_label.trim(),
+        field_type: fieldForm.field_type,
+        is_required: fieldForm.is_required,
+        relation_table: fieldForm.relation_table || null,
+        field_order: fieldForm.field_order
+      });
+      
+      if (result.error) {
+        console.error('Error creating field:', result.error);
+        toast({
+          title: "Error",
+          description: "Error al crear el campo",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ 
+        title: "Éxito",
+        description: "Campo creado correctamente" 
+      });
+      
+      setFieldForm({
+        field_name: '',
+        field_label: '',
+        field_type: 'text',
+        is_required: false,
+        relation_table: '',
+        field_order: templateFields.length
+      });
+      
+      await loadTemplateFields(selectedTemplate.id);
+    } catch (error) {
+      console.error('Unexpected error creating field:', error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al crear el campo",
+        variant: "destructive",
+      });
     }
   };
 
+  const handleDeleteField = async (fieldId: string) => {
+    if (!confirm('¿Está seguro de que desea eliminar este campo?')) {
+      return;
+    }
+
+    try {
+      const result = await deleteSniesTemplateField(fieldId);
+      
+      if (result.error) {
+        console.error('Error deleting field:', result.error);
+        toast({
+          title: "Error",
+          description: "Error al eliminar el campo",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ 
+        title: "Éxito",
+        description: "Campo eliminado correctamente" 
+      });
+      
+      if (selectedTemplate) {
+        await loadTemplateFields(selectedTemplate.id);
+      }
+    } catch (error) {
+      console.error('Unexpected error deleting field:', error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al eliminar el campo",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getFieldTypeLabel = (type: string) => {
+    const types: { [key: string]: string } = {
+      'text': 'Texto',
+      'numeric': 'Numérico',
+      'date': 'Fecha',
+      'relation': 'Relación'
+    };
+    return types[type] || type;
+  };
+
+  if (profile?.role !== 'Administrador') {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No tienes permisos para acceder a esta sección.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Templates */}
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -267,14 +385,14 @@ export function SniesTemplateManagement() {
               <FileText className="h-5 w-5" />
               Plantillas SNIES
             </CardTitle>
-            <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetTemplateForm} className="institutional-gradient text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nueva Plantilla
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+            <Button 
+              onClick={openNewTemplate}
+              className="institutional-gradient text-white"
+              disabled={isLoading}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Plantilla
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -283,24 +401,53 @@ export function SniesTemplateManagement() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Descripción</TableHead>
+                <TableHead>No. de Campos</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Fecha Creación</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {templates.map((template) => (
-                <TableRow 
-                  key={template.id}
-                  className={selectedTemplate?.id === template.id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"}
-                  onClick={() => setSelectedTemplate(template)}
-                >
+              {templates.map((template: any) => (
+                <TableRow key={template.id}>
                   <TableCell className="font-medium">{template.name}</TableCell>
-                  <TableCell>{template.description}</TableCell>
+                  <TableCell className="max-w-xs truncate">{template.description || '-'}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">0 campos</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={template.is_active ? "default" : "secondary"}>
+                      {template.is_active ? 'Activa' : 'Inactiva'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(template.created_at).toLocaleDateString('es-ES')}
+                  </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleEditTemplate(template); }}>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => openTemplateFields(template)}
+                        disabled={isLoading}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => openEditTemplate(template)}
+                        disabled={isLoading}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template); }}>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDeleteTemplate(template.id)}
+                        disabled={isLoading}
+                        className="text-red-600 hover:text-red-700"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -309,103 +456,37 @@ export function SniesTemplateManagement() {
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
 
-      {/* Fields */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Campos de la Plantilla
-              {selectedTemplate && <Badge variant="outline">{selectedTemplate.name}</Badge>}
-            </CardTitle>
-            <Dialog open={isFieldDialogOpen} onOpenChange={setIsFieldDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={resetFieldForm} 
-                  disabled={!selectedTemplate}
-                  className="institutional-gradient text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuevo Campo
-                </Button>
-              </DialogTrigger>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {selectedTemplate ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Orden</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Etiqueta</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Requerido</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fields.map((field) => (
-                  <TableRow key={field.id}>
-                    <TableCell>{field.field_order}</TableCell>
-                    <TableCell className="font-mono text-sm">{field.field_name}</TableCell>
-                    <TableCell>{field.field_label}</TableCell>
-                    <TableCell>
-                      <Badge variant={field.field_type === 'relation' ? 'default' : 'secondary'}>
-                        {field.field_type}
-                        {field.field_type === 'relation' && field.relation_table && (
-                          <span className="ml-1 text-xs">
-                            ({relationTables.find(t => t.value === field.relation_table)?.label})
-                          </span>
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {field.is_required ? <Badge variant="destructive">Sí</Badge> : <Badge variant="outline">No</Badge>}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEditField(field)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDeleteField(field)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
+          {templates.length === 0 && !isLoading && (
             <div className="text-center py-8 text-gray-500">
-              Selecciona una plantilla para ver sus campos
+              No hay plantillas SNIES creadas. Haz clic en "Nueva Plantilla" para crear una.
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Template Dialog */}
+      {/* Dialog para crear/editar plantilla */}
       <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla SNIES'}
+              {isEditingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla SNIES'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleTemplateSubmit} className="space-y-4">
+          
+          <form onSubmit={isEditingTemplate ? handleUpdateTemplate : handleCreateTemplate} className="space-y-4">
             <div>
-              <Label htmlFor="templateName">Nombre</Label>
+              <Label htmlFor="templateName">
+                Nombre de la Plantilla <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="templateName"
                 value={templateForm.name}
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Nombre de la plantilla"
                 required
+                disabled={isLoading}
+                maxLength={255}
               />
             </div>
             <div>
@@ -414,139 +495,189 @@ export function SniesTemplateManagement() {
                 id="templateDescription"
                 value={templateForm.description}
                 onChange={(e) => setTemplateForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Descripción de la plantilla"
+                placeholder="Descripción de la plantilla (opcional)"
+                disabled={isLoading}
                 rows={3}
               />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsTemplateDialogOpen(false)}
+                disabled={isLoading}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" className="institutional-gradient text-white">
-                {editingTemplate ? 'Actualizar' : 'Crear'}
+              <Button 
+                type="submit" 
+                className="institutional-gradient text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Guardando...' : (isEditingTemplate ? 'Actualizar' : 'Crear Plantilla')}
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Field Dialog */}
-      <Dialog open={isFieldDialogOpen} onOpenChange={setIsFieldDialogOpen}>
-        <DialogContent className="max-w-2xl">
+      {/* Dialog para ver/editar campos de plantilla */}
+      <Dialog open={isFieldsDialogOpen} onOpenChange={setIsFieldsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingField ? 'Editar Campo' : 'Nuevo Campo'}
+              Campos de la Plantilla: {selectedTemplate?.name}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleFieldSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="fieldName">Nombre del Campo</Label>
-                <Input
-                  id="fieldName"
-                  value={fieldForm.field_name}
-                  onChange={(e) => setFieldForm(prev => ({ ...prev, field_name: e.target.value }))}
-                  placeholder="ID_TIPO_DOCUMENTO"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="fieldLabel">Etiqueta</Label>
-                <Input
-                  id="fieldLabel"
-                  value={fieldForm.field_label}
-                  onChange={(e) => setFieldForm(prev => ({ ...prev, field_label: e.target.value }))}
-                  placeholder="Tipo de Documento"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="fieldType">Tipo de Campo</Label>
-                <Select value={fieldForm.field_type} onValueChange={(value: 'text' | 'numeric' | 'relation') => setFieldForm(prev => ({ ...prev, field_type: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Texto</SelectItem>
-                    <SelectItem value="numeric">Numérico</SelectItem>
-                    <SelectItem value="relation">Relación</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="fieldOrder">Orden</Label>
-                <Input
-                  id="fieldOrder"
-                  type="number"
-                  value={fieldForm.field_order}
-                  onChange={(e) => setFieldForm(prev => ({ ...prev, field_order: parseInt(e.target.value) }))}
-                  min="0"
-                />
-              </div>
-            </div>
-
-            {fieldForm.field_type === 'relation' && (
-              <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
-                <h4 className="font-medium">Configuración de Relación</h4>
+          
+          <div className="space-y-6">
+            {/* Formulario para agregar nuevo campo */}
+            <div className="border p-4 rounded-lg bg-gray-50">
+              <h4 className="font-medium mb-4">Agregar Nuevo Campo</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="relationTable">Tabla de Relación</Label>
-                  <Select value={fieldForm.relation_table} onValueChange={handleRelationTableChange}>
+                  <Label htmlFor="fieldName">Nombre del Campo</Label>
+                  <Input
+                    id="fieldName"
+                    value={fieldForm.field_name}
+                    onChange={(e) => setFieldForm(prev => ({ ...prev, field_name: e.target.value }))}
+                    placeholder="nombre_campo"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fieldLabel">Etiqueta del Campo</Label>
+                  <Input
+                    id="fieldLabel"
+                    value={fieldForm.field_label}
+                    onChange={(e) => setFieldForm(prev => ({ ...prev, field_label: e.target.value }))}
+                    placeholder="Etiqueta visible"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fieldType">Tipo de Campo</Label>
+                  <Select 
+                    value={fieldForm.field_type} 
+                    onValueChange={(value) => setFieldForm(prev => ({ ...prev, field_type: value }))}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tabla" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {relationTables.map(table => (
-                        <SelectItem key={table.value} value={table.value}>
-                          {table.label}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="text">Texto</SelectItem>
+                      <SelectItem value="numeric">Numérico</SelectItem>
+                      <SelectItem value="date">Fecha</SelectItem>
+                      <SelectItem value="relation">Relación</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                {fieldForm.field_type === 'relation' && (
                   <div>
-                    <Label htmlFor="relationIdField">Campo ID</Label>
-                    <Input
-                      id="relationIdField"
-                      value={fieldForm.relation_id_field}
-                      onChange={(e) => setFieldForm(prev => ({ ...prev, relation_id_field: e.target.value }))}
-                      placeholder="id"
-                    />
+                    <Label htmlFor="relationTable">Tabla de Relación</Label>
+                    <Select 
+                      value={fieldForm.relation_table} 
+                      onValueChange={(value) => setFieldForm(prev => ({ ...prev, relation_table: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar tabla" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="snies_countries">Países</SelectItem>
+                        <SelectItem value="snies_municipalities">Municipios</SelectItem>
+                        <SelectItem value="snies_document_types">Tipos de Documento</SelectItem>
+                        <SelectItem value="snies_biological_sex">Sexo Biológico</SelectItem>
+                        <SelectItem value="snies_marital_status">Estado Civil</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="relationDisplayField">Campo a Mostrar</Label>
-                    <Input
-                      id="relationDisplayField"
-                      value={fieldForm.relation_display_field}
-                      onChange={(e) => setFieldForm(prev => ({ ...prev, relation_display_field: e.target.value }))}
-                      placeholder="name"
-                    />
-                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="fieldRequired"
+                    checked={fieldForm.is_required}
+                    onCheckedChange={(checked) => setFieldForm(prev => ({ ...prev, is_required: checked }))}
+                  />
+                  <Label htmlFor="fieldRequired">Campo Obligatorio</Label>
+                </div>
+                <div>
+                  <Label htmlFor="fieldOrder">Orden</Label>
+                  <Input
+                    id="fieldOrder"
+                    type="number"
+                    value={fieldForm.field_order}
+                    onChange={(e) => setFieldForm(prev => ({ ...prev, field_order: parseInt(e.target.value) || 0 }))}
+                    min="0"
+                  />
                 </div>
               </div>
-            )}
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isRequired"
-                checked={fieldForm.is_required}
-                onCheckedChange={(checked) => setFieldForm(prev => ({ ...prev, is_required: !!checked }))}
-              />
-              <Label htmlFor="isRequired">Campo requerido</Label>
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsFieldDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="institutional-gradient text-white">
-                {editingField ? 'Actualizar' : 'Crear'}
+              <Button 
+                onClick={handleCreateField}
+                className="mt-4 institutional-gradient text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar Campo
               </Button>
             </div>
-          </form>
+
+            {/* Lista de campos existentes */}
+            <div>
+              <h4 className="font-medium mb-4">Campos Existentes ({templateFields.length})</h4>
+              {templateFields.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Orden</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Etiqueta</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Obligatorio</TableHead>
+                      <TableHead>Tabla Relación</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {templateFields
+                      .sort((a, b) => a.field_order - b.field_order)
+                      .map((field: any) => (
+                        <TableRow key={field.id}>
+                          <TableCell>{field.field_order}</TableCell>
+                          <TableCell className="font-mono text-sm">{field.field_name}</TableCell>
+                          <TableCell>{field.field_label}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {getFieldTypeLabel(field.field_type)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {field.is_required ? (
+                              <Badge variant="destructive">Sí</Badge>
+                            ) : (
+                              <Badge variant="secondary">No</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {field.relation_table || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleDeleteField(field.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No hay campos definidos para esta plantilla.
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

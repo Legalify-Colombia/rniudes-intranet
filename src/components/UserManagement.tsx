@@ -1,660 +1,570 @@
-import { useState, useEffect } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Filter } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { getValidPositions, getRoleFromPosition, validatePosition, type Position } from '@/utils/positionUtils';
-import { CampusSelector } from "./CampusSelector";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-
-interface User {
-  id: string;
-  full_name: string;
-  document_number: string;
-  email: string;
-  position: string;
-  role: string;
-  weekly_hours?: number;
-  number_of_weeks?: number;
-  total_hours?: number;
-  campus_id?: string;
-  managed_campus_ids?: string[];
-  campus?: {
-    id: string;
-    name: string;
-  };
-}
-
-interface Campus {
-  id: string;
-  name: string;
-}
+import { Plus, Edit, Save, X } from "lucide-react";
+import { getRoleFromPosition } from "@/utils/positionUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 export function UserManagement() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [campuses, setCampuses] = useState<Campus[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [userManagedCampus, setUserManagedCampus] = useState<string[]>([]);
-  const [selectedFilterCampus, setSelectedFilterCampus] = useState<string[]>([]);
-  const { toast } = useToast();
+  const [users, setUsers] = useState<any[]>([]);
+  const [campuses, setCampuses] = useState<any[]>([]);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
   const { profile } = useAuth();
+  const { toast } = useToast();
+  const { fetchUsersByCampus, fetchCampuses } = useSupabaseData();
 
-  const {
-    fetchCampus,
-    fetchUsersByCampus,
-    getUserManagedCampus,
-    updateUserCampusAccess
-  } = useSupabaseData();
-
-  const [formData, setFormData] = useState({
-    fullName: "",
-    documentNumber: "",
-    email: "",
-    password: "",
-    position: "",
-    campusId: "",
-    managedCampusIds: [] as string[],
-    weeklyHours: 0,
-    numberOfWeeks: 16,
+  const [userForm, setUserForm] = useState({
+    email: '',
+    full_name: '',
+    document_number: '',
+    position: '',
+    role: '',
+    weekly_hours: '',
+    number_of_weeks: '16',
+    campus_id: '',
+    managed_campus_ids: [] as string[]
   });
 
-  // Get positions and ensure they're all valid
-  const positions = getValidPositions().filter(pos => pos && pos.trim().length > 0);
+  const [editForm, setEditForm] = useState({
+    weekly_hours: '',
+    number_of_weeks: '',
+    managed_campus_ids: [] as string[]
+  });
 
   useEffect(() => {
-    loadInitialData();
+    loadData();
   }, []);
 
-  useEffect(() => {
-    if (userManagedCampus.length > 0 || profile?.role === 'Administrador') {
-      loadUsers();
-    }
-  }, [selectedFilterCampus, userManagedCampus]);
-
-  const loadInitialData = async () => {
+  const loadData = async () => {
     try {
-      // Load campuses
-      const { data: campusData } = await fetchCampus();
-      setCampuses(campusData || []);
+      setIsLoading(true);
+      
+      // Load campuses first
+      const campusResult = await fetchCampuses();
+      if (campusResult.data) {
+        setCampuses(campusResult.data);
+      }
 
-      // Load user's managed campus if they are an admin
-      if (profile?.id && profile?.role === 'Administrador') {
-        const { data: managedData } = await getUserManagedCampus(profile.id);
-        if (managedData) {
-          const managedIds = managedData.managed_campus_ids || 
-            (managedData.campus_id ? [managedData.campus_id] : []);
-          setUserManagedCampus(managedIds);
-          setSelectedFilterCampus(managedIds);
-        }
+      // For super admin, load all users. For campus admin, load only their managed campuses
+      let campusIds: string[] | undefined;
+      if (profile?.role === 'Administrador' && profile.managed_campus_ids) {
+        campusIds = profile.managed_campus_ids;
+      }
+
+      const usersResult = await fetchUsersByCampus(campusIds);
+      if (usersResult.data) {
+        setUsers(usersResult.data);
       }
     } catch (error) {
-      console.error('Error loading initial data:', error);
+      console.error("Error loading data:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos iniciales",
-        variant: "destructive"
+        description: "No se pudieron cargar los datos",
+        variant: "destructive",
       });
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const campusFilter = selectedFilterCampus.length > 0 ? selectedFilterCampus : userManagedCampus;
-      const { data, error } = await fetchUsersByCampus(
-        profile?.role === 'Administrador' && userManagedCampus.length === 0 ? undefined : campusFilter
-      );
-      
-      if (error) {
-        console.error('Error loading users:', error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los usuarios",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Transform data to match User interface
-      const transformedUsers: User[] = (data || []).map(user => ({
-        id: user.id,
-        full_name: user.full_name,
-        document_number: user.document_number,
-        email: user.email,
-        position: user.position,
-        role: user.role,
-        weekly_hours: user.weekly_hours,
-        number_of_weeks: user.number_of_weeks,
-        total_hours: user.total_hours,
-        campus_id: user.campus_id,
-        managed_campus_ids: user.managed_campus_ids,
-        campus: user.campus_id ? { 
-          id: user.campus_id, 
-          name: campuses.find(c => c.id === user.campus_id)?.name || 'Sin asignar' 
-        } : undefined
-      }));
-
-      setUsers(transformedUsers);
-    } catch (error) {
-      console.error('Error loading users:', error);
+      setIsLoading(false);
     }
   };
 
   const handlePositionChange = (position: string) => {
-    console.log('UserManagement - Position change called with:', position, 'Type:', typeof position);
+    console.log("UserManagement - Position change called with: ", position, "Type:", typeof position);
     
-    if (position && typeof position === 'string' && position.trim().length > 0 && validatePosition(position)) {
-      console.log('UserManagement - Setting valid position:', position);
-      setFormData(prev => ({
-        ...prev,
-        position: position.trim(),
-      }));
-    } else {
-      console.log('UserManagement - Invalid position detected, not setting:', position);
-      setFormData(prev => ({ ...prev, position: '' }));
+    if (!position || position.trim() === '') {
+      console.log("UserManagement - Invalid position detected, not setting: ", position);
+      return;
     }
+
+    const role = getRoleFromPosition(position);
+    console.log("UserManagement - Role determined: ", role);
+    
+    setUserForm(prev => ({ 
+      ...prev, 
+      position: position,
+      role: role 
+    }));
   };
 
-  const calculateTotalHours = () => {
-    return formData.weeklyHours * formData.numberOfWeeks;
-  };
-
-  const canCreateUserInCampus = (campusId: string) => {
-    if (profile?.role !== 'Administrador') return false;
-    return userManagedCampus.length === 0 || userManagedCampus.includes(campusId);
-  };
-
-  const getAvailableCampuses = () => {
-    if (profile?.role === 'Administrador' && userManagedCampus.length === 0) {
-      return campuses; // Super admin can see all campuses
-    }
-    return campuses.filter(campus => userManagedCampus.includes(campus.id));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!editingUser && !formData.password) {
+    if (!userForm.email || !userForm.full_name || !userForm.position) {
       toast({
-        title: "Error",
-        description: "La contraseña es requerida para nuevos usuarios",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!formData.position || formData.position.trim() === "") {
-      toast({
-        title: "Error",
-        description: "El cargo es requerido",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!formData.campusId) {
-      toast({
-        title: "Error",
-        description: "El campus es requerido",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!canCreateUserInCampus(formData.campusId)) {
-      toast({
-        title: "Error",
-        description: "No tiene permisos para crear usuarios en este campus",
-        variant: "destructive"
+        title: "Error de validación",
+        description: "Email, nombre completo y cargo son obligatorios",
+        variant: "destructive",
       });
       return;
     }
 
     try {
-      if (editingUser) {
-        // Update existing user
-        const updates = {
-          full_name: formData.fullName,
-          document_number: formData.documentNumber,
-          email: formData.email,
-          position: formData.position,
-          role: getRoleFromPosition(formData.position),
-          campus_id: formData.campusId,
-          ...(formData.position === "Gestor de Internacionalización" && {
-            weekly_hours: formData.weeklyHours,
-            number_of_weeks: formData.numberOfWeeks,
-            total_hours: calculateTotalHours(),
-          }),
-          ...(getRoleFromPosition(formData.position) === 'Administrador' && {
-            managed_campus_ids: formData.managedCampusIds.length > 0 ? formData.managedCampusIds : null,
-          }),
-        };
-
-        const { error } = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', editingUser.id);
-
-        if (error) {
-          console.error('Error updating user:', error);
-          toast({
-            title: "Error",
-            description: "No se pudo actualizar el usuario",
-            variant: "destructive"
-          });
-          return;
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: userForm.email,
+        email_confirm: true,
+        user_metadata: {
+          full_name: userForm.full_name,
+          document_number: userForm.document_number,
+          position: userForm.position,
+          role: userForm.role,
+          weekly_hours: userForm.weekly_hours ? parseInt(userForm.weekly_hours) : null,
+          number_of_weeks: parseInt(userForm.number_of_weeks),
+          total_hours: userForm.weekly_hours ? parseInt(userForm.weekly_hours) * parseInt(userForm.number_of_weeks) : null,
+          campus_id: userForm.campus_id || null,
+          managed_campus_ids: userForm.role === 'Administrador' ? userForm.managed_campus_ids : null
         }
-
-        toast({ title: "Usuario actualizado exitosamente" });
-      } else {
-        // Create new user
-        const totalHours = formData.position === "Gestor de Internacionalización" 
-          ? calculateTotalHours() 
-          : undefined;
-
-        const userData = {
-          full_name: formData.fullName,
-          document_number: formData.documentNumber,
-          position: formData.position,
-          role: getRoleFromPosition(formData.position),
-          campus_id: formData.campusId,
-          weekly_hours: formData.weeklyHours,
-          number_of_weeks: formData.numberOfWeeks,
-          total_hours: totalHours,
-          ...(getRoleFromPosition(formData.position) === 'Administrador' && {
-            managed_campus_ids: formData.managedCampusIds.length > 0 ? formData.managedCampusIds : null,
-          }),
-        };
-
-        const { error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: userData
-          }
-        });
-
-        if (error) {
-          console.error('Error creating user:', error);
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive"
-          });
-          return;
-        }
-
-        toast({ title: "Usuario creado exitosamente" });
-      }
-
-      setFormData({
-        fullName: "",
-        documentNumber: "",
-        email: "",
-        password: "",
-        position: "",
-        campusId: "",
-        managedCampusIds: [],
-        weeklyHours: 0,
-        numberOfWeeks: 16,
       });
-      setEditingUser(null);
-      setIsDialogOpen(false);
-      loadUsers();
-    } catch (error) {
-      console.error('Error submitting form:', error);
-      toast({
-        title: "Error",
-        description: "Ocurrió un error inesperado",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    setFormData({
-      fullName: user.full_name,
-      documentNumber: user.document_number,
-      email: user.email,
-      password: "",
-      position: user.position,
-      campusId: user.campus_id || "",
-      managedCampusIds: user.managed_campus_ids || [],
-      weeklyHours: user.weekly_hours || 0,
-      numberOfWeeks: user.number_of_weeks || 16,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
 
       if (error) {
-        console.error('Error deleting user:', error);
+        console.error("Error creating user:", error);
         toast({
           title: "Error",
-          description: "No se pudo eliminar el usuario",
-          variant: "destructive"
+          description: "Error al crear el usuario: " + error.message,
+          variant: "destructive",
         });
         return;
       }
 
-      toast({ title: "Usuario eliminado exitosamente" });
-      loadUsers();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-    }
-  };
-
-  const handleUpdateCampusAccess = async () => {
-    if (!profile?.id) return;
-
-    try {
-      const campusIdToUpdate = selectedFilterCampus[0] || '';
-      const { error } = await updateUserCampusAccess(profile.id, campusIdToUpdate);
-      if (error) {
-        toast({
-          title: "Error",
-          description: "No se pudo actualizar el acceso a campus",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setUserManagedCampus(selectedFilterCampus);
       toast({
         title: "Éxito",
-        description: "Acceso a campus actualizado correctamente"
+        description: "Usuario creado correctamente",
       });
+
+      setUserForm({
+        email: '',
+        full_name: '',
+        document_number: '',
+        position: '',
+        role: '',
+        weekly_hours: '',
+        number_of_weeks: '16',
+        campus_id: '',
+        managed_campus_ids: []
+      });
+      
+      setIsCreateDialogOpen(false);
+      await loadData();
     } catch (error) {
-      console.error('Error updating campus access:', error);
+      console.error("Error creating user:", error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al crear el usuario",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (loading) {
+  const startEditUser = (user: any) => {
+    setEditingUser(user.id);
+    setEditForm({
+      weekly_hours: user.weekly_hours?.toString() || '',
+      number_of_weeks: user.number_of_weeks?.toString() || '16',
+      managed_campus_ids: user.managed_campus_ids || []
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingUser(null);
+    setEditForm({
+      weekly_hours: '',
+      number_of_weeks: '',
+      managed_campus_ids: []
+    });
+  };
+
+  const saveUserChanges = async (userId: string) => {
+    try {
+      setIsLoading(true);
+      
+      const updates: any = {
+        weekly_hours: editForm.weekly_hours ? parseInt(editForm.weekly_hours) : null,
+        number_of_weeks: parseInt(editForm.number_of_weeks),
+        total_hours: editForm.weekly_hours ? parseInt(editForm.weekly_hours) * parseInt(editForm.number_of_weeks) : null
+      };
+
+      // Only update managed_campus_ids for administrators
+      const user = users.find(u => u.id === userId);
+      if (user?.role === 'Administrador') {
+        updates.managed_campus_ids = editForm.managed_campus_ids.length > 0 ? editForm.managed_campus_ids : null;
+      }
+
+      console.log('Updating user with data:', updates);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating user:", error);
+        toast({
+          title: "Error",
+          description: "Error al actualizar el usuario: " + error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('User updated successfully:', data);
+      
+      toast({
+        title: "Éxito",
+        description: "Usuario actualizado correctamente",
+      });
+
+      setEditingUser(null);
+      await loadData();
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al actualizar el usuario",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'Administrador':
+        return 'bg-red-100 text-red-800';
+      case 'Gestor':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getCampusName = (campusId: string) => {
+    const campus = campuses.find(c => c.id === campusId);
+    return campus?.name || 'Sin asignar';
+  };
+
+  const getManagedCampusNames = (campusIds: string[]) => {
+    if (!campusIds || campusIds.length === 0) return 'Todos los campus';
+    return campusIds.map(id => getCampusName(id)).join(', ');
+  };
+
+  const canManageUser = (user: any) => {
+    if (profile?.role === 'Administrador') {
+      // Super admin can manage all
+      if (!profile.managed_campus_ids) return true;
+      // Campus admin can only manage users in their campuses
+      return user.campus_id && profile.managed_campus_ids.includes(user.campus_id);
+    }
+    return false;
+  };
+
+  if (profile?.role !== 'Administrador') {
     return (
-      <Card className="w-full">
-        <CardContent className="p-8">
-          <div className="flex justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-              <p className="mt-4 text-gray-600">Cargando usuarios...</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8">
+        <p className="text-gray-500">No tienes permisos para acceder a esta sección.</p>
+      </div>
     );
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-2xl font-bold text-primary">Gestión de Usuarios</CardTitle>
-        <div className="flex gap-2">
-          {profile?.role === 'Administrador' && (
-            <Dialog>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Gestión de Usuarios</CardTitle>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Gestionar Campus
+                <Button className="institutional-gradient text-white">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nuevo Usuario
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Gestionar Acceso a Campus</DialogTitle>
+                  <DialogTitle>Crear Nuevo Usuario</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <CampusSelector
-                    campuses={campuses}
-                    selectedCampusIds={selectedFilterCampus}
-                    onSelectionChange={setSelectedFilterCampus}
-                    mode="multiple"
-                    label="Campus que puede gestionar"
-                    placeholder="Seleccionar campus"
-                  />
+                
+                <form onSubmit={handleCreateUser} className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={userForm.email}
+                      onChange={(e) => setUserForm(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="full_name">Nombre Completo</Label>
+                    <Input
+                      id="full_name"
+                      value={userForm.full_name}
+                      onChange={(e) => setUserForm(prev => ({ ...prev, full_name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="document_number">Número de Documento</Label>
+                    <Input
+                      id="document_number"
+                      value={userForm.document_number}
+                      onChange={(e) => setUserForm(prev => ({ ...prev, document_number: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="position">Cargo</Label>
+                    <Select onValueChange={handlePositionChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar cargo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Administrador General">Administrador General</SelectItem>
+                        <SelectItem value="Administrador de Campus">Administrador de Campus</SelectItem>
+                        <SelectItem value="Gestor de Internacionalización">Gestor de Internacionalización</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="campus_id">Campus</Label>
+                    <Select onValueChange={(value) => setUserForm(prev => ({ ...prev, campus_id: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar campus" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {campuses.map(campus => (
+                          <SelectItem key={campus.id} value={campus.id}>
+                            {campus.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {userForm.role === 'Gestor' && (
+                    <>
+                      <div>
+                        <Label htmlFor="weekly_hours">Horas Semanales</Label>
+                        <Input
+                          id="weekly_hours"
+                          type="number"
+                          value={userForm.weekly_hours}
+                          onChange={(e) => setUserForm(prev => ({ ...prev, weekly_hours: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="number_of_weeks">Número de Semanas</Label>
+                        <Input
+                          id="number_of_weeks"
+                          type="number"
+                          value={userForm.number_of_weeks}
+                          onChange={(e) => setUserForm(prev => ({ ...prev, number_of_weeks: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {userForm.role === 'Administrador' && (
+                    <div>
+                      <Label>Campus que puede gestionar</Label>
+                      <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
+                        {campuses.map(campus => (
+                          <div key={campus.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`campus_${campus.id}`}
+                              checked={userForm.managed_campus_ids.includes(campus.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setUserForm(prev => ({
+                                    ...prev,
+                                    managed_campus_ids: [...prev.managed_campus_ids, campus.id]
+                                  }));
+                                } else {
+                                  setUserForm(prev => ({
+                                    ...prev,
+                                    managed_campus_ids: prev.managed_campus_ids.filter(id => id !== campus.id)
+                                  }));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`campus_${campus.id}`} className="text-sm">
+                              {campus.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Si no selecciona ninguno, podrá gestionar todos los campus
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-end space-x-2">
-                    <Button onClick={handleUpdateCampusAccess}>
-                      Guardar Cambios
+                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" className="institutional-gradient text-white" disabled={isLoading}>
+                      {isLoading ? 'Creando...' : 'Crear Usuario'}
                     </Button>
                   </div>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
-          )}
-          
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="institutional-gradient text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                Nuevo Usuario
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingUser ? "Editar Usuario" : "Crear Nuevo Usuario"}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nombre Completo</Label>
-                  <Input
-                    id="fullName"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="documentNumber">No. de Documento de Identidad</Label>
-                  <Input
-                    id="documentNumber"
-                    value={formData.documentNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, documentNumber: e.target.value }))}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                {!editingUser && (
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                      required
-                      placeholder="Mínimo 6 caracteres"
-                    />
-                  </div>
-                )}
-
-                <CampusSelector
-                  campuses={getAvailableCampuses()}
-                  selectedCampusIds={formData.campusId ? [formData.campusId] : []}
-                  onSelectionChange={(ids) => setFormData(prev => ({ ...prev, campusId: ids[0] || "" }))}
-                  mode="single"
-                  label="Campus"
-                  placeholder="Seleccionar campus"
-                  required
-                />
-                
-                <div className="space-y-2">
-                  <Label htmlFor="position">Cargo</Label>
-                  <Select 
-                    value={formData.position || undefined} 
-                    onValueChange={handlePositionChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar cargo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {positions.map((position) => {
-                        if (!position || typeof position !== 'string' || position.trim().length === 0) {
-                          console.warn('UserManagement - Skipping invalid position:', position);
-                          return null;
-                        }
-                        return (
-                          <SelectItem key={position} value={position}>
-                            {position}
-                          </SelectItem>
-                        );
-                      }).filter(Boolean)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.position && formData.position.trim() !== "" && (
-                  <div className="space-y-2">
-                    <Label>Rol en el Sistema</Label>
-                    <Input
-                      value={getRoleFromPosition(formData.position)}
-                      disabled
-                      className="bg-gray-100"
-                    />
-                  </div>
-                )}
-
-                {getRoleFromPosition(formData.position) === 'Administrador' && (
-                  <CampusSelector
-                    campuses={getAvailableCampuses()}
-                    selectedCampusIds={formData.managedCampusIds}
-                    onSelectionChange={(ids) => setFormData(prev => ({ ...prev, managedCampusIds: ids }))}
-                    mode="multiple"
-                    label="Campus que puede gestionar (Opcional)"
-                    placeholder="Seleccionar campus a gestionar"
-                  />
-                )}
-
-                {formData.position === "Gestor de Internacionalización" && (
-                  <div className="space-y-4 border-t pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="weeklyHours">Horas Semanales Asignadas</Label>
-                      <Input
-                        id="weeklyHours"
-                        type="number"
-                        value={formData.weeklyHours}
-                        onChange={(e) => setFormData(prev => ({ ...prev, weeklyHours: parseInt(e.target.value) || 0 }))}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="numberOfWeeks">Número de Semanas</Label>
-                      <Input
-                        id="numberOfWeeks"
-                        type="number"
-                        value={formData.numberOfWeeks}
-                        onChange={(e) => setFormData(prev => ({ ...prev, numberOfWeeks: parseInt(e.target.value) || 16 }))}
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Total de Horas Disponibles</Label>
-                      <Input
-                        value={calculateTotalHours()}
-                        disabled
-                        className="bg-blue-50 font-semibold"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="institutional-gradient text-white">
-                    {editingUser ? "Actualizar" : "Crear"} Usuario
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre Completo</TableHead>
-              <TableHead>Documento</TableHead>
-              <TableHead>Correo</TableHead>
-              <TableHead>Campus</TableHead>
-              <TableHead>Cargo</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Horas Totales</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.full_name}</TableCell>
-                <TableCell>{user.document_number}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.campus?.name || 'Sin asignar'}</TableCell>
-                <TableCell>{user.position}</TableCell>
-                <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    user.role === 'Administrador' ? 'bg-blue-100 text-blue-800' :
-                    user.role === 'Coordinador' ? 'bg-green-100 text-green-800' :
-                    'bg-orange-100 text-orange-800'
-                  }`}>
-                    {user.role}
-                  </span>
-                </TableCell>
-                <TableCell>{user.total_hours || '-'}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(user)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(user.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        
-        {users.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No hay usuarios registrados en los campus seleccionados. Crear el primer usuario.
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Cargo</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>Campus</TableHead>
+                <TableHead>Horas/Semana</TableHead>
+                <TableHead>Campus Gestionados</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user: any) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.full_name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.position}</TableCell>
+                  <TableCell>
+                    <Badge className={getRoleBadgeColor(user.role)}>
+                      {user.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{getCampusName(user.campus_id)}</TableCell>
+                  <TableCell>
+                    {editingUser === user.id ? (
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="number"
+                          value={editForm.weekly_hours}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, weekly_hours: e.target.value }))}
+                          className="w-20"
+                          placeholder="Horas"
+                        />
+                        <span className="text-xs text-gray-500">h/sem</span>
+                      </div>
+                    ) : (
+                      <span>{user.weekly_hours || '-'} {user.weekly_hours ? 'h/sem' : ''}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingUser === user.id && user.role === 'Administrador' ? (
+                      <div className="max-w-xs">
+                        <div className="space-y-1 max-h-20 overflow-y-auto">
+                          {campuses.map(campus => (
+                            <div key={campus.id} className="flex items-center space-x-1">
+                              <input
+                                type="checkbox"
+                                id={`edit_campus_${campus.id}`}
+                                checked={editForm.managed_campus_ids.includes(campus.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setEditForm(prev => ({
+                                      ...prev,
+                                      managed_campus_ids: [...prev.managed_campus_ids, campus.id]
+                                    }));
+                                  } else {
+                                    setEditForm(prev => ({
+                                      ...prev,
+                                      managed_campus_ids: prev.managed_campus_ids.filter(id => id !== campus.id)
+                                    }));
+                                  }
+                                }}
+                                className="w-3 h-3"
+                              />
+                              <label htmlFor={`edit_campus_${campus.id}`} className="text-xs">
+                                {campus.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm">
+                        {user.role === 'Administrador' 
+                          ? getManagedCampusNames(user.managed_campus_ids)
+                          : '-'
+                        }
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {canManageUser(user) && (
+                      <div className="flex space-x-2">
+                        {editingUser === user.id ? (
+                          <>
+                            <Button 
+                              size="sm" 
+                              onClick={() => saveUserChanges(user.id)}
+                              disabled={isLoading}
+                            >
+                              <Save className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={cancelEdit}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          // Solo mostrar el botón editar para gestores, no para administradores de internacionalización
+                          user.role === 'Gestor' || user.role === 'Administrador' ? (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => startEditUser(user)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          ) : null
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          {users.length === 0 && !isLoading && (
+            <div className="text-center py-8 text-gray-500">
+              No hay usuarios registrados.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -29,7 +29,10 @@ export function useSniesReports() {
     try {
       const { data, error } = await supabase
         .from("snies_report_templates")
-        .select("*")
+        .select(`
+          *,
+          field_count:snies_template_fields(count)
+        `)
         .eq("is_active", true)
         .order("name");
       
@@ -38,7 +41,13 @@ export function useSniesReports() {
         return { data: null, error };
       }
       
-      return { data: data || [], error: null };
+      // Procesar los datos para obtener el conteo de campos
+      const processedData = (data || []).map(template => ({
+        ...template,
+        field_count: template.field_count?.length || 0
+      }));
+      
+      return { data: processedData, error: null };
     } catch (error) {
       console.error('Unexpected error fetching SNIES templates:', error);
       return { data: null, error };

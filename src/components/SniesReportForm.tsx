@@ -4,10 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
 interface SniesReportFormProps {
   report: any;
@@ -172,24 +174,116 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     }
   };
 
+  const SearchableSelect = ({ field, rowIndex, value }: { field: any, rowIndex: number, value: string }) => {
+    const [open, setOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    let options = relationData[field.relation_table] || [];
+    
+    // Filtrar municipios solo para Colombia si es el campo de municipios
+    if (field.relation_table === 'snies_municipalities') {
+      const currentRow = reportData[rowIndex];
+      const selectedCountry = currentRow?.country_id || currentRow?.pais_id;
+      
+      if (selectedCountry === '170') {
+        options = relationData[field.relation_table] || [];
+      } else {
+        options = [];
+      }
+    }
+
+    // Filtrar opciones basado en búsqueda por ID o nombre
+    const filteredOptions = options.filter((option: any) => 
+      option.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const selectedOption = options.find((option: any) => option.id === value);
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-8 text-xs"
+            disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
+          >
+            {selectedOption ? `${selectedOption.id} - ${selectedOption.name}` : 
+             field.relation_table === 'snies_municipalities' && options.length === 0
+               ? "Seleccione Colombia primero"
+               : "Seleccionar..."}
+            <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0">
+          <Command>
+            <CommandInput 
+              placeholder={`Buscar por código o nombre...`} 
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+            />
+            <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+            <CommandGroup className="max-h-48 overflow-auto">
+              {filteredOptions.map((option: any) => (
+                <CommandItem
+                  key={option.id}
+                  value={option.id}
+                  onSelect={() => {
+                    updateCell(rowIndex, field.field_name, option.id);
+                    setOpen(false);
+                    setSearchTerm("");
+                  }}
+                  className="text-xs"
+                >
+                  <span className="font-mono mr-2">{option.id}</span>
+                  <span>{option.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
   const renderField = (field: any, rowIndex: number, value: string) => {
     const fieldId = `${field.field_name}_${rowIndex}`;
     
+    // Campo de fecha manual
+    if (field.field_type === 'date') {
+      return (
+        <Input
+          id={fieldId}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            let inputValue = e.target.value.replace(/\D/g, ''); // Solo números
+            if (inputValue.length >= 2) {
+              inputValue = inputValue.substring(0, 2) + '/' + inputValue.substring(2);
+            }
+            if (inputValue.length >= 5) {
+              inputValue = inputValue.substring(0, 5) + '/' + inputValue.substring(5, 9);
+            }
+            updateCell(rowIndex, field.field_name, inputValue);
+          }}
+          placeholder="DD/MM/AAAA"
+          maxLength={10}
+          disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
+          className="w-full h-8 text-xs border-gray-300 focus:border-blue-500"
+        />
+      );
+    }
+    
     if (field.field_type === 'relation' && field.relation_table) {
-      let options = relationData[field.relation_table] || [];
-      
-      // Filtrar municipios solo para Colombia si es el campo de municipios
-      if (field.relation_table === 'snies_municipalities') {
-        const currentRow = reportData[rowIndex];
-        const selectedCountry = currentRow?.country_id || currentRow?.pais_id;
-        
-        // Solo mostrar municipios si Colombia está seleccionado (ID: 170)
-        if (selectedCountry === '170') {
-          options = relationData[field.relation_table] || [];
-        } else {
-          options = [];
-        }
+      // Usar el componente de búsqueda para países y municipios
+      if (field.relation_table === 'snies_countries' || field.relation_table === 'snies_municipalities') {
+        return <SearchableSelect field={field} rowIndex={rowIndex} value={value} />;
       }
+      
+      // Para otros campos de relación, usar select normal
+      let options = relationData[field.relation_table] || [];
       
       return (
         <Select
@@ -198,11 +292,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
         >
           <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue placeholder={
-              field.relation_table === 'snies_municipalities' && options.length === 0
-                ? "Seleccione Colombia primero"
-                : "Seleccionar..."
-            } />
+            <SelectValue placeholder="Seleccionar..." />
           </SelectTrigger>
           <SelectContent>
             {options.map((option: any) => (

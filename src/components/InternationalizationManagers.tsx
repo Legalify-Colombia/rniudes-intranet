@@ -1,385 +1,212 @@
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
-import { WorkPlanForm } from "./WorkPlanForm";
-import { Edit, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { Eye, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function InternationalizationManagers() {
-  const { 
-    fetchManagersByCampus, 
-    updateManagerHours,
-    fetchCampus,
-    getUserManagedCampus
-  } = useSupabaseData();
-  const { toast } = useToast();
-  const { profile } = useAuth();
-  
   const [managers, setManagers] = useState<any[]>([]);
-  const [campuses, setCampuses] = useState<any[]>([]);
-  const [filteredManagers, setFilteredManagers] = useState<any[]>([]);
-  const [selectedCampus, setSelectedCampus] = useState<string>("todos");
-  const [userManagedCampus, setUserManagedCampus] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedManager, setSelectedManager] = useState<any>(null);
-  const [showWorkPlanForm, setShowWorkPlanForm] = useState(false);
-  const [editingHours, setEditingHours] = useState<{[key: string]: {weekly: string, weeks: string}}>({});
+  const [selectedManager, setSelectedManager] = useState<any | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const { fetchManagersByCampus } = useSupabaseData();
 
   useEffect(() => {
-    loadData();
+    loadManagers();
   }, []);
 
-  useEffect(() => {
-    filterManagers();
-  }, [managers, selectedCampus]);
-
-  const loadData = async () => {
-    setLoading(true);
+  const loadManagers = async () => {
     try {
-      // Load user's managed campus if they are an admin
-      let managedCampusIds: string[] = [];
-      if (profile?.id && profile?.role === 'Administrador') {
-        const { data: managedData } = await getUserManagedCampus(profile.id);
-        if (managedData) {
-          managedCampusIds = managedData.managed_campus_ids || 
-            (managedData.campus_id ? [managedData.campus_id] : []);
-          setUserManagedCampus(managedCampusIds);
-        }
+      setIsLoading(true);
+      
+      let campusIds: string[] | undefined;
+      if (profile?.role === 'Administrador' && profile.managed_campus_ids) {
+        campusIds = profile.managed_campus_ids;
       }
 
-      // Cargar campus
-      const { data: campusData } = await fetchCampus();
-      const filteredCampuses = managedCampusIds.length > 0 
-        ? (campusData || []).filter(campus => managedCampusIds.includes(campus.id))
-        : campusData || [];
-      setCampuses(filteredCampuses);
-
-      // Cargar gestores con filtro por campus
-      const campusFilter = profile?.role === 'Administrador' && managedCampusIds.length === 0 
-        ? undefined 
-        : managedCampusIds;
-
-      const { data: managersData } = await fetchManagersByCampus(campusFilter);
-      console.log('Managers data:', managersData);
-      setManagers(managersData || []);
+      const result = await fetchManagersByCampus(campusIds);
+      if (result.error) {
+        console.error("Error loading managers:", result.error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los gestores",
+          variant: "destructive",
+        });
+      } else {
+        console.log("Managers data:", result.data);
+        setManagers(result.data || []);
+      }
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading managers:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos",
+        description: "Error inesperado al cargar los gestores",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const filterManagers = () => {
-    if (selectedCampus === "todos") {
-      setFilteredManagers(managers);
-    } else {
-      const filtered = managers.filter(manager => 
-        manager.campus_id === selectedCampus ||
-        manager.academic_programs?.some((program: any) => 
-          program.campus_id === selectedCampus
-        )
-      );
-      setFilteredManagers(filtered);
-    }
-  };
-
-  const canManageManager = (manager: any) => {
-    if (profile?.role !== 'Administrador') return false;
-    if (userManagedCampus.length === 0) return true; // Super admin
-    
-    return manager.campus_id && userManagedCampus.includes(manager.campus_id);
-  };
-
-  const getManagerProgram = (manager: any) => {
-    return manager.academic_programs?.[0] || null;
-  };
-
-  const getManagerCampus = (manager: any) => {
-    const program = getManagerProgram(manager);
-    return program?.campus?.name || "Sin asignar";
-  };
-
-  const getManagerFaculty = (manager: any) => {
-    const program = getManagerProgram(manager);
-    return program?.faculty?.name || "Sin asignar";
-  };
-
-  const getManagerProgramName = (manager: any) => {
-    const program = getManagerProgram(manager);
-    return program?.name || "Sin asignar";
-  };
-
-  const handleEditHours = (managerId: string) => {
-    const manager = managers.find(m => m.id === managerId);
-    if (manager && canManageManager(manager)) {
-      setEditingHours(prev => ({
-        ...prev,
-        [managerId]: {
-          weekly: (manager.weekly_hours || 0).toString(),
-          weeks: (manager.number_of_weeks || 16).toString()
-        }
-      }));
-    } else {
-      toast({
-        title: "Error",
-        description: "No tiene permisos para editar este gestor",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSaveHours = async (managerId: string) => {
-    const manager = managers.find(m => m.id === managerId);
-    if (!canManageManager(manager)) {
-      toast({
-        title: "Error",
-        description: "No tiene permisos para editar este gestor",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const values = editingHours[managerId];
-    if (!values) return;
-
-    const weeklyHours = parseInt(values.weekly) || 0;
-    const numberOfWeeks = parseInt(values.weeks) || 16;
-
-    const { error } = await updateManagerHours(managerId, weeklyHours, numberOfWeeks);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudieron actualizar las horas",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Éxito",
-      description: "Horas actualizadas correctamente",
-    });
-
-    setEditingHours(prev => {
-      const newState = { ...prev };
-      delete newState[managerId];
-      return newState;
-    });
-
-    loadData();
-  };
-
-  const handleCancelEdit = (managerId: string) => {
-    setEditingHours(prev => {
-      const newState = { ...prev };
-      delete newState[managerId];
-      return newState;
-    });
-  };
-
-  const handleWorkPlanClick = (manager: any) => {
+  const openManagerDetails = (manager: any) => {
     setSelectedManager(manager);
-    setShowWorkPlanForm(true);
+    setIsDetailsDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="secondary"><Edit className="w-3 h-3 mr-1" />Borrador</Badge>;
-      case 'submitted':
-        return <Badge variant="default"><Clock className="w-3 h-3 mr-1" />Enviado</Badge>;
-      case 'approved':
-        return <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Aprobado</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rechazado</Badge>;
-      default:
-        return <Badge variant="outline"><AlertCircle className="w-3 h-3 mr-1" />Sin plan</Badge>;
-    }
+  const getStatusBadge = (manager: any) => {
+    const hasHours = manager.weekly_hours && manager.number_of_weeks;
+    return hasHours ? (
+      <Badge variant="default" className="bg-green-600">Configurado</Badge>
+    ) : (
+      <Badge variant="secondary">Sin configurar</Badge>
+    );
   };
 
-  if (loading) {
-    return <div className="flex justify-center p-8">Cargando gestores...</div>;
+  if (profile?.role !== 'Administrador') {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No tienes permisos para acceder a esta sección.</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
             Gestores de Internacionalización
-            {userManagedCampus.length > 0 && (
-              <span className="text-sm font-normal text-gray-600 block">
-                Campus: {campuses.filter(c => userManagedCampus.includes(c.id)).map(c => c.name).join(', ')}
-              </span>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <Select value={selectedCampus} onValueChange={setSelectedCampus}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Filtrar por campus" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los campus disponibles</SelectItem>
-                {campuses.map((campus) => (
-                  <SelectItem key={campus.id} value={campus.id}>
-                    {campus.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Gestor</TableHead>
-                <TableHead>Campus</TableHead>
-                <TableHead>Facultad</TableHead>
-                <TableHead>Programa</TableHead>
-                <TableHead>Horas/Semana</TableHead>
-                <TableHead>Semanas</TableHead>
-                <TableHead>Total Horas</TableHead>
-                <TableHead>Estado Plan</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredManagers.map((manager) => (
-                <TableRow key={manager.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{manager.full_name}</div>
-                      <div className="text-sm text-gray-500">{manager.email}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getManagerCampus(manager)}</TableCell>
-                  <TableCell>{getManagerFaculty(manager)}</TableCell>
-                  <TableCell>{getManagerProgramName(manager)}</TableCell>
-                  <TableCell>
-                    {editingHours[manager.id] ? (
-                      <Input
-                        type="number"
-                        value={editingHours[manager.id].weekly}
-                        onChange={(e) => setEditingHours(prev => ({
-                          ...prev,
-                          [manager.id]: {
-                            ...prev[manager.id],
-                            weekly: e.target.value
-                          }
-                        }))}
-                        className="w-20"
-                      />
-                    ) : (
-                      <span 
-                        onClick={() => canManageManager(manager) && handleEditHours(manager.id)} 
-                        className={`cursor-pointer hover:bg-gray-100 p-1 rounded ${!canManageManager(manager) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        {manager.weekly_hours || 0}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingHours[manager.id] ? (
-                      <Input
-                        type="number"
-                        value={editingHours[manager.id].weeks}
-                        onChange={(e) => setEditingHours(prev => ({
-                          ...prev,
-                          [manager.id]: {
-                            ...prev[manager.id],
-                            weeks: e.target.value
-                          }
-                        }))}
-                        className="w-20"
-                      />
-                    ) : (
-                      <span 
-                        onClick={() => canManageManager(manager) && handleEditHours(manager.id)} 
-                        className={`cursor-pointer hover:bg-gray-100 p-1 rounded ${!canManageManager(manager) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        {manager.number_of_weeks || 16}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {manager.total_hours || 0}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge('draft')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      {editingHours[manager.id] ? (
-                        <>
-                          <Button size="sm" onClick={() => handleSaveHours(manager.id)}>
-                            Guardar
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleCancelEdit(manager.id)}>
-                            Cancelar
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleEditHours(manager.id)}
-                            variant="outline"
-                            disabled={!canManageManager(manager)}
-                          >
-                            Editar Horas
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleWorkPlanClick(manager)}
-                            disabled={!manager.total_hours || manager.total_hours === 0 || !canManageManager(manager)}
-                          >
-                            Plan de Trabajo
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          {isLoading ? (
+            <div className="text-center py-8">
+              <p>Cargando gestores...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Campus</TableHead>
+                  <TableHead>Programas Asignados</TableHead>
+                  <TableHead>Horas Semanales</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {managers.map((manager: any) => (
+                  <TableRow key={manager.id}>
+                    <TableCell className="font-medium">{manager.full_name}</TableCell>
+                    <TableCell>{manager.email}</TableCell>
+                    <TableCell>{manager.campus || 'Sin asignar'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {manager.academic_programs?.length || 0} programas
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {manager.weekly_hours ? (
+                        <span>{manager.weekly_hours} horas/semana</span>
+                      ) : (
+                        <span className="text-gray-500">No configurado</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(manager)}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => openManagerDetails(manager)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {managers.length === 0 && !isLoading && (
+            <div className="text-center py-8 text-gray-500">
+              No hay gestores de internacionalización registrados.
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={showWorkPlanForm} onOpenChange={setShowWorkPlanForm}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-auto">
+      {/* Dialog para ver detalles del gestor */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Plan de Trabajo</DialogTitle>
+            <DialogTitle>Detalles del Gestor</DialogTitle>
           </DialogHeader>
+          
           {selectedManager && (
-            <WorkPlanForm
-              manager={selectedManager}
-              onClose={() => setShowWorkPlanForm(false)}
-              onSave={() => {
-                setShowWorkPlanForm(false);
-                loadData();
-              }}
-            />
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium text-gray-700">Información Personal</h4>
+                  <div className="mt-2 space-y-2">
+                    <p><span className="font-medium">Nombre:</span> {selectedManager.full_name}</p>
+                    <p><span className="font-medium">Email:</span> {selectedManager.email}</p>
+                    <p><span className="font-medium">Documento:</span> {selectedManager.document_number || 'No registrado'}</p>
+                    <p><span className="font-medium">Campus:</span> {selectedManager.campus || 'Sin asignar'}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-gray-700">Carga Académica</h4>
+                  <div className="mt-2 space-y-2">
+                    <p><span className="font-medium">Horas semanales:</span> {selectedManager.weekly_hours || 'No configurado'}</p>
+                    <p><span className="font-medium">Número de semanas:</span> {selectedManager.number_of_weeks || 'No configurado'}</p>
+                    <p><span className="font-medium">Total de horas:</span> {selectedManager.total_hours || 'No calculado'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-gray-700 mb-3">Programas Académicos Asignados</h4>
+                {selectedManager.academic_programs && selectedManager.academic_programs.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedManager.academic_programs.map((program: any) => (
+                      <div key={program.id} className="border rounded-lg p-3 bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div>
+                            <p className="font-medium">{program.name}</p>
+                            <p className="text-sm text-gray-600">Director: {program.director_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Campus: {program.campus?.name}</p>
+                            <p className="text-sm text-gray-600">Facultad: {program.faculty?.name}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No tiene programas académicos asignados.</p>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
