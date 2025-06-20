@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +17,10 @@ import { useCustomPlans } from "./useCustomPlans";
 import { useIndicators } from "./useIndicators";
 import { useWorkPlanAssignments } from "./useWorkPlanAssignments";
 import { useFileUpload } from "./useFileUpload";
+import { useSniesReports } from "./useSniesReports";
+import { useTemplateReports } from "./useTemplateReports";
+import { useReportConfiguration } from "./useReportConfiguration";
+import { usePlanTypes } from "./usePlanTypes";
 
 type Result<T> = { data: T | null; error: any };
 
@@ -35,6 +40,10 @@ export function useSupabaseData() {
   const indicatorsHook = useIndicators();
   const workPlanAssignmentsHook = useWorkPlanAssignments();
   const fileUploadHook = useFileUpload();
+  const sniesReportsHook = useSniesReports();
+  const templateReportsHook = useTemplateReports();
+  const reportConfigurationHook = useReportConfiguration();
+  const planTypesHook = usePlanTypes();
 
   useEffect(() => {
     const getProfile = async () => {
@@ -104,6 +113,14 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const deleteIndicatorReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
   const checkPeriodActive = async (periodId: string): Promise<Result<boolean>> => {
     const { data, error } = await supabase
       .from("report_periods")
@@ -127,151 +144,6 @@ export function useSupabaseData() {
       .eq("id", reportId)
       .select()
       .single();
-    return { data, error };
-  };
-
-  // Plan types management
-  const createPlanType = async (planType: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("plan_types")
-      .insert(planType)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const updatePlanType = async (id: string, updates: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("plan_types")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const deletePlanType = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("plan_types")
-      .delete()
-      .eq("id", id);
-    return { data, error };
-  };
-
-  // Plan fields management
-  const createPlanField = async (field: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("plan_fields")
-      .insert(field)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const updatePlanField = async (id: string, updates: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("plan_fields")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const deletePlanField = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("plan_fields")
-      .delete()
-      .eq("id", id);
-    return { data, error };
-  };
-
-  const configurePlanTypeElements = async (planTypeId: string, elements: any): Promise<Result<any>> => {
-    // Implementation for configuring plan type elements
-    return { data: null, error: null };
-  };
-
-  // Report system config
-  const fetchReportSystemConfig = async (): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("report_system_config")
-      .select("*")
-      .single();
-    return { data, error };
-  };
-
-  const updateReportSystemConfig = async (updates: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("report_system_config")
-      .update(updates)
-      .eq("id", updates.id)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  // Report templates
-  const fetchReportTemplates = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("report_templates")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
-    return { data, error };
-  };
-
-  const createReportTemplate = async (template: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("report_templates")
-      .insert(template)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const updateReportTemplate = async (id: string, updates: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("report_templates")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const deleteReportTemplate = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("report_templates")
-      .delete()
-      .eq("id", id);
-    return { data, error };
-  };
-
-  // Manager report versions
-  const createManagerReportVersion = async (version: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("manager_report_versions")
-      .insert(version)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const updateManagerReportVersion = async (id: string, updates: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("manager_report_versions")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const getNextVersionNumber = async (reportId: string, templateId: string): Promise<Result<number>> => {
-    const { data, error } = await supabase.rpc('get_next_version_number', {
-      p_manager_report_id: reportId,
-      p_template_id: templateId
-    });
     return { data, error };
   };
 
@@ -313,38 +185,25 @@ export function useSupabaseData() {
     // File Upload
     ...fileUploadHook,
 
+    // SNIES Reports
+    ...sniesReportsHook,
+
+    // Template Reports
+    ...templateReportsHook,
+
+    // Report Configuration
+    ...reportConfigurationHook,
+
+    // Plan Types
+    ...planTypesHook,
+
     // Additional functions
     createManagerReport,
     fetchUnifiedReports,
     deleteTemplateBasedReport,
+    deleteIndicatorReport,
     checkPeriodActive,
     submitTemplateBasedReport,
-    
-    // Plan types
-    createPlanType,
-    updatePlanType,
-    deletePlanType,
-    
-    // Plan fields
-    createPlanField,
-    updatePlanField,
-    deletePlanField,
-    configurePlanTypeElements,
-    
-    // Report system
-    fetchReportSystemConfig,
-    updateReportSystemConfig,
-    
-    // Report templates
-    fetchReportTemplates,
-    createReportTemplate,
-    updateReportTemplate,
-    deleteReportTemplate,
-    
-    // Report versions
-    createManagerReportVersion,
-    updateManagerReportVersion,
-    getNextVersionNumber,
     
     // SNIES functions
     fetchSniesCountries: async (): Promise<Result<any[]>> => {
@@ -493,3 +352,4 @@ export function useSupabaseData() {
     }
   };
 }
+

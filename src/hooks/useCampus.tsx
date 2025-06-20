@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Campus, Result } from "@/types/supabase";
@@ -25,28 +26,22 @@ export function useCampus() {
     return { data, error };
   };
 
-  const getUserManagedCampus = async (userId: string): Promise<Result<Campus[]>> => {
+  const getUserManagedCampus = async (userId: string): Promise<Result<any>> => {
     const { data: userProfile, error: profileError } = await supabase
       .from("profiles")
-      .select("managed_campus_ids")
+      .select("managed_campus_ids, campus_id")
       .eq("id", userId)
       .single();
 
     if (profileError) return { data: null, error: profileError };
 
-    if (!userProfile.managed_campus_ids) {
-      // Super admin - fetch all campus
-      const { data, error } = await supabase.from("campus").select("*").order("name");
-      return { data, error };
-    }
-
-    // Fetch only managed campus
-    const { data, error } = await supabase
-      .from("campus")
-      .select("*")
-      .in("id", userProfile.managed_campus_ids)
-      .order("name");
-    return { data, error };
+    return { 
+      data: {
+        managed_campus_ids: userProfile.managed_campus_ids || [],
+        campus_id: userProfile.campus_id
+      }, 
+      error: null 
+    };
   };
 
   return {
@@ -57,3 +52,4 @@ export function useCampus() {
     getUserManagedCampus,
   };
 }
+
