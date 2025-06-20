@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
 import { ProgressIndicatorCard } from "./ProgressIndicatorCard";
+import { EvidenceUploader } from "./EvidenceUploader";
 import { FileText, Save, Send, AlertTriangle, CheckCircle, Clock, Edit3 } from "lucide-react";
 
 interface EditableReportFormProps {
@@ -32,7 +33,6 @@ export function EditableReportForm({
     fetchWorkPlanAssignments,
     fetchProductProgressReports,
     upsertProductProgressReport,
-    uploadFile,
     updateManagerReport
   } = useSupabaseData();
   const { toast } = useToast();
@@ -61,6 +61,7 @@ export function EditableReportForm({
         fetchProductProgressReports(reportId)
       ]);
 
+      console.log('Datos cargados:', { assignmentsResult, progressResult });
       setAssignments(assignmentsResult.data || []);
       setProgressReports(progressResult.data || []);
     } catch (error) {
@@ -118,6 +119,7 @@ export function EditableReportForm({
   const updateLocalChanges = (productId: string, assignmentId: string, updates: any) => {
     if (isReadOnly) return;
     
+    console.log('Actualizando cambios locales:', { productId, updates });
     setLocalChanges(prev => ({
       ...prev,
       [productId]: {
@@ -137,7 +139,10 @@ export function EditableReportForm({
       // Guardar cada cambio local en la base de datos
       const savePromises = Object.keys(localChanges).map(async (productId) => {
         const assignment = assignments.find(a => a.product.id === productId);
-        if (!assignment) return;
+        if (!assignment) {
+          console.log('No se encontró assignment para producto:', productId);
+          return { data: null, error: null };
+        }
 
         const reportData = {
           manager_report_id: reportId,
@@ -147,27 +152,34 @@ export function EditableReportForm({
         };
 
         console.log('Guardando reporte de producto:', reportData);
-        return upsertProductProgressReport(reportData);
+        const result = await upsertProductProgressReport(reportData);
+        console.log('Resultado del guardado individual:', result);
+        return result;
       });
 
       const results = await Promise.all(savePromises);
       console.log('Resultados del guardado:', results);
       
       // Verificar si hubo errores
-      const errors = results.filter(result => result.error);
+      const errors = results.filter(result => result && result.error);
       if (errors.length > 0) {
         console.error('Errores al guardar:', errors);
-        throw new Error('Error al guardar algunos reportes');
+        throw new Error(`Error al guardar ${errors.length} reportes`);
       }
       
       // Limpiar cambios locales después de guardar exitosamente
       setLocalChanges({});
       
       // Actualizar el estado del informe principal para asegurar que permanezca como draft
-      await updateManagerReport(reportId, { 
+      const updateResult = await updateManagerReport(reportId, { 
         status: 'draft',
         updated_at: new Date().toISOString()
       });
+
+      if (updateResult.error) {
+        console.error('Error actualizando informe principal:', updateResult.error);
+        throw updateResult.error;
+      }
       
       toast({
         title: "Éxito",
@@ -180,7 +192,7 @@ export function EditableReportForm({
       console.error('Error saving draft:', error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el borrador",
+        description: error instanceof Error ? error.message : "No se pudo guardar el borrador",
         variant: "destructive",
       });
     } finally {
@@ -433,7 +445,7 @@ export function EditableReportForm({
                             <TableHead className="font-medium w-32">Progreso (%)</TableHead>
                             <TableHead className="font-medium w-40">Progreso Visual</TableHead>
                             <TableHead className="font-medium">Observaciones</TableHead>
-                            <TableHead className="font-medium w-32">Evidencias</TableHead>
+                            <TableHead className="font-medium w-80">Evidencias</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -498,15 +510,19 @@ export function EditableReportForm({
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  <div className="text-center">
-                                    {progressReport.evidence_file_names?.length > 0 ? (
-                                      <Badge variant="secondary">
-                                        {progressReport.evidence_file_names.length} archivo{progressReport.evidence_file_names.length !== 1 ? 's' : ''}
-                                      </Badge>
-                                    ) : (
-                                      <span className="text-xs text-gray-400">Sin evidencias</span>
-                                    )}
-                                  </div>
+                                  <EvidenceUploader
+                                    productId={product.id}
+                                    reportId={reportId}
+                                    currentFiles={progressReport.evidence_files || []}
+                                    currentFileNames={progressReport.evidence_file_names || []}
+                                    onFilesChange={(files, fileNames) => {
+                                      updateLocalChanges(product.id, assignment.id, {
+                                        evidence_files: files,
+                                        evidence_file_names: fileNames
+                                      });
+                                    }}
+                                    disabled={!canEdit}
+                                  />
                                 </TableCell>
                               </TableRow>
                             );
