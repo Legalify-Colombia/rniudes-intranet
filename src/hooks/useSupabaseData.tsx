@@ -316,24 +316,38 @@ export function useSupabaseData() {
     return await query;
   };
 
-  // Enhanced faculties fetch with campus filtering
+  // CORRECTED: Enhanced faculties fetch with campus filtering using faculty_campus table
   const fetchFacultiesByCampus = async (campusIds?: string[]) => {
-    let query = supabase
-      .from('faculties')
-      .select(`
-        *,
-        campus:campus_id(*),
-        faculty_campus!inner(
-          campus(*)
-        )
-      `)
-      .order('name');
-
     if (campusIds && campusIds.length > 0) {
-      query = query.in('campus_id', campusIds);
+      // Filter by specific campus through faculty_campus relationship
+      const { data, error } = await supabase
+        .from('faculties')
+        .select(`
+          *,
+          campus:campus_id(*),
+          faculty_campus!inner(
+            campus(*)
+          )
+        `)
+        .in('faculty_campus.campus_id', campusIds)
+        .order('name');
+      
+      return { data, error };
+    } else {
+      // Return all faculties
+      const { data, error } = await supabase
+        .from('faculties')
+        .select(`
+          *,
+          campus:campus_id(*),
+          faculty_campus(
+            campus(*)
+          )
+        `)
+        .order('name');
+      
+      return { data, error };
     }
-
-    return await query;
   };
 
   // Get user's managed campus IDs
@@ -353,7 +367,7 @@ export function useSupabaseData() {
       .select(`
         *,
         campus:campus_id(*),
-        faculty_campus!inner(
+        faculty_campus(
           campus(*)
         )
       `)

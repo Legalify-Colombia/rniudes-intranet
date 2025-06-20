@@ -92,7 +92,7 @@ export function CampusManagement() {
       // Load data based on campus permissions
       const campusFilter = profile?.role === 'Administrador' && managedCampusIds.length === 0 
         ? undefined 
-        : managedCampusIds;
+        : managedCampusIds.length > 0 ? managedCampusIds : undefined;
 
       const [campusResult, facultiesResult, programsResult, managersResult] = await Promise.all([
         fetchCampus(),
@@ -391,11 +391,15 @@ export function CampusManagement() {
     }
   };
 
-  const availableFaculties = faculties.filter(f => 
-    !programForm.campus_id || 
-    f.faculty_campus?.some(fc => fc.campus.id === programForm.campus_id) ||
-    canManageCampus(programForm.campus_id)
-  );
+  // CORRECTED: Filter faculties available for programs based on campus relationship
+  const availableFaculties = faculties.filter(f => {
+    if (!programForm.campus_id) return true;
+    
+    // Check if faculty has relationship with the selected campus
+    return f.faculty_campus?.some(fc => fc.campus.id === programForm.campus_id) ||
+           f.campus_id === programForm.campus_id ||
+           canManageCampus(programForm.campus_id);
+  });
   
   const availableManagers = managers.filter(m => 
     m.role === 'Gestor' && 
@@ -585,7 +589,7 @@ export function CampusManagement() {
                     <div className="space-y-2">
                       <Label>Campus Asociados (Seleccione al menos uno)</Label>
                       <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-                        {campuses.map((campus) => (
+                        {campuses.filter(campus => canManageCampus(campus.id)).map((campus) => (
                           <div key={campus.id} className="flex items-center space-x-2">
                             <Checkbox
                               id={`campus-${campus.id}`}
@@ -755,7 +759,7 @@ export function CampusManagement() {
                           <SelectValue placeholder="Seleccionar campus" />
                         </SelectTrigger>
                         <SelectContent>
-                          {campuses.map((campus) => (
+                          {campuses.filter(campus => canManageCampus(campus.id)).map((campus) => (
                             <SelectItem key={campus.id} value={campus.id}>
                               {campus.name}
                             </SelectItem>
