@@ -1,5 +1,3 @@
-
-
 import { PostgrestError } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -35,6 +33,21 @@ export interface AcademicProgram {
   description?: string;
   faculty_id: string;
   campus_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Document template interface
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_type: string;
+  template_content: string;
+  file_url?: string;
+  file_name?: string;
+  is_active: boolean;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -296,6 +309,262 @@ export function useSupabaseData() {
       return { error: null };
     } catch (error) {
       console.error("Unexpected error deleting file:", error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  // User management functions
+  const fetchManagers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, campus(id, name)')
+        .eq('role', 'Gestor')
+        .order('full_name');
+
+      if (error) {
+        console.error("Error fetching managers:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching managers:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const fetchManagersByCampus = async (campusIds: string | string[]) => {
+    try {
+      const ids = Array.isArray(campusIds) ? campusIds : [campusIds];
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, campus(id, name)')
+        .eq('role', 'Gestor')
+        .in('campus_id', ids)
+        .order('full_name');
+
+      if (error) {
+        console.error("Error fetching managers by campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching managers by campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const fetchUsersByCampus = async (campusIds?: string[]) => {
+    try {
+      let query = supabase
+        .from('profiles')
+        .select('*, campus(id, name)')
+        .order('full_name');
+
+      if (campusIds && campusIds.length > 0) {
+        query = query.in('campus_id', campusIds);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching users by campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching users by campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const updateManagerHours = async (managerId: string, hours: { weekly_hours: number; number_of_weeks: number; total_hours: number }) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(hours)
+        .eq('id', managerId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating manager hours:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error updating manager hours:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const getUserManagedCampus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('campus_id, managed_campus_ids')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user managed campus:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching user managed campus:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const updateUserCampusAccess = async (userId: string, campusIds: string[]) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ managed_campus_ids: campusIds.length > 0 ? campusIds : null })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating user campus access:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error updating user campus access:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  // File upload functions
+  const uploadFile = async (file: File, bucket: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error("Error uploading file:", error);
+        return { data: null, error };
+      }
+
+      const { data: urlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(fileName);
+
+      return { data: { ...data, publicUrl: urlData.publicUrl }, error: null };
+    } catch (error) {
+      console.error("Unexpected error uploading file:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const deleteProductProgressReport = async (reportId: string) => {
+    try {
+      const { error } = await supabase
+        .from('product_progress_reports')
+        .delete()
+        .eq('id', reportId);
+
+      if (error) {
+        console.error("Error deleting product progress report:", error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error("Unexpected error deleting product progress report:", error);
+      return { error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  // Document template functions
+  const fetchDocumentTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) {
+        console.error("Error fetching document templates:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error fetching document templates:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const createDocumentTemplate = async (templateData: Omit<DocumentTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .insert(templateData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating document template:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error creating document template:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const updateDocumentTemplate = async (templateId: string, updates: Partial<DocumentTemplate>) => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .update(updates)
+        .eq('id', templateId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating document template:", error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error("Unexpected error updating document template:", error);
+      return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+  };
+
+  const deleteDocumentTemplate = async (templateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('document_templates')
+        .delete()
+        .eq('id', templateId);
+
+      if (error) {
+        console.error("Error deleting document template:", error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error("Unexpected error deleting document template:", error);
       return { error: error instanceof Error ? error : new Error(String(error)) };
     }
   };
@@ -739,6 +1008,20 @@ export function useSupabaseData() {
     upsertProductProgressReport,
     uploadEvidenceFile,
     deleteEvidenceFile,
+    deleteProductProgressReport,
+    uploadFile,
+    // User management
+    fetchManagers,
+    fetchManagersByCampus,
+    fetchUsersByCampus,
+    updateManagerHours,
+    getUserManagedCampus,
+    updateUserCampusAccess,
+    // Document templates
+    fetchDocumentTemplates,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
     // Campus management
     fetchCampus,
     createCampus,
