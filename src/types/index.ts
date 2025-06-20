@@ -1,4 +1,3 @@
-
 // Strategic configuration types
 export interface StrategicAxis {
   id: string;
@@ -211,7 +210,7 @@ export interface SpecificLine {
 export interface Indicator {
   id: string;
   name: string;
-  data_type: string;
+  data_type: 'numeric' | 'link' | 'file' | 'short_text' | 'long_text';
   is_active: boolean;
   created_by: string;
   created_at: string;

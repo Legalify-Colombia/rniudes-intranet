@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import {
   AcademicProgram,
@@ -114,7 +113,7 @@ export const useSupabaseData = () => {
   };
 
   const getUserManagedCampus = async (userId: string) => {
-    return await supabase.from('profiles').select('managed_campus_ids').eq('id', userId).single();
+    return await supabase.from('profiles').select('managed_campus_ids, campus_id').eq('id', userId).single();
   };
 
   const fetchWorkPlanAssignments = async (workPlanId: string) => {
@@ -479,6 +478,17 @@ export const useSupabaseData = () => {
     return await supabase.from('report_templates').update(data).eq('id', id).select().single();
   };
 
+  const deleteReportTemplate = async (id: string) => {
+    return await supabase.from('report_templates').delete().eq('id', id);
+  };
+
+  const fetchUsersByCampus = async (campusIds?: string[]) => {
+    if (!campusIds || campusIds.length === 0) {
+      return await supabase.from('profiles').select('*');
+    }
+    return await supabase.from('profiles').select('*').in('campus_id', campusIds);
+  };
+
   return {
     fetchAcademicPrograms,
     fetchStrategicAxes,
@@ -568,7 +578,9 @@ export const useSupabaseData = () => {
     updateManagerReportVersion,
     getNextVersionNumber,
     createReportTemplate,
-    updateReportTemplate
+    updateReportTemplate,
+    deleteReportTemplate,
+    fetchUsersByCampus
   };
 };
 
