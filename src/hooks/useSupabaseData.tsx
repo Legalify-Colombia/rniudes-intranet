@@ -453,11 +453,11 @@ export function useSupabaseData() {
       .from('work_plans')
       .select(`
         *,
-        manager:manager_id(*),
-        program:program_id(
-          *,
-          campus:campus_id(*),
-          faculty:faculty_id(*)
+        manager:profiles!work_plans_manager_id_fkey(
+          id,
+          full_name,
+          email,
+          position
         )
       `)
       .order('created_at', { ascending: false });
@@ -618,6 +618,39 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const approveWorkPlan = async (workPlanId: string, status: 'approved' | 'rejected', comments?: string) => {
+    const { data, error } = await supabase
+      .from('work_plans')
+      .update({ 
+        status,
+        approval_comments: comments,
+        approved_date: status === 'approved' ? new Date().toISOString() : null,
+        approved_by: (await supabase.auth.getUser()).data.user?.id
+      })
+      .eq('id', workPlanId)
+      .select();
+
+    return { data, error };
+  };
+
+  const fetchPendingWorkPlans = async () => {
+    const { data, error } = await supabase
+      .from('work_plans')
+      .select(`
+        *,
+        manager:profiles!work_plans_manager_id_fkey(
+          id,
+          full_name,
+          email,
+          position
+        )
+      `)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    return { data, error };
+  };
+
   return {
     loading,
     setLoading,
@@ -673,5 +706,7 @@ export function useSupabaseData() {
     // File Management
     uploadFile,
     deleteFile,
+    approveWorkPlan,
+    fetchPendingWorkPlans,
   };
 }

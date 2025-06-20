@@ -9,26 +9,14 @@ import { InternationalizationManagers } from "@/components/InternationalizationM
 import { StrategicConfiguration } from "@/components/StrategicConfiguration";
 import { ManagerReports } from "@/components/ManagerReports";
 import { ManagerWorkPlan } from "@/components/ManagerWorkPlan";
-import { Bell, LogOut } from "lucide-react";
+import { WorkPlanApproval } from "@/components/WorkPlanApproval";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeView, setActiveView] = useState("dashboard");
-  const { profile, signOut } = useAuth();
-  const { toast } = useToast();
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast({
-        title: "Error al cerrar sesión",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
+  const { profile } = useAuth();
 
   const renderContent = () => {
     switch (activeView) {
@@ -44,144 +32,41 @@ const Index = () => {
         return <ManagerReports />;
       case "manager-work-plan":
         return <ManagerWorkPlan />;
+      case "work-plan-approval":
+        return <WorkPlanApproval />;
+      case "my-report":
+        return <div className="p-6"><h1>Mi Informe - En desarrollo</h1></div>;
       default:
         return <Dashboard />;
-    }
-  };
-
-  const canAccessSection = (section: string) => {
-    if (!profile) return false;
-    
-    switch (section) {
-      case "users":
-      case "programs":
-      case "strategic":
-        return profile.role === "Administrador";
-      case "managers":
-      case "manager-reports":
-        return ["Administrador", "Coordinador"].includes(profile.role);
-      case "manager-work-plan":
-        return profile.role === "Gestor";
-      default:
-        return true;
     }
   };
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
-        <AppSidebar />
+        <AppSidebar activeView={activeView} setActiveView={setActiveView} />
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
+          {/* Top Bar simplificada */}
           <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <SidebarTrigger />
               <div className="h-8 w-px bg-gray-200" />
-              <nav className="flex space-x-1">
-                <button
-                  onClick={() => setActiveView("dashboard")}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeView === "dashboard"
-                      ? "bg-blue-100 text-blue-700"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  Dashboard
-                </button>
-                
-                {canAccessSection("users") && (
-                  <button
-                    onClick={() => setActiveView("users")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeView === "users"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    Usuarios
-                  </button>
-                )}
-                
-                {canAccessSection("programs") && (
-                  <button
-                    onClick={() => setActiveView("programs")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeView === "programs"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    Campus y Programas
-                  </button>
-                )}
-                
-                {canAccessSection("managers") && (
-                  <button
-                    onClick={() => setActiveView("managers")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeView === "managers"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    Gestores
-                  </button>
-                )}
-
-                {canAccessSection("strategic") && (
-                  <button
-                    onClick={() => setActiveView("strategic")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeView === "strategic"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    Configuración Estratégica
-                  </button>
-                )}
-
-                {canAccessSection("manager-reports") && (
-                  <button
-                    onClick={() => setActiveView("manager-reports")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeView === "manager-reports"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    Informes de Gestores
-                  </button>
-                )}
-
-                {canAccessSection("manager-work-plan") && (
-                  <button
-                    onClick={() => setActiveView("manager-work-plan")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeView === "manager-work-plan"
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    Mi Plan de Trabajo
-                  </button>
-                )}
-              </nav>
+              <img 
+                src="https://udes.edu.co/images/logo/logo-con-acreditada-color.png" 
+                alt="UDES Logo" 
+                className="h-8 w-auto md:hidden"
+              />
             </div>
             
             <div className="flex items-center space-x-4">
               <Button variant="outline" size="sm">
                 <Bell className="h-4 w-4 mr-2" />
-                Notificaciones
+                <span className="hidden sm:inline">Notificaciones</span>
               </Button>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 hidden md:block">
                 <p className="font-medium">{profile?.full_name}</p>
                 <p className="text-xs">{profile?.position}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Salir
-              </Button>
             </div>
           </header>
 

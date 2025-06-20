@@ -110,6 +110,13 @@ export default function Auth() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="https://udes.edu.co/images/logo/logo-con-acreditada-color.png" 
+              alt="UDES Logo" 
+              className="h-16 w-auto"
+            />
+          </div>
           <CardTitle className="text-2xl font-bold text-primary">
             DRNI - Gestión
           </CardTitle>
