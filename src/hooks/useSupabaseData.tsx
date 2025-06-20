@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile, Result } from "@/types/supabase";
 
@@ -395,8 +394,7 @@ export function useSupabaseData() {
           manager:manager_id (
             id,
             full_name,
-            email,
-            position
+            email
           ),
           program:program_id (
             id,
@@ -568,9 +566,12 @@ export function useSupabaseData() {
   };
 
   const upsertWorkPlanAssignment = async (assignment: any): Promise<Result<any>> => {
+    // Remove 'status' property as it doesn't exist in the work_plan_assignments table
+    const { status, ...assignmentWithoutStatus } = assignment;
+    
     const { data, error } = await supabase
       .from("work_plan_assignments")
-      .upsert(assignment)
+      .upsert(assignmentWithoutStatus)
       .select()
       .single();
     return { data, error };
@@ -1322,9 +1323,23 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const consolidateSniesReports = async (templateId: string): Promise<Result<any>> => {
-    // Implementation for consolidating SNIES reports
-    return { data: null, error: null };
+  const consolidateSniesReports = async (templateId: string, title: string): Promise<Result<any>> => {
+    try {
+      // This is a placeholder implementation - you would need to implement the actual consolidation logic
+      console.log('Consolidating SNIES reports for template:', templateId, 'with title:', title);
+      
+      // For now, return a mock response
+      return { 
+        data: { 
+          total_records: 0, 
+          participating_managers: 0 
+        }, 
+        error: null 
+      };
+    } catch (error) {
+      console.error('Error consolidating SNIES reports:', error);
+      return { data: null, error };
+    }
   };
 
   const fetchSniesTemplateFields = async (templateId: string): Promise<Result<any[]>> => {
@@ -1334,6 +1349,64 @@ export function useSupabaseData() {
       .eq("template_id", templateId)
       .order("field_order");
     return { data, error };
+  };
+
+  // SNIES Report Data functions
+  const fetchSniesReportData = async (reportId: string): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_report_data")
+        .select("*")
+        .eq("report_id", reportId)
+        .order("row_index");
+      
+      if (error) {
+        console.error('Error fetching SNIES report data:', error);
+        return { data: null, error };
+      }
+      
+      return { data: data || [], error: null };
+    } catch (error) {
+      console.error('Unexpected error fetching SNIES report data:', error);
+      return { data: null, error };
+    }
+  };
+
+  const saveSniesReportData = async (reportId: string, reportData: any[]): Promise<Result<any>> => {
+    try {
+      // First, delete existing data for this report
+      const { error: deleteError } = await supabase
+        .from("snies_report_data")
+        .delete()
+        .eq("report_id", reportId);
+
+      if (deleteError) {
+        console.error('Error deleting existing SNIES report data:', deleteError);
+        return { data: null, error: deleteError };
+      }
+
+      // Insert new data
+      const dataToInsert = reportData.map((row, index) => ({
+        report_id: reportId,
+        row_index: index,
+        field_data: row
+      }));
+
+      const { data, error } = await supabase
+        .from("snies_report_data")
+        .insert(dataToInsert)
+        .select();
+
+      if (error) {
+        console.error('Error saving SNIES report data:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Unexpected error saving SNIES report data:', error);
+      return { data: null, error };
+    }
   };
 
   // File upload function
@@ -1510,8 +1583,10 @@ export function useSupabaseData() {
     bulkCreateSniesCountries,
     bulkCreateSniesMunicipalities,
     fetchSniesReportTemplates,
-    consolidateSniesReports,
     fetchSniesTemplateFields,
+    fetchSniesReportData,
+    saveSniesReportData,
+    consolidateSniesReports,
     
     // Utilities
     uploadFile,
