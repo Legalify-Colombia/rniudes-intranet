@@ -185,3 +185,72 @@ export interface UnifiedReport {
   report_period_id: string | null;
   type_display_name: string;
 }
+
+export interface PlanType {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanField {
+  id: string;
+  plan_type_id: string;
+  field_name: string;
+  field_type: "numeric" | "short_text" | "long_text" | "dropdown" | "file";
+  dropdown_options?: any;
+  is_required: boolean;
+  field_order: number;
+  created_at: string;
+}
+
+export interface CustomPlan {
+  id: string;
+  plan_type_id: string;
+  manager_id: string;
+  title: string;
+  status: "draft" | "submitted" | "approved" | "rejected";
+  submitted_date?: string;
+  approved_date?: string;
+  approved_by?: string;
+  approval_comments?: string;
+  created_at: string;
+  updated_at: string;
+  plan_type?: PlanType;
+  responses?: CustomPlanResponse[];
+  assignments?: CustomPlanAssignment[];
+}
+
+export interface CustomPlanResponse {
+  id: string;
+  custom_plan_id: string;
+  plan_field_id: string;
+  response_value?: any;
+  file_url?: string;
+  file_name?: string;
+  created_at: string;
+  updated_at: string;
+  plan_field?: PlanField;
+}
+
+export interface CustomPlanAssignment {
+  id: string;
+  custom_plan_id: string;
+  strategic_axis_id?: string;
+  action_id?: string;
+  product_id?: string;
+  assigned_hours: number;
+  created_at: string;
+  strategic_axis?: StrategicAxis;
+  action?: Action;
+  product?: Product;
+}
+
+export interface PlanTypeConfiguration {
+  strategic_axes: string[];
+  actions: string[];
+  products: string[];
+}

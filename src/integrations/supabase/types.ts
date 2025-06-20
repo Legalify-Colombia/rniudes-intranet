@@ -142,6 +142,177 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_plan_assignments: {
+        Row: {
+          action_id: string | null
+          assigned_hours: number | null
+          created_at: string | null
+          custom_plan_id: string
+          id: string
+          product_id: string | null
+          strategic_axis_id: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          assigned_hours?: number | null
+          created_at?: string | null
+          custom_plan_id: string
+          id?: string
+          product_id?: string | null
+          strategic_axis_id?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          assigned_hours?: number | null
+          created_at?: string | null
+          custom_plan_id?: string
+          id?: string
+          product_id?: string | null
+          strategic_axis_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_plan_assignments_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_assignments_custom_plan_id_fkey"
+            columns: ["custom_plan_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_assignments_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_plan_responses: {
+        Row: {
+          created_at: string | null
+          custom_plan_id: string
+          file_name: string | null
+          file_url: string | null
+          id: string
+          plan_field_id: string
+          response_value: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_plan_id: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          plan_field_id: string
+          response_value?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_plan_id?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          plan_field_id?: string
+          response_value?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_plan_responses_custom_plan_id_fkey"
+            columns: ["custom_plan_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_responses_plan_field_id_fkey"
+            columns: ["plan_field_id"]
+            isOneToOne: false
+            referencedRelation: "plan_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_plans: {
+        Row: {
+          approval_comments: string | null
+          approved_by: string | null
+          approved_date: string | null
+          created_at: string | null
+          id: string
+          manager_id: string
+          plan_type_id: string
+          status: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          plan_type_id: string
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          plan_type_id?: string
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plans_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_templates: {
         Row: {
           created_at: string | null
@@ -894,6 +1065,202 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      plan_fields: {
+        Row: {
+          created_at: string | null
+          dropdown_options: Json | null
+          field_name: string
+          field_order: number | null
+          field_type: string
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dropdown_options?: Json | null
+          field_name: string
+          field_order?: number | null
+          field_type: string
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dropdown_options?: Json | null
+          field_name?: string
+          field_order?: number | null
+          field_type?: string
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_fields_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_type_actions: {
+        Row: {
+          action_id: string
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_actions_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_type_actions_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_type_products: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_products_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_type_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_type_strategic_axes: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+          strategic_axis_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+          strategic_axis_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+          strategic_axis_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_strategic_axes_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_type_strategic_axes_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_types: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_types_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       preliminary_reports: {
         Row: {

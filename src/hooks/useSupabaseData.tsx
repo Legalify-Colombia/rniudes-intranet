@@ -1107,6 +1107,232 @@ export const useSupabaseData = () => {
     }
   };
 
+  // Plan Types Management
+  const fetchPlanTypes = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('plan_types')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const createPlanType = async (planTypeData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('plan_types')
+      .insert({
+        ...planTypeData,
+        created_by: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePlanType = async (id: string, planTypeData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('plan_types')
+      .update(planTypeData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanType = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('plan_types')
+      .update({ is_active: false })
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Plan Fields Management
+  const fetchPlanFields = async (planTypeId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('plan_fields')
+      .select('*')
+      .eq('plan_type_id', planTypeId)
+      .order('field_order');
+    return { data: data || [], error };
+  };
+
+  const createPlanField = async (fieldData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('plan_fields')
+      .insert(fieldData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePlanField = async (id: string, fieldData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('plan_fields')
+      .update(fieldData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanField = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('plan_fields')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Plan Type Configuration
+  const configurePlanTypeElements = async (planTypeId: string, elements: any): Promise<Result<null>> => {
+    try {
+      // Clear existing associations
+      await Promise.all([
+        supabase.from('plan_type_strategic_axes').delete().eq('plan_type_id', planTypeId),
+        supabase.from('plan_type_actions').delete().eq('plan_type_id', planTypeId),
+        supabase.from('plan_type_products').delete().eq('plan_type_id', planTypeId)
+      ]);
+
+      // Insert new associations
+      const promises = [];
+
+      if (elements.strategic_axes.length > 0) {
+        const axesData = elements.strategic_axes.map((axisId: string) => ({
+          plan_type_id: planTypeId,
+          strategic_axis_id: axisId
+        }));
+        promises.push(supabase.from('plan_type_strategic_axes').insert(axesData));
+      }
+
+      if (elements.actions.length > 0) {
+        const actionsData = elements.actions.map((actionId: string) => ({
+          plan_type_id: planTypeId,
+          action_id: actionId
+        }));
+        promises.push(supabase.from('plan_type_actions').insert(actionsData));
+      }
+
+      if (elements.products.length > 0) {
+        const productsData = elements.products.map((productId: string) => ({
+          plan_type_id: planTypeId,
+          product_id: productId
+        }));
+        promises.push(supabase.from('plan_type_products').insert(productsData));
+      }
+
+      await Promise.all(promises);
+      return { data: null, error: null };
+    } catch (error) {
+      console.error('Error configuring plan type elements:', error);
+      return { data: null, error };
+    }
+  };
+
+  // Custom Plans Management
+  const fetchCustomPlans = async (managerId?: string): Promise<Result<any[]>> => {
+    let query = supabase
+      .from('custom_plans')
+      .select(`
+        *,
+        plan_type:plan_types(*)
+      `);
+
+    if (managerId) {
+      query = query.eq('manager_id', managerId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const createCustomPlan = async (planData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('custom_plans')
+      .insert({
+        ...planData,
+        manager_id: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateCustomPlan = async (id: string, planData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('custom_plans')
+      .update(planData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const submitCustomPlan = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('custom_plans')
+      .update({
+        status: 'submitted',
+        submitted_date: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteCustomPlan = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('custom_plans')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Custom Plan Responses
+  const fetchCustomPlanResponses = async (planId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('custom_plan_responses')
+      .select(`
+        *,
+        plan_field:plan_fields(*)
+      `)
+      .eq('custom_plan_id', planId);
+    return { data: data || [], error };
+  };
+
+  const upsertCustomPlanResponse = async (responseData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('custom_plan_responses')
+      .upsert(responseData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Custom Plan Assignments
+  const fetchCustomPlanAssignments = async (planId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('custom_plan_assignments')
+      .select(`
+        *,
+        strategic_axis:strategic_axes(*),
+        action:actions(*),
+        product:products(*)
+      `)
+      .eq('custom_plan_id', planId);
+    return { data: data || [], error };
+  };
+
+  const upsertCustomPlanAssignment = async (assignmentData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('custom_plan_assignments')
+      .upsert(assignmentData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
   return {
     fetchStrategicAxes,
     createStrategicAxis,
@@ -1190,5 +1416,27 @@ export const useSupabaseData = () => {
     deleteIndicatorReport,
     checkPeriodActive,
     submitTemplateBasedReport,
+    
+    // Plan Types functions
+    fetchPlanTypes,
+    createPlanType,
+    updatePlanType,
+    deletePlanType,
+    fetchPlanFields,
+    createPlanField,
+    updatePlanField,
+    deletePlanField,
+    configurePlanTypeElements,
+    
+    // Custom Plans functions
+    fetchCustomPlans,
+    createCustomPlan,
+    updateCustomPlan,
+    submitCustomPlan,
+    deleteCustomPlan,
+    fetchCustomPlanResponses,
+    upsertCustomPlanResponse,
+    fetchCustomPlanAssignments,
+    upsertCustomPlanAssignment,
   };
 };
