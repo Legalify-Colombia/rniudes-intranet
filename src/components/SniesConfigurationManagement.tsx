@@ -4,33 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload, Download, CheckCircle, XCircle } from "lucide-react";
+import { PaginatedTable } from "./PaginatedTable";
 
 export function SniesConfigurationManagement() {
   const {
     fetchSniesCountries,
     fetchSniesMunicipalities,
-    fetchSniesAcademicLevels,
-    fetchSniesProgramTypes,
-    fetchSniesRecognitionTypes,
-    fetchSniesDepartments,
+    fetchSniesDocumentTypes,
+    fetchSniesBiologicalSex,
+    fetchSniesMaritalStatus,
     createSniesCountry,
     createSniesMunicipality,
-    createSniesAcademicLevel,
-    createSniesProgramType,
-    createSniesRecognitionType,
-    createSniesDepartment,
     bulkCreateSniesCountries,
     bulkCreateSniesMunicipalities,
-    bulkCreateSniesAcademicLevels,
-    bulkCreateSniesProgramTypes,
-    bulkCreateSniesRecognitionTypes,
-    bulkCreateSniesDepartments,
   } = useSupabaseData();
   
   const { toast } = useToast();
@@ -38,15 +29,14 @@ export function SniesConfigurationManagement() {
   // Estados para los datos
   const [countries, setCountries] = useState<any[]>([]);
   const [municipalities, setMunicipalities] = useState<any[]>([]);
-  const [academicLevels, setAcademicLevels] = useState<any[]>([]);
-  const [programTypes, setProgramTypes] = useState<any[]>([]);
-  const [recognitionTypes, setRecognitionTypes] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
+  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
+  const [biologicalSex, setBiologicalSex] = useState<any[]>([]);
+  const [maritalStatus, setMaritalStatus] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(true);
 
   // Estados para formularios individuales
-  const [newItem, setNewItem] = useState({ id: '', name: '', description: '', country_id: '' });
+  const [newItem, setNewItem] = useState({ id: '', name: '', description: '', department_id: '' });
   
   // Estados para importación CSV
   const [csvData, setCsvData] = useState('');
@@ -62,25 +52,22 @@ export function SniesConfigurationManagement() {
       const [
         countriesResult,
         municipalitiesResult,
-        academicLevelsResult,
-        programTypesResult,
-        recognitionTypesResult,
-        departmentsResult
+        documentTypesResult,
+        biologicalSexResult,
+        maritalStatusResult
       ] = await Promise.all([
         fetchSniesCountries(),
         fetchSniesMunicipalities(),
-        fetchSniesAcademicLevels(),
-        fetchSniesProgramTypes(),
-        fetchSniesRecognitionTypes(),
-        fetchSniesDepartments()
+        fetchSniesDocumentTypes(),
+        fetchSniesBiologicalSex(),
+        fetchSniesMaritalStatus()
       ]);
 
       setCountries(countriesResult.data || []);
       setMunicipalities(municipalitiesResult.data || []);
-      setAcademicLevels(academicLevelsResult.data || []);
-      setProgramTypes(programTypesResult.data || []);
-      setRecognitionTypes(recognitionTypesResult.data || []);
-      setDepartments(departmentsResult.data || []);
+      setDocumentTypes(documentTypesResult.data || []);
+      setBiologicalSex(biologicalSexResult.data || []);
+      setMaritalStatus(maritalStatusResult.data || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -135,22 +122,11 @@ export function SniesConfigurationManagement() {
       },
       municipalities: {
         'ID_MUNICIPIO': 'id',
+        'ID_DEPARTAMENTO': 'department_id',
         'DESC_MUNICIPIO': 'name',
-        'ID_PAIS': 'country_id',
-        'COD_DEPARTAMENTO': 'department_code',
         'id': 'id',
-        'name': 'name',
-        'description': 'description',
-        'country_id': 'country_id'
-      },
-      departments: {
-        'ID_DEPARTAMENTO': 'id',
-        'DESC_DEPARTAMENTO': 'name',
-        'ID_PAIS': 'country_id',
-        'id': 'id',
-        'name': 'name',
-        'description': 'description',
-        'country_id': 'country_id'
+        'department_id': 'department_id',
+        'name': 'name'
       }
     };
 
@@ -166,6 +142,10 @@ export function SniesConfigurationManagement() {
         });
         // Agregar campos por defecto
         row.is_active = true;
+        // Para municipios, solo asignar Colombia como país por defecto
+        if (type === 'municipalities') {
+          row.country_id = '170'; // ID de Colombia
+        }
         result.push(row);
       }
     }
@@ -188,9 +168,22 @@ export function SniesConfigurationManagement() {
         id: newItem.id,
         name: newItem.name,
         description: newItem.description || null,
-        ...(type === 'departments' && { country_id: newItem.country_id }),
         is_active: true
       };
+
+      // Para municipios, agregar department_id y country_id por defecto (Colombia)
+      if (type === 'municipalities') {
+        if (!newItem.department_id) {
+          toast({
+            title: "Error",
+            description: "ID del departamento es obligatorio para municipios",
+            variant: "destructive",
+          });
+          return;
+        }
+        itemData.department_id = newItem.department_id;
+        itemData.country_id = '170'; // Colombia por defecto
+      }
 
       let result;
       switch (type) {
@@ -199,18 +192,6 @@ export function SniesConfigurationManagement() {
           break;
         case 'municipalities':
           result = await createSniesMunicipality(itemData);
-          break;
-        case 'academic_levels':
-          result = await createSniesAcademicLevel(itemData);
-          break;
-        case 'program_types':
-          result = await createSniesProgramType(itemData);
-          break;
-        case 'recognition_types':
-          result = await createSniesRecognitionType(itemData);
-          break;
-        case 'departments':
-          result = await createSniesDepartment(itemData);
           break;
         default:
           throw new Error('Tipo no válido');
@@ -223,7 +204,7 @@ export function SniesConfigurationManagement() {
         description: "Elemento creado correctamente",
       });
 
-      setNewItem({ id: '', name: '', description: '', country_id: '' });
+      setNewItem({ id: '', name: '', description: '', department_id: '' });
       await loadAllData();
     } catch (error) {
       console.error("Error creating item:", error);
@@ -260,18 +241,6 @@ export function SniesConfigurationManagement() {
           break;
         case 'municipalities':
           result = await bulkCreateSniesMunicipalities(parsedData);
-          break;
-        case 'academic_levels':
-          result = await bulkCreateSniesAcademicLevels(parsedData);
-          break;
-        case 'program_types':
-          result = await bulkCreateSniesProgramTypes(parsedData);
-          break;
-        case 'recognition_types':
-          result = await bulkCreateSniesRecognitionTypes(parsedData);
-          break;
-        case 'departments':
-          result = await bulkCreateSniesDepartments(parsedData);
           break;
         default:
           throw new Error('Tipo no válido');
@@ -312,10 +281,7 @@ export function SniesConfigurationManagement() {
         headers = 'id,name,description,alpha_2,alpha_3';
         break;
       case 'municipalities':
-        headers = 'id,name,description,country_id';
-        break;
-      case 'departments':
-        headers = 'id,name,description,country_id';
+        headers = 'ID_MUNICIPIO,ID_DEPARTAMENTO,DESC_MUNICIPIO';
         break;
       default:
         headers = 'id,name,description';
@@ -370,29 +336,25 @@ export function SniesConfigurationManagement() {
                 placeholder="Nombre"
               />
             </div>
-            <div>
-              <Label htmlFor={`${type}_description`}>Descripción</Label>
-              <Input
-                id={`${type}_description`}
-                value={newItem.description}
-                onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Descripción (opcional)"
-              />
-            </div>
-            {type === 'departments' && (
+            {type === 'municipalities' ? (
               <div>
-                <Label htmlFor={`${type}_country`}>País</Label>
-                <select
-                  id={`${type}_country`}
-                  value={newItem.country_id}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, country_id: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Seleccionar país</option>
-                  {countries.map(country => (
-                    <option key={country.id} value={country.id}>{country.name}</option>
-                  ))}
-                </select>
+                <Label htmlFor={`${type}_department`}>ID Departamento</Label>
+                <Input
+                  id={`${type}_department`}
+                  value={newItem.department_id}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, department_id: e.target.value }))}
+                  placeholder="ID del departamento"
+                />
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor={`${type}_description`}>Descripción</Label>
+                <Input
+                  id={`${type}_description`}
+                  value={newItem.description}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Descripción (opcional)"
+                />
               </div>
             )}
             <div className="flex items-end">
@@ -421,34 +383,61 @@ export function SniesConfigurationManagement() {
             </Button>
           </div>
 
-          {/* Lista de elementos */}
-          <div>
-            <h4 className="font-medium mb-3">Lista de {title}</h4>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  {type === 'departments' && <TableHead>País</TableHead>}
-                  <TableHead>Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-mono text-sm">{item.id}</TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.description || '-'}</TableCell>
-                    {type === 'departments' && (
-                      <TableCell>{item.country?.name || '-'}</TableCell>
-                    )}
-                    <TableCell>{getStatusBadge(item.is_active)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          {/* Lista de elementos con paginación */}
+          {type === 'countries' && (
+            <PaginatedTable
+              data={data}
+              columns={[
+                { key: 'id', label: 'ID' },
+                { key: 'name', label: 'Nombre' },
+                { key: 'description', label: 'Descripción' },
+                { key: 'alpha_2', label: 'Alpha-2' },
+                { key: 'alpha_3', label: 'Alpha-3' },
+                { 
+                  key: 'is_active', 
+                  label: 'Estado',
+                  render: (value) => getStatusBadge(value)
+                }
+              ]}
+              searchFields={['id', 'name', 'alpha_2', 'alpha_3']}
+              title={`Lista de ${title}`}
+            />
+          )}
+
+          {type === 'municipalities' && (
+            <PaginatedTable
+              data={data}
+              columns={[
+                { key: 'id', label: 'ID Municipio' },
+                { key: 'department_id', label: 'ID Departamento' },
+                { key: 'name', label: 'Nombre' },
+                { 
+                  key: 'is_active', 
+                  label: 'Estado',
+                  render: (value) => getStatusBadge(value)
+                }
+              ]}
+              searchFields={['id', 'name', 'department_id']}
+              title={`Lista de ${title}`}
+            />
+          )}
+
+          {(type === 'document_types' || type === 'biological_sex' || type === 'marital_status') && (
+            <PaginatedTable
+              data={data}
+              columns={[
+                { key: 'id', label: 'ID' },
+                { key: 'name', label: 'Nombre' },
+                { 
+                  key: 'is_active', 
+                  label: 'Estado',
+                  render: (value) => getStatusBadge(value)
+                }
+              ]}
+              searchFields={['id', 'name']}
+              title={`Lista de ${title}`}
+            />
+          )}
         </div>
       </CardContent>
     </Card>
@@ -457,37 +446,32 @@ export function SniesConfigurationManagement() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="countries" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="countries">Países</TabsTrigger>
-          <TabsTrigger value="departments">Departamentos</TabsTrigger>
           <TabsTrigger value="municipalities">Municipios</TabsTrigger>
-          <TabsTrigger value="academic_levels">Niveles Académicos</TabsTrigger>
-          <TabsTrigger value="program_types">Tipos de Programa</TabsTrigger>
-          <TabsTrigger value="recognition_types">Tipos de Reconocimiento</TabsTrigger>
+          <TabsTrigger value="document_types">Tipos de Documento</TabsTrigger>
+          <TabsTrigger value="biological_sex">Sexo Biológico</TabsTrigger>
+          <TabsTrigger value="marital_status">Estado Civil</TabsTrigger>
         </TabsList>
 
         <TabsContent value="countries">
           {renderConfigSection("Países", countries, "countries")}
         </TabsContent>
 
-        <TabsContent value="departments">
-          {renderConfigSection("Departamentos", departments, "departments")}
-        </TabsContent>
-
         <TabsContent value="municipalities">
           {renderConfigSection("Municipios", municipalities, "municipalities")}
         </TabsContent>
 
-        <TabsContent value="academic_levels">
-          {renderConfigSection("Niveles Académicos", academicLevels, "academic_levels")}
+        <TabsContent value="document_types">
+          {renderConfigSection("Tipos de Documento", documentTypes, "document_types")}
         </TabsContent>
 
-        <TabsContent value="program_types">
-          {renderConfigSection("Tipos de Programa", programTypes, "program_types")}
+        <TabsContent value="biological_sex">
+          {renderConfigSection("Sexo Biológico", biologicalSex, "biological_sex")}
         </TabsContent>
 
-        <TabsContent value="recognition_types">
-          {renderConfigSection("Tipos de Reconocimiento", recognitionTypes, "recognition_types")}
+        <TabsContent value="marital_status">
+          {renderConfigSection("Estado Civil", maritalStatus, "marital_status")}
         </TabsContent>
       </Tabs>
     </div>

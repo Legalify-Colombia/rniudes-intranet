@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,11 +30,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     fetchSniesCountries,
     fetchSniesMunicipalities,
     fetchSniesBiologicalSex,
-    fetchSniesMaritalStatus,
-    fetchSniesAcademicLevels,
-    fetchSniesProgramTypes,
-    fetchSniesRecognitionTypes,
-    fetchSniesDepartments
+    fetchSniesMaritalStatus
   } = useSupabaseData();
 
   useEffect(() => {
@@ -109,18 +104,6 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           case 'snies_marital_status':
             result = await fetchSniesMaritalStatus();
             break;
-          case 'snies_academic_levels':
-            result = await fetchSniesAcademicLevels();
-            break;
-          case 'snies_program_types':
-            result = await fetchSniesProgramTypes();
-            break;
-          case 'snies_recognition_types':
-            result = await fetchSniesRecognitionTypes();
-            break;
-          case 'snies_departments':
-            result = await fetchSniesDepartments();
-            break;
           default:
             continue;
         }
@@ -193,7 +176,20 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     const fieldId = `${field.field_name}_${rowIndex}`;
     
     if (field.field_type === 'relation' && field.relation_table) {
-      const options = relationData[field.relation_table] || [];
+      let options = relationData[field.relation_table] || [];
+      
+      // Filtrar municipios solo para Colombia si es el campo de municipios
+      if (field.relation_table === 'snies_municipalities') {
+        const currentRow = reportData[rowIndex];
+        const selectedCountry = currentRow?.country_id || currentRow?.pais_id;
+        
+        // Solo mostrar municipios si Colombia está seleccionado (ID: 170)
+        if (selectedCountry === '170') {
+          options = relationData[field.relation_table] || [];
+        } else {
+          options = [];
+        }
+      }
       
       return (
         <Select
@@ -202,7 +198,11 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
         >
           <SelectTrigger className="w-full h-8 text-xs">
-            <SelectValue placeholder="Seleccionar..." />
+            <SelectValue placeholder={
+              field.relation_table === 'snies_municipalities' && options.length === 0
+                ? "Seleccione Colombia primero"
+                : "Seleccionar..."
+            } />
           </SelectTrigger>
           <SelectContent>
             {options.map((option: any) => (

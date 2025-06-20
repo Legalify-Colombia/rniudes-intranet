@@ -1787,30 +1787,6 @@ export type Database = {
           },
         ]
       }
-      snies_academic_levels: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id: string
-          is_active?: boolean | null
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-        }
-        Relationships: []
-      }
       snies_biological_sex: {
         Row: {
           created_at: string | null
@@ -1903,38 +1879,6 @@ export type Database = {
         }
         Relationships: []
       }
-      snies_departments: {
-        Row: {
-          country_id: string | null
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-        }
-        Insert: {
-          country_id?: string | null
-          created_at?: string | null
-          id: string
-          is_active?: boolean | null
-          name: string
-        }
-        Update: {
-          country_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "snies_departments_country_id_fkey"
-            columns: ["country_id"]
-            isOneToOne: false
-            referencedRelation: "snies_countries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       snies_document_types: {
         Row: {
           created_at: string | null
@@ -2011,15 +1955,7 @@ export type Database = {
           municipality_id?: string | null
           name?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "snies_institutions_municipality_id_fkey"
-            columns: ["municipality_id"]
-            isOneToOne: false
-            referencedRelation: "snies_municipalities"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       snies_knowledge_areas: {
         Row: {
@@ -2129,7 +2065,7 @@ export type Database = {
         Row: {
           country_id: string | null
           created_at: string | null
-          department_code: string | null
+          department_id: string
           id: string
           is_active: boolean | null
           name: string
@@ -2137,7 +2073,7 @@ export type Database = {
         Insert: {
           country_id?: string | null
           created_at?: string | null
-          department_code?: string | null
+          department_id: string
           id: string
           is_active?: boolean | null
           name: string
@@ -2145,7 +2081,7 @@ export type Database = {
         Update: {
           country_id?: string | null
           created_at?: string | null
-          department_code?: string | null
+          department_id?: string
           id?: string
           is_active?: boolean | null
           name?: string
@@ -2159,54 +2095,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      snies_program_types: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id: string
-          is_active?: boolean | null
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-        }
-        Relationships: []
-      }
-      snies_recognition_types: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id: string
-          is_active?: boolean | null
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-        }
-        Relationships: []
       }
       snies_report_data: {
         Row: {
