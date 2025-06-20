@@ -619,11 +619,14 @@ export type Database = {
       }
       profiles: {
         Row: {
+          campus: string | null
+          campus_id: string | null
           created_at: string | null
           document_number: string
           email: string
           full_name: string
           id: string
+          managed_campus_ids: string[] | null
           number_of_weeks: number | null
           position: string
           role: string
@@ -632,11 +635,14 @@ export type Database = {
           weekly_hours: number | null
         }
         Insert: {
+          campus?: string | null
+          campus_id?: string | null
           created_at?: string | null
           document_number: string
           email: string
           full_name: string
           id: string
+          managed_campus_ids?: string[] | null
           number_of_weeks?: number | null
           position: string
           role: string
@@ -645,11 +651,14 @@ export type Database = {
           weekly_hours?: number | null
         }
         Update: {
+          campus?: string | null
+          campus_id?: string | null
           created_at?: string | null
           document_number?: string
           email?: string
           full_name?: string
           id?: string
+          managed_campus_ids?: string[] | null
           number_of_weeks?: number | null
           position?: string
           role?: string
@@ -657,7 +666,15 @@ export type Database = {
           updated_at?: string | null
           weekly_hours?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_document_templates: {
         Row: {
@@ -1145,6 +1162,10 @@ export type Database = {
       calculate_total_progress: {
         Args: { report_id: string }
         Returns: number
+      }
+      can_manage_campus: {
+        Args: { admin_id: string; target_campus_id: string }
+        Returns: boolean
       }
       get_next_version_number: {
         Args: { p_manager_report_id: string; p_template_id: string }

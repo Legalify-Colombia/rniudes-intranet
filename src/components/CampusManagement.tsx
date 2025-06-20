@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import { Plus, Edit, Trash2, Building, GraduationCap, School } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, Campus, Faculty, AcademicProgram } from "@/hooks/useSupabaseData";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/hooks/use-auth";
 
 export function CampusManagement() {
   const [campuses, setCampuses] = useState<Campus[]>([]);
@@ -20,23 +20,26 @@ export function CampusManagement() {
   const [managers, setManagers] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("campuses");
   const [loading, setLoading] = useState(true);
+  const [userManagedCampus, setUserManagedCampus] = useState<string[]>([]);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const {
     fetchCampus,
     createCampus,
     updateCampus,
     deleteCampus,
-    fetchFaculties,
+    fetchFacultiesByCampus,
     createFaculty,
     updateFaculty,
     deleteFaculty,
-    fetchAcademicPrograms,
+    fetchAcademicProgramsByCampus,
     createAcademicProgram,
     updateAcademicProgram,
     deleteAcademicProgram,
-    fetchManagers,
-    updateManagerHours
+    fetchManagersByCampus,
+    updateManagerHours,
+    getUserManagedCampus
   } = useSupabaseData();
 
   // Campus Management
@@ -75,15 +78,37 @@ export function CampusManagement() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Load user's managed campus if they are an admin
+      let managedCampusIds: string[] = [];
+      if (profile?.id && profile?.role === 'Administrador') {
+        const { data: managedData } = await getUserManagedCampus(profile.id);
+        if (managedData) {
+          managedCampusIds = managedData.managed_campus_ids || 
+            (managedData.campus_id ? [managedData.campus_id] : []);
+          setUserManagedCampus(managedCampusIds);
+        }
+      }
+
+      // Load data based on campus permissions
+      const campusFilter = profile?.role === 'Administrador' && managedCampusIds.length === 0 
+        ? undefined 
+        : managedCampusIds;
+
       const [campusResult, facultiesResult, programsResult, managersResult] = await Promise.all([
         fetchCampus(),
-        fetchFaculties(),
-        fetchAcademicPrograms(),
-        fetchManagers()
+        fetchFacultiesByCampus(campusFilter),
+        fetchAcademicProgramsByCampus(campusFilter),
+        fetchManagersByCampus(campusFilter)
       ]);
 
       if (campusResult.error) console.error('Error loading campus:', campusResult.error);
-      else setCampuses(campusResult.data || []);
+      else {
+        // Filter campuses if user has limited access
+        const filteredCampuses = campusFilter 
+          ? (campusResult.data || []).filter(campus => campusFilter.includes(campus.id))
+          : campusResult.data || [];
+        setCampuses(filteredCampuses);
+      }
 
       if (facultiesResult.error) console.error('Error loading faculties:', facultiesResult.error);
       else setFaculties(facultiesResult.data || []);
@@ -104,6 +129,11 @@ export function CampusManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const canManageCampus = (campusId: string) => {
+    if (profile?.role !== 'Administrador') return false;
+    return userManagedCampus.length === 0 || userManagedCampus.includes(campusId);
   };
 
   // Campus Functions
@@ -158,11 +188,22 @@ export function CampusManagement() {
   const handleFacultySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if user can manage the selected campus
+    const canManageSelectedCampus = facultyForm.campus_ids.every(campusId => canManageCampus(campusId));
+    if (!canManageSelectedCampus) {
+      toast({
+        title: "Error",
+        description: "No tiene permisos para gestionar algunos de los campus seleccionados",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       const facultyData = {
         name: facultyForm.name,
         dean_name: facultyForm.dean_name,
-        campus_id: facultyForm.campus_ids[0], // Primer campus seleccionado como principal
+        campus_id: facultyForm.campus_ids[0],
         campus_ids: facultyForm.campus_ids,
       };
       
@@ -231,6 +272,16 @@ export function CampusManagement() {
   // Program Functions
   const handleProgramSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if user can manage the selected campus
+    if (!canManageCampus(programForm.campus_id)) {
+      toast({
+        title: "Error",
+        description: "No tiene permisos para gestionar este campus",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       const programData = {
@@ -342,10 +393,14 @@ export function CampusManagement() {
 
   const availableFaculties = faculties.filter(f => 
     !programForm.campus_id || 
-    f.faculty_campus?.some(fc => fc.campus.id === programForm.campus_id)
+    f.faculty_campus?.some(fc => fc.campus.id === programForm.campus_id) ||
+    canManageCampus(programForm.campus_id)
   );
   
-  const availableManagers = managers.filter(m => m.role === 'Gestor');
+  const availableManagers = managers.filter(m => 
+    m.role === 'Gestor' && 
+    (!m.campus_id || canManageCampus(m.campus_id))
+  );
 
   // Función para obtener los campus asociados a una facultad
   const getFacultyCampusNames = (faculty: Faculty) => {
@@ -373,7 +428,14 @@ export function CampusManagement() {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold text-primary">Gestión de Campus, Facultades y Programas</CardTitle>
+        <CardTitle className="text-2xl font-bold text-primary">
+          Gestión de Campus, Facultades y Programas
+          {userManagedCampus.length > 0 && (
+            <span className="text-sm font-normal text-gray-600 block">
+              Gestionando: {campuses.filter(c => userManagedCampus.includes(c.id)).map(c => c.name).join(', ')}
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       
       <CardContent>
@@ -381,15 +443,15 @@ export function CampusManagement() {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="campuses" className="flex items-center gap-2">
               <Building className="w-4 h-4" />
-              Campus
+              Campus ({campuses.length})
             </TabsTrigger>
             <TabsTrigger value="faculties" className="flex items-center gap-2">
               <School className="w-4 h-4" />
-              Facultades
+              Facultades ({faculties.length})
             </TabsTrigger>
             <TabsTrigger value="programs" className="flex items-center gap-2">
               <GraduationCap className="w-4 h-4" />
-              Programas
+              Programas ({programs.length})
             </TabsTrigger>
           </TabsList>
 
@@ -399,7 +461,10 @@ export function CampusManagement() {
               <h3 className="text-lg font-semibold">Campus Universitarios</h3>
               <Dialog open={campusDialog} onOpenChange={setCampusDialog}>
                 <DialogTrigger asChild>
-                  <Button className="institutional-gradient text-white">
+                  <Button 
+                    className="institutional-gradient text-white"
+                    disabled={profile?.role !== 'Administrador' || userManagedCampus.length > 0}
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Nuevo Campus
                   </Button>
@@ -455,14 +520,24 @@ export function CampusManagement() {
                     <TableCell>{campus.address}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setEditingCampus(campus);
-                          setCampusForm({ name: campus.name, address: campus.address });
-                          setCampusDialog(true);
-                        }}>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => {
+                            setEditingCampus(campus);
+                            setCampusForm({ name: campus.name, address: campus.address });
+                            setCampusDialog(true);
+                          }}
+                          disabled={!canManageCampus(campus.id)}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDeleteCampus(campus.id)}>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => handleDeleteCampus(campus.id)}
+                          disabled={!canManageCampus(campus.id)}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -832,7 +907,10 @@ export function CampusManagement() {
         
         {campuses.length === 0 && activeTab === "campuses" && (
           <div className="text-center py-8 text-gray-500">
-            No hay campus registrados. Crear el primer campus.
+            {userManagedCampus.length > 0 
+              ? "No tiene campus asignados para gestionar."
+              : "No hay campus registrados. Crear el primer campus."
+            }
           </div>
         )}
         

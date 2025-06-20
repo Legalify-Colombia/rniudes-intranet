@@ -231,6 +231,121 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Enhanced user management functions with campus filtering
+  const fetchUsersByCampus = async (campusIds?: string[]) => {
+    let query = supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus_id(*)
+      `)
+      .order('full_name');
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    return await query;
+  };
+
+  const updateUserCampusAccess = async (userId: string, campusIds: string[]) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ managed_campus_ids: campusIds })
+      .eq('id', userId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const canManageCampus = async (adminId: string, campusId: string) => {
+    const { data, error } = await supabase.rpc('can_manage_campus', {
+      admin_id: adminId,
+      target_campus_id: campusId
+    });
+    return { data, error };
+  };
+
+  // Enhanced managers fetch with campus filtering
+  const fetchManagersByCampus = async (campusIds?: string[]) => {
+    let query = supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus_id(*),
+        academic_programs(
+          *,
+          campus:campus_id(*),
+          faculty:faculty_id(*)
+        )
+      `)
+      .eq('role', 'Gestor')
+      .order('full_name');
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    return await query;
+  };
+
+  // Enhanced academic programs fetch with campus filtering
+  const fetchAcademicProgramsByCampus = async (campusIds?: string[]) => {
+    let query = supabase
+      .from('academic_programs')
+      .select(`
+        *,
+        campus:campus_id(*),
+        faculty:faculty_id(*),
+        manager:manager_id(
+          *,
+          campus:campus_id(*),
+          academic_programs(
+            *,
+            campus:campus_id(*),
+            faculty:faculty_id(*)
+          )
+        )
+      `)
+      .order('name');
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    return await query;
+  };
+
+  // Enhanced faculties fetch with campus filtering
+  const fetchFacultiesByCampus = async (campusIds?: string[]) => {
+    let query = supabase
+      .from('faculties')
+      .select(`
+        *,
+        campus:campus_id(*),
+        faculty_campus!inner(
+          campus(*)
+        )
+      `)
+      .order('name');
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    return await query;
+  };
+
+  // Get user's managed campus IDs
+  const getUserManagedCampus = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('campus_id, managed_campus_ids, role')
+      .eq('id', userId)
+      .single();
+    return { data, error };
+  };
+
   // Faculty functions
   const fetchFaculties = async () => {
     const { data, error } = await supabase
@@ -342,6 +457,7 @@ export function useSupabaseData() {
         faculty:faculty_id(*),
         manager:manager_id(
           *,
+          campus:campus_id(*),
           academic_programs(
             *,
             campus:campus_id(*),
@@ -1181,6 +1297,14 @@ export function useSupabaseData() {
     createCampus,
     updateCampus,
     deleteCampus,
+    // Enhanced campus-aware functions
+    fetchUsersByCampus,
+    updateUserCampusAccess,
+    canManageCampus,
+    fetchManagersByCampus,
+    fetchAcademicProgramsByCampus,
+    fetchFacultiesByCampus,
+    getUserManagedCampus,
     // Faculties
     fetchFaculties,
     createFaculty,

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,19 +10,23 @@ import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
 import { WorkPlanForm } from "./WorkPlanForm";
 import { Edit, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function InternationalizationManagers() {
   const { 
-    fetchManagers, 
+    fetchManagersByCampus, 
     updateManagerHours,
-    fetchCampus
+    fetchCampus,
+    getUserManagedCampus
   } = useSupabaseData();
   const { toast } = useToast();
+  const { profile } = useAuth();
   
   const [managers, setManagers] = useState<any[]>([]);
   const [campuses, setCampuses] = useState<any[]>([]);
   const [filteredManagers, setFilteredManagers] = useState<any[]>([]);
   const [selectedCampus, setSelectedCampus] = useState<string>("todos");
+  const [userManagedCampus, setUserManagedCampus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedManager, setSelectedManager] = useState<any>(null);
   const [showWorkPlanForm, setShowWorkPlanForm] = useState(false);
@@ -40,12 +43,30 @@ export function InternationalizationManagers() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Load user's managed campus if they are an admin
+      let managedCampusIds: string[] = [];
+      if (profile?.id && profile?.role === 'Administrador') {
+        const { data: managedData } = await getUserManagedCampus(profile.id);
+        if (managedData) {
+          managedCampusIds = managedData.managed_campus_ids || 
+            (managedData.campus_id ? [managedData.campus_id] : []);
+          setUserManagedCampus(managedCampusIds);
+        }
+      }
+
       // Cargar campus
       const { data: campusData } = await fetchCampus();
-      setCampuses(campusData || []);
+      const filteredCampuses = managedCampusIds.length > 0 
+        ? (campusData || []).filter(campus => managedCampusIds.includes(campus.id))
+        : campusData || [];
+      setCampuses(filteredCampuses);
 
-      // Cargar gestores con sus relaciones
-      const { data: managersData } = await fetchManagers();
+      // Cargar gestores con filtro por campus
+      const campusFilter = profile?.role === 'Administrador' && managedCampusIds.length === 0 
+        ? undefined 
+        : managedCampusIds;
+
+      const { data: managersData } = await fetchManagersByCampus(campusFilter);
       console.log('Managers data:', managersData);
       setManagers(managersData || []);
     } catch (error) {
@@ -65,12 +86,20 @@ export function InternationalizationManagers() {
       setFilteredManagers(managers);
     } else {
       const filtered = managers.filter(manager => 
+        manager.campus_id === selectedCampus ||
         manager.academic_programs?.some((program: any) => 
           program.campus_id === selectedCampus
         )
       );
       setFilteredManagers(filtered);
     }
+  };
+
+  const canManageManager = (manager: any) => {
+    if (profile?.role !== 'Administrador') return false;
+    if (userManagedCampus.length === 0) return true; // Super admin
+    
+    return manager.campus_id && userManagedCampus.includes(manager.campus_id);
   };
 
   const getManagerProgram = (manager: any) => {
@@ -94,7 +123,7 @@ export function InternationalizationManagers() {
 
   const handleEditHours = (managerId: string) => {
     const manager = managers.find(m => m.id === managerId);
-    if (manager) {
+    if (manager && canManageManager(manager)) {
       setEditingHours(prev => ({
         ...prev,
         [managerId]: {
@@ -102,10 +131,26 @@ export function InternationalizationManagers() {
           weeks: (manager.number_of_weeks || 16).toString()
         }
       }));
+    } else {
+      toast({
+        title: "Error",
+        description: "No tiene permisos para editar este gestor",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSaveHours = async (managerId: string) => {
+    const manager = managers.find(m => m.id === managerId);
+    if (!canManageManager(manager)) {
+      toast({
+        title: "Error",
+        description: "No tiene permisos para editar este gestor",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const values = editingHours[managerId];
     if (!values) return;
 
@@ -173,7 +218,14 @@ export function InternationalizationManagers() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Gestores de Internacionalización</CardTitle>
+          <CardTitle>
+            Gestores de Internacionalización
+            {userManagedCampus.length > 0 && (
+              <span className="text-sm font-normal text-gray-600 block">
+                Campus: {campuses.filter(c => userManagedCampus.includes(c.id)).map(c => c.name).join(', ')}
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
@@ -182,7 +234,7 @@ export function InternationalizationManagers() {
                 <SelectValue placeholder="Filtrar por campus" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos los campus</SelectItem>
+                <SelectItem value="todos">Todos los campus disponibles</SelectItem>
                 {campuses.map((campus) => (
                   <SelectItem key={campus.id} value={campus.id}>
                     {campus.name}
@@ -233,7 +285,10 @@ export function InternationalizationManagers() {
                         className="w-20"
                       />
                     ) : (
-                      <span onClick={() => handleEditHours(manager.id)} className="cursor-pointer hover:bg-gray-100 p-1 rounded">
+                      <span 
+                        onClick={() => canManageManager(manager) && handleEditHours(manager.id)} 
+                        className={`cursor-pointer hover:bg-gray-100 p-1 rounded ${!canManageManager(manager) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
                         {manager.weekly_hours || 0}
                       </span>
                     )}
@@ -253,7 +308,10 @@ export function InternationalizationManagers() {
                         className="w-20"
                       />
                     ) : (
-                      <span onClick={() => handleEditHours(manager.id)} className="cursor-pointer hover:bg-gray-100 p-1 rounded">
+                      <span 
+                        onClick={() => canManageManager(manager) && handleEditHours(manager.id)} 
+                        className={`cursor-pointer hover:bg-gray-100 p-1 rounded ${!canManageManager(manager) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
                         {manager.number_of_weeks || 16}
                       </span>
                     )}
@@ -281,13 +339,14 @@ export function InternationalizationManagers() {
                             size="sm" 
                             onClick={() => handleEditHours(manager.id)}
                             variant="outline"
+                            disabled={!canManageManager(manager)}
                           >
                             Editar Horas
                           </Button>
                           <Button 
                             size="sm" 
                             onClick={() => handleWorkPlanClick(manager)}
-                            disabled={!manager.total_hours || manager.total_hours === 0}
+                            disabled={!manager.total_hours || manager.total_hours === 0 || !canManageManager(manager)}
                           >
                             Plan de Trabajo
                           </Button>
