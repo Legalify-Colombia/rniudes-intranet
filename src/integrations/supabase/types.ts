@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           campus_id: string
           created_at: string | null
+          description: string | null
           director_email: string
           director_name: string
           faculty_id: string
@@ -24,6 +25,7 @@ export type Database = {
         Insert: {
           campus_id: string
           created_at?: string | null
+          description?: string | null
           director_email: string
           director_name: string
           faculty_id: string
@@ -35,6 +37,7 @@ export type Database = {
         Update: {
           campus_id?: string
           created_at?: string | null
+          description?: string | null
           director_email?: string
           director_name?: string
           faculty_id?: string
@@ -360,6 +363,7 @@ export type Database = {
           campus_id: string
           created_at: string | null
           dean_name: string
+          description: string | null
           id: string
           name: string
           updated_at: string | null
@@ -368,6 +372,7 @@ export type Database = {
           campus_id: string
           created_at?: string | null
           dean_name: string
+          description?: string | null
           id?: string
           name: string
           updated_at?: string | null
@@ -376,6 +381,7 @@ export type Database = {
           campus_id?: string
           created_at?: string | null
           dean_name?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string | null

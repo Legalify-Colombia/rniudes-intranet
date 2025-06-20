@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Plus, Edit, Save, X } from "lucide-react";
-import { getRoleFromPosition } from "@/utils/positionUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 export function UserManagement() {
@@ -27,12 +27,14 @@ export function UserManagement() {
 
   const [userForm, setUserForm] = useState({
     email: '',
+    password: '',
     full_name: '',
     document_number: '',
     position: '',
     role: '',
     weekly_hours: '',
     number_of_weeks: '16',
+    total_hours: '',
     campus_id: '',
     managed_campus_ids: [] as string[]
   });
@@ -46,6 +48,17 @@ export function UserManagement() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Calculate total hours when weekly hours or weeks change
+    const weeklyHours = parseInt(userForm.weekly_hours) || 0;
+    const numberOfWeeks = parseInt(userForm.number_of_weeks) || 16;
+    const totalHours = weeklyHours * numberOfWeeks;
+    
+    if (userForm.weekly_hours && totalHours !== parseInt(userForm.total_hours)) {
+      setUserForm(prev => ({ ...prev, total_hours: totalHours.toString() }));
+    }
+  }, [userForm.weekly_hours, userForm.number_of_weeks]);
 
   const loadData = async () => {
     try {
@@ -80,15 +93,22 @@ export function UserManagement() {
   };
 
   const handlePositionChange = (position: string) => {
-    console.log("UserManagement - Position change called with: ", position, "Type:", typeof position);
+    let role = '';
     
-    if (!position || position.trim() === '') {
-      console.log("UserManagement - Invalid position detected, not setting: ", position);
-      return;
+    switch (position) {
+      case 'Director DRNI':
+      case 'Coordinador de Campus':
+        role = 'Administrador';
+        break;
+      case 'Director de Programa':
+        role = 'Coordinador';
+        break;
+      case 'Gestor de Internacionalización':
+        role = 'Gestor';
+        break;
+      default:
+        role = '';
     }
-
-    const role = getRoleFromPosition(position);
-    console.log("UserManagement - Role determined: ", role);
     
     setUserForm(prev => ({ 
       ...prev, 
@@ -100,10 +120,19 @@ export function UserManagement() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userForm.email || !userForm.full_name || !userForm.position) {
+    if (!userForm.email || !userForm.full_name || !userForm.position || !userForm.password) {
       toast({
         title: "Error de validación",
-        description: "Email, nombre completo y cargo son obligatorios",
+        description: "Email, nombre completo, cargo y contraseña son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (userForm.role === 'Gestor' && (!userForm.weekly_hours || !userForm.campus_id)) {
+      toast({
+        title: "Error de validación",
+        description: "Para gestores, las horas semanales y el campus son obligatorios",
         variant: "destructive",
       });
       return;
@@ -112,8 +141,9 @@ export function UserManagement() {
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase.auth.admin.createUser({
+      const userData = {
         email: userForm.email,
+        password: userForm.password,
         email_confirm: true,
         user_metadata: {
           full_name: userForm.full_name,
@@ -122,11 +152,13 @@ export function UserManagement() {
           role: userForm.role,
           weekly_hours: userForm.weekly_hours ? parseInt(userForm.weekly_hours) : null,
           number_of_weeks: parseInt(userForm.number_of_weeks),
-          total_hours: userForm.weekly_hours ? parseInt(userForm.weekly_hours) * parseInt(userForm.number_of_weeks) : null,
+          total_hours: userForm.total_hours ? parseInt(userForm.total_hours) : null,
           campus_id: userForm.campus_id || null,
           managed_campus_ids: userForm.role === 'Administrador' ? userForm.managed_campus_ids : null
         }
-      });
+      };
+
+      const { data, error } = await supabase.auth.admin.createUser(userData);
 
       if (error) {
         console.error("Error creating user:", error);
@@ -145,12 +177,14 @@ export function UserManagement() {
 
       setUserForm({
         email: '',
+        password: '',
         full_name: '',
         document_number: '',
         position: '',
         role: '',
         weekly_hours: '',
         number_of_weeks: '16',
+        total_hours: '',
         campus_id: '',
         managed_campus_ids: []
       });
@@ -203,8 +237,6 @@ export function UserManagement() {
         updates.managed_campus_ids = editForm.managed_campus_ids.length > 0 ? editForm.managed_campus_ids : null;
       }
 
-      console.log('Updating user with data:', updates);
-
       const { data, error } = await updateUserProfile(userId, updates);
 
       if (error) {
@@ -216,8 +248,6 @@ export function UserManagement() {
         });
         return;
       }
-
-      console.log('User updated successfully:', data);
       
       toast({
         title: "Éxito",
@@ -242,8 +272,10 @@ export function UserManagement() {
     switch (role) {
       case 'Administrador':
         return 'bg-red-100 text-red-800';
-      case 'Gestor':
+      case 'Coordinador':
         return 'bg-blue-100 text-blue-800';
+      case 'Gestor':
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -306,6 +338,17 @@ export function UserManagement() {
                       required
                     />
                   </div>
+
+                  <div>
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={userForm.password}
+                      onChange={(e) => setUserForm(prev => ({ ...prev, password: e.target.value }))}
+                      required
+                    />
+                  </div>
                   
                   <div>
                     <Label htmlFor="full_name">Nombre Completo</Label>
@@ -333,28 +376,42 @@ export function UserManagement() {
                         <SelectValue placeholder="Seleccionar cargo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Administrador General">Administrador General</SelectItem>
-                        <SelectItem value="Administrador de Campus">Administrador de Campus</SelectItem>
+                        <SelectItem value="Director DRNI">Director DRNI</SelectItem>
+                        <SelectItem value="Coordinador de Campus">Coordinador de Campus</SelectItem>
+                        <SelectItem value="Director de Programa">Director de Programa</SelectItem>
                         <SelectItem value="Gestor de Internacionalización">Gestor de Internacionalización</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="campus_id">Campus</Label>
-                    <Select onValueChange={(value) => setUserForm(prev => ({ ...prev, campus_id: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar campus" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {campuses.map(campus => (
-                          <SelectItem key={campus.id} value={campus.id}>
-                            {campus.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+
+                  {userForm.role && (
+                    <div>
+                      <Label>Rol Asignado</Label>
+                      <div className="p-2 bg-gray-100 rounded">
+                        <Badge className={getRoleBadgeColor(userForm.role)}>
+                          {userForm.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  {(userForm.role === 'Gestor' || userForm.role === 'Coordinador' || userForm.role === 'Administrador') && (
+                    <div>
+                      <Label htmlFor="campus_id">Campus</Label>
+                      <Select onValueChange={(value) => setUserForm(prev => ({ ...prev, campus_id: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar campus" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {campuses.map(campus => (
+                            <SelectItem key={campus.id} value={campus.id}>
+                              {campus.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   
                   {userForm.role === 'Gestor' && (
                     <>
@@ -365,6 +422,7 @@ export function UserManagement() {
                           type="number"
                           value={userForm.weekly_hours}
                           onChange={(e) => setUserForm(prev => ({ ...prev, weekly_hours: e.target.value }))}
+                          required
                         />
                       </div>
                       
@@ -377,6 +435,17 @@ export function UserManagement() {
                           onChange={(e) => setUserForm(prev => ({ ...prev, number_of_weeks: e.target.value }))}
                         />
                       </div>
+
+                      {userForm.weekly_hours && (
+                        <div>
+                          <Label>Total de Horas</Label>
+                          <div className="p-2 bg-blue-50 rounded">
+                            <span className="font-medium text-blue-800">
+                              {userForm.total_hours} horas
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -439,6 +508,7 @@ export function UserManagement() {
                 <TableHead>Rol</TableHead>
                 <TableHead>Campus</TableHead>
                 <TableHead>Horas/Semana</TableHead>
+                <TableHead>Total Horas</TableHead>
                 <TableHead>Campus Gestionados</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -465,10 +535,16 @@ export function UserManagement() {
                           className="w-20"
                           placeholder="Horas"
                         />
-                        <span className="text-xs text-gray-500">h/sem</span>
                       </div>
                     ) : (
-                      <span>{user.weekly_hours || '-'} {user.weekly_hours ? 'h/sem' : ''}</span>
+                      <span>{user.weekly_hours || '-'}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingUser === user.id ? (
+                      <span>{editForm.weekly_hours ? parseInt(editForm.weekly_hours) * parseInt(editForm.number_of_weeks) : user.total_hours}</span>
+                    ) : (
+                      <span>{user.total_hours || '-'}</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -533,8 +609,7 @@ export function UserManagement() {
                             </Button>
                           </>
                         ) : (
-                          // Only show edit button for users with editable properties
-                          user.role === 'Gestor' || user.role === 'Administrador' ? (
+                          (user.role === 'Gestor' || user.role === 'Administrador') && (
                             <Button 
                               size="sm" 
                               variant="outline" 
@@ -542,7 +617,7 @@ export function UserManagement() {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                          ) : null
+                          )
                         )}
                       </div>
                     )}
