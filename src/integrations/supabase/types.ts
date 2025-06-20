@@ -1790,19 +1790,19 @@ export type Database = {
       snies_biological_sex: {
         Row: {
           created_at: string | null
-          id: string
+          id: number
           is_active: boolean | null
           name: string
         }
         Insert: {
           created_at?: string | null
-          id: string
+          id: number
           is_active?: boolean | null
           name: string
         }
         Update: {
           created_at?: string | null
-          id?: string
+          id?: number
           is_active?: boolean | null
           name?: string
         }
@@ -1906,19 +1906,19 @@ export type Database = {
       snies_marital_status: {
         Row: {
           created_at: string | null
-          id: string
+          id: number
           is_active: boolean | null
           name: string
         }
         Insert: {
           created_at?: string | null
-          id: string
+          id: number
           is_active?: boolean | null
           name: string
         }
         Update: {
           created_at?: string | null
-          id?: string
+          id?: number
           is_active?: boolean | null
           name?: string
         }

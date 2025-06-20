@@ -1574,7 +1574,7 @@ export const useSupabaseData = () => {
     return { data: data || [], error };
   };
 
-  const createSniesCountry = async (countryData: Partial<SniesCountry>): Promise<Result<SniesCountry>> => {
+  const createSniesCountry = async (countryData: { id: string; name: string; alpha_3?: string; alpha_2?: string }): Promise<Result<SniesCountry>> => {
     const { data, error } = await supabase
       .from('snies_countries')
       .insert(countryData)
@@ -1583,7 +1583,7 @@ export const useSupabaseData = () => {
     return { data, error };
   };
 
-  const bulkCreateSniesCountries = async (countries: Partial<SniesCountry>[]): Promise<Result<SniesCountry[]>> => {
+  const bulkCreateSniesCountries = async (countries: { id: string; name: string; alpha_3?: string; alpha_2?: string }[]): Promise<Result<SniesCountry[]>> => {
     const { data, error } = await supabase
       .from('snies_countries')
       .insert(countries)
@@ -1591,7 +1591,7 @@ export const useSupabaseData = () => {
     return { data: data || [], error };
   };
 
-  const createSniesMunicipality = async (municipalityData: Partial<SniesMunicipality>): Promise<Result<SniesMunicipality>> => {
+  const createSniesMunicipality = async (municipalityData: { id: string; name: string; country_id?: string; department_code?: string }): Promise<Result<SniesMunicipality>> => {
     const { data, error } = await supabase
       .from('snies_municipalities')
       .insert(municipalityData)
@@ -1600,7 +1600,7 @@ export const useSupabaseData = () => {
     return { data, error };
   };
 
-  const bulkCreateSniesMunicipalities = async (municipalities: Partial<SniesMunicipality>[]): Promise<Result<SniesMunicipality[]>> => {
+  const bulkCreateSniesMunicipalities = async (municipalities: { id: string; name: string; country_id?: string; department_code?: string }[]): Promise<Result<SniesMunicipality[]>> => {
     const { data, error } = await supabase
       .from('snies_municipalities')
       .insert(municipalities)
@@ -1618,19 +1618,19 @@ export const useSupabaseData = () => {
     return { data: data || [], error };
   };
 
-  const createSniesReportTemplate = async (templateData: Partial<SniesReportTemplate>): Promise<Result<SniesReportTemplate>> => {
+  const createSniesReportTemplate = async (templateData: { name: string; description?: string }): Promise<Result<SniesReportTemplate>> => {
     const { data, error } = await supabase
       .from('snies_report_templates')
       .insert({
         ...templateData,
-        created_by: profile?.id
+        created_by: profile?.id || ''
       })
       .select()
       .single();
     return { data, error };
   };
 
-  const updateSniesReportTemplate = async (id: string, templateData: Partial<SniesReportTemplate>): Promise<Result<SniesReportTemplate>> => {
+  const updateSniesReportTemplate = async (id: string, templateData: { name?: string; description?: string }): Promise<Result<SniesReportTemplate>> => {
     const { data, error } = await supabase
       .from('snies_report_templates')
       .update(templateData)
@@ -1658,7 +1658,17 @@ export const useSupabaseData = () => {
     return { data: data || [], error };
   };
 
-  const createSniesTemplateField = async (fieldData: Partial<SniesTemplateField>): Promise<Result<SniesTemplateField>> => {
+  const createSniesTemplateField = async (fieldData: {
+    template_id: string;
+    field_name: string;
+    field_label: string;
+    field_type: 'text' | 'numeric' | 'relation';
+    relation_table?: string;
+    relation_id_field?: string;
+    relation_display_field?: string;
+    is_required: boolean;
+    field_order: number;
+  }): Promise<Result<SniesTemplateField>> => {
     const { data, error } = await supabase
       .from('snies_template_fields')
       .insert(fieldData)
@@ -1667,7 +1677,16 @@ export const useSupabaseData = () => {
     return { data, error };
   };
 
-  const updateSniesTemplateField = async (id: string, fieldData: Partial<SniesTemplateField>): Promise<Result<SniesTemplateField>> => {
+  const updateSniesTemplateField = async (id: string, fieldData: Partial<{
+    field_name: string;
+    field_label: string;
+    field_type: 'text' | 'numeric' | 'relation';
+    relation_table?: string;
+    relation_id_field?: string;
+    relation_display_field?: string;
+    is_required: boolean;
+    field_order: number;
+  }>): Promise<Result<SniesTemplateField>> => {
     const { data, error } = await supabase
       .from('snies_template_fields')
       .update(fieldData)
@@ -1698,19 +1717,23 @@ export const useSupabaseData = () => {
     return { data: data || [], error };
   };
 
-  const createSniesReport = async (reportData: Partial<SniesReport>): Promise<Result<SniesReport>> => {
+  const createSniesReport = async (reportData: { title: string; template_id: string }): Promise<Result<SniesReport>> => {
     const { data, error } = await supabase
       .from('snies_reports')
       .insert({
         ...reportData,
-        manager_id: profile?.id
+        manager_id: profile?.id || ''
       })
       .select()
       .single();
     return { data, error };
   };
 
-  const updateSniesReport = async (id: string, reportData: Partial<SniesReport>): Promise<Result<SniesReport>> => {
+  const updateSniesReport = async (id: string, reportData: Partial<{
+    title: string;
+    status: 'draft' | 'submitted' | 'reviewed';
+    submitted_date: string;
+  }>): Promise<Result<SniesReport>> => {
     const { data, error } = await supabase
       .from('snies_reports')
       .update(reportData)
@@ -1784,7 +1807,7 @@ export const useSupabaseData = () => {
         title,
         total_records: consolidatedData.length,
         participating_managers: reports?.length || 0,
-        created_by: profile?.id
+        created_by: profile?.id || ''
       })
       .select()
       .single();
