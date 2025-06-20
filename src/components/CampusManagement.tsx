@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Building, GraduationCap, School } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, Campus, Faculty, AcademicProgram } from "@/hooks/useSupabaseData";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
+import type { Campus, Faculty, AcademicProgram } from "@/types/supabase";
 
 export function CampusManagement() {
   const [campuses, setCampuses] = useState<Campus[]>([]);
@@ -42,6 +43,78 @@ export function CampusManagement() {
     getUserManagedCampus
   } = useSupabaseData();
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // Load user's managed campus if they are an admin
+      let managedCampusIds: string[] = [];
+      if (profile?.id && profile?.role === 'Administrador') {
+        const { data: managedData } = await getUserManagedCampus(profile.id);
+        if (managedData) {
+          managedCampusIds = managedData.map(campus => campus.id);
+          setUserManagedCampus(managedCampusIds);
+        }
+      }
+
+      // Load campuses
+      const campusResult = await fetchCampus();
+      if (campusResult.error) console.error('Error loading campus:', campusResult.error);
+      else {
+        const filteredCampuses = managedCampusIds.length > 0 
+          ? (campusResult.data || []).filter(campus => managedCampusIds.includes(campus.id))
+          : campusResult.data || [];
+        setCampuses(filteredCampuses);
+      }
+
+      // Load faculties
+      if (managedCampusIds.length > 0) {
+        const facultiesPromises = managedCampusIds.map(campusId => fetchFacultiesByCampus(campusId));
+        const facultiesResults = await Promise.all(facultiesPromises);
+        const allFaculties = facultiesResults.flatMap(result => result.data || []);
+        setFaculties(allFaculties);
+      } else {
+        const facultiesResult = await fetchFacultiesByCampus(''); // Fetch all if no filter
+        setFaculties(facultiesResult.data || []);
+      }
+
+      // Load programs
+      if (managedCampusIds.length > 0) {
+        const programsPromises = managedCampusIds.map(campusId => fetchAcademicProgramsByCampus(campusId));
+        const programsResults = await Promise.all(programsPromises);
+        const allPrograms = programsResults.flatMap(result => result.data || []);
+        setPrograms(allPrograms);
+      } else {
+        const programsResult = await fetchAcademicProgramsByCampus(''); // Fetch all if no filter
+        setPrograms(programsResult.data || []);
+      }
+
+      // Load managers
+      if (managedCampusIds.length > 0) {
+        const managersPromises = managedCampusIds.map(campusId => fetchManagersByCampus(campusId));
+        const managersResults = await Promise.all(managersPromises);
+        const allManagers = managersResults.flatMap(result => result.data || []);
+        setManagers(allManagers);
+      } else {
+        const managersResult = await fetchManagersByCampus(''); // Fetch all if no filter
+        setManagers(managersResult.data || []);
+      }
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Campus Management
   const [campusDialog, setCampusDialog] = useState(false);
   const [campusForm, setCampusForm] = useState({ name: "", address: "" });
@@ -70,66 +143,6 @@ export function CampusManagement() {
     manager_id: ""
   });
   const [editingProgram, setEditingProgram] = useState<AcademicProgram | null>(null);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      // Load user's managed campus if they are an admin
-      let managedCampusIds: string[] = [];
-      if (profile?.id && profile?.role === 'Administrador') {
-        const { data: managedData } = await getUserManagedCampus(profile.id);
-        if (managedData) {
-          managedCampusIds = managedData.managed_campus_ids || 
-            (managedData.campus_id ? [managedData.campus_id] : []);
-          setUserManagedCampus(managedCampusIds);
-        }
-      }
-
-      // Load data based on campus permissions
-      const campusFilter = profile?.role === 'Administrador' && managedCampusIds.length === 0 
-        ? undefined 
-        : managedCampusIds.length > 0 ? managedCampusIds : undefined;
-
-      const [campusResult, facultiesResult, programsResult, managersResult] = await Promise.all([
-        fetchCampus(),
-        fetchFacultiesByCampus(campusFilter),
-        fetchAcademicProgramsByCampus(campusFilter),
-        fetchManagersByCampus(campusFilter)
-      ]);
-
-      if (campusResult.error) console.error('Error loading campus:', campusResult.error);
-      else {
-        // Filter campuses if user has limited access
-        const filteredCampuses = campusFilter 
-          ? (campusResult.data || []).filter(campus => campusFilter.includes(campus.id))
-          : campusResult.data || [];
-        setCampuses(filteredCampuses);
-      }
-
-      if (facultiesResult.error) console.error('Error loading faculties:', facultiesResult.error);
-      else setFaculties(facultiesResult.data || []);
-
-      if (programsResult.error) console.error('Error loading programs:', programsResult.error);
-      else setPrograms(programsResult.data || []);
-
-      if (managersResult.error) console.error('Error loading managers:', managersResult.error);
-      else setManagers(managersResult.data || []);
-
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const canManageCampus = (campusId: string) => {
     if (profile?.role !== 'Administrador') return false;
@@ -188,7 +201,6 @@ export function CampusManagement() {
   const handleFacultySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if user can manage the selected campus
     const canManageSelectedCampus = facultyForm.campus_ids.every(campusId => canManageCampus(campusId));
     if (!canManageSelectedCampus) {
       toast({
@@ -204,7 +216,6 @@ export function CampusManagement() {
         name: facultyForm.name,
         dean_name: facultyForm.dean_name,
         campus_id: facultyForm.campus_ids[0],
-        campus_ids: facultyForm.campus_ids,
       };
       
       if (editingFaculty) {
@@ -235,7 +246,6 @@ export function CampusManagement() {
         toast({ title: "Facultad creada exitosamente" });
       }
 
-      // Si se asignó un gestor y se definieron horas, actualizar las horas del gestor
       if (facultyForm.manager_id && facultyForm.manager_id !== "none" && facultyForm.weekly_hours > 0) {
         const { error: hoursError } = await updateManagerHours(
           facultyForm.manager_id, 
@@ -273,7 +283,6 @@ export function CampusManagement() {
   const handleProgramSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if user can manage the selected campus
     if (!canManageCampus(programForm.campus_id)) {
       toast({
         title: "Error",
@@ -391,28 +400,15 @@ export function CampusManagement() {
     }
   };
 
-  // CORRECTED: Filter faculties available for programs based on campus relationship
   const availableFaculties = faculties.filter(f => {
     if (!programForm.campus_id) return true;
-    
-    // Check if faculty has relationship with the selected campus
-    return f.faculty_campus?.some(fc => fc.campus.id === programForm.campus_id) ||
-           f.campus_id === programForm.campus_id ||
-           canManageCampus(programForm.campus_id);
+    return f.campus_id === programForm.campus_id || canManageCampus(programForm.campus_id);
   });
   
   const availableManagers = managers.filter(m => 
     m.role === 'Gestor' && 
     (!m.campus_id || canManageCampus(m.campus_id))
   );
-
-  // Función para obtener los campus asociados a una facultad
-  const getFacultyCampusNames = (faculty: Faculty) => {
-    if (faculty.faculty_campus && faculty.faculty_campus.length > 0) {
-      return faculty.faculty_campus.map(fc => fc.campus.name).join(', ');
-    }
-    return faculty.campus?.name || 'Sin campus asignado';
-  };
 
   if (loading) {
     return (
@@ -694,42 +690,42 @@ export function CampusManagement() {
                 <TableRow>
                   <TableHead>Facultad</TableHead>
                   <TableHead>Decano</TableHead>
-                  <TableHead>Campus Asociados</TableHead>
+                  <TableHead>Campus</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {faculties.map((faculty) => (
-                  <TableRow key={faculty.id}>
-                    <TableCell className="font-medium">{faculty.name}</TableCell>
-                    <TableCell>{faculty.dean_name}</TableCell>
-                    <TableCell>{getFacultyCampusNames(faculty)}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setEditingFaculty(faculty);
-                          const campusIds = faculty.faculty_campus ? 
-                            faculty.faculty_campus.map(fc => fc.campus.id) : 
-                            (faculty.campus_id ? [faculty.campus_id] : []);
-                          setFacultyForm({ 
-                            name: faculty.name, 
-                            dean_name: faculty.dean_name, 
-                            campus_ids: campusIds,
-                            manager_id: "",
-                            weekly_hours: 0,
-                            number_of_weeks: 16
-                          });
-                          setFacultyDialog(true);
-                        }}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDeleteFaculty(faculty.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {faculties.map((faculty) => {
+                  const campus = campuses.find(c => c.id === faculty.campus_id);
+                  return (
+                    <TableRow key={faculty.id}>
+                      <TableCell className="font-medium">{faculty.name}</TableCell>
+                      <TableCell>{faculty.dean_name}</TableCell>
+                      <TableCell>{campus?.name || 'Sin campus asignado'}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setEditingFaculty(faculty);
+                            setFacultyForm({ 
+                              name: faculty.name, 
+                              dean_name: faculty.dean_name, 
+                              campus_ids: faculty.campus_id ? [faculty.campus_id] : [],
+                              manager_id: "",
+                              weekly_hours: 0,
+                              number_of_weeks: 16
+                            });
+                            setFacultyDialog(true);
+                          }}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeleteFaculty(faculty.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TabsContent>
@@ -868,42 +864,48 @@ export function CampusManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {programs.map((program) => (
-                  <TableRow key={program.id}>
-                    <TableCell>{program.faculty?.name}</TableCell>
-                    <TableCell className="font-medium">{program.name}</TableCell>
-                    <TableCell>{program.campus?.name}</TableCell>
-                    <TableCell>{program.director_name}</TableCell>
-                    <TableCell>
-                      {program.manager ? (
-                        <span className="text-green-600 font-medium">{program.manager.full_name}</span>
-                      ) : (
-                        <span className="text-gray-400">Sin asignar</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => {
-                          setEditingProgram(program);
-                          setProgramForm({
-                            name: program.name,
-                            campus_id: program.campus_id,
-                            faculty_id: program.faculty_id,
-                            director_name: program.director_name,
-                            director_email: program.director_email,
-                            manager_id: program.manager_id || ""
-                          });
-                          setProgramDialog(true);
-                        }}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDeleteProgram(program.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {programs.map((program) => {
+                  const faculty = faculties.find(f => f.id === program.faculty_id);
+                  const campus = campuses.find(c => c.id === program.campus_id);
+                  const manager = managers.find(m => m.id === program.manager_id);
+                  
+                  return (
+                    <TableRow key={program.id}>
+                      <TableCell>{faculty?.name}</TableCell>
+                      <TableCell className="font-medium">{program.name}</TableCell>
+                      <TableCell>{campus?.name}</TableCell>
+                      <TableCell>{program.director_name}</TableCell>
+                      <TableCell>
+                        {manager ? (
+                          <span className="text-green-600 font-medium">{manager.full_name}</span>
+                        ) : (
+                          <span className="text-gray-400">Sin asignar</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setEditingProgram(program);
+                            setProgramForm({
+                              name: program.name,
+                              campus_id: program.campus_id,
+                              faculty_id: program.faculty_id,
+                              director_name: program.director_name,
+                              director_email: program.director_email,
+                              manager_id: program.manager_id || ""
+                            });
+                            setProgramDialog(true);
+                          }}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeleteProgram(program.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TabsContent>

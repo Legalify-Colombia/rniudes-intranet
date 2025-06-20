@@ -4,11 +4,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
 
+// Import all the modular hooks
+import { useCampus } from "./useCampus";
+import { useFaculties } from "./useFaculties";
+import { useAcademicPrograms } from "./useAcademicPrograms";
+import { useManagers } from "./useManagers";
+import { useStrategicElements } from "./useStrategicElements";
+import { useReports } from "./useReports";
+import { useDocumentTemplates } from "./useDocumentTemplates";
+import { useCustomPlans } from "./useCustomPlans";
+
 type Result<T> = { data: T | null; error: any };
 
 export function useSupabaseData() {
   const [profile, setProfile] = useState<Database["public"]["Tables"]["profiles"]["Row"] | null>(null);
   const { user } = useAuth();
+
+  // Import all hooks
+  const campusHook = useCampus();
+  const facultiesHook = useFaculties();
+  const academicProgramsHook = useAcademicPrograms();
+  const managersHook = useManagers();
+  const strategicElementsHook = useStrategicElements();
+  const reportsHook = useReports();
+  const documentTemplatesHook = useDocumentTemplates();
+  const customPlansHook = useCustomPlans();
 
   useEffect(() => {
     const getProfile = async () => {
@@ -52,346 +72,7 @@ export function useSupabaseData() {
     }
   };
 
-  // Campus CRUD
-  const fetchCampus = async (): Promise<Result<Database["public"]["Tables"]["campus"]["Row"][]>> => {
-    const { data, error } = await supabase.from("campus").select("*").order("name");
-    return { data, error };
-  };
-
-  const createCampus = async (campus: Database["public"]["Tables"]["campus"]["Insert"]): Promise<Result<Database["public"]["Tables"]["campus"]["Row"]>> => {
-    const { data, error } = await supabase.from("campus").insert(campus).select().single();
-    return { data, error };
-  };
-
-  const updateCampus = async (id: string, updates: Database["public"]["Tables"]["campus"]["Update"]): Promise<Result<Database["public"]["Tables"]["campus"]["Row"]>> => {
-    const { data, error } = await supabase.from("campus").update(updates).eq("id", id).select().single();
-    return { data, error };
-  };
-
-  const deleteCampus = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("campus").delete().eq("id", id);
-    return { data, error };
-  };
-
-  // Faculties CRUD
-  const fetchFaculties = async (): Promise<Result<Database["public"]["Tables"]["faculties"]["Row"][]>> => {
-    const { data, error } = await supabase.from("faculties").select("*").order("name");
-    return { data, error };
-  };
-
-  const fetchFacultiesByCampus = async (campusId: string): Promise<Result<Database["public"]["Tables"]["faculties"]["Row"][]>> => {
-    const { data, error } = await supabase
-      .from("faculties")
-      .select("*")
-      .eq("campus_id", campusId)
-      .order("name");
-    return { data, error };
-  };
-
-  const createFaculty = async (faculty: Database["public"]["Tables"]["faculties"]["Insert"]): Promise<Result<Database["public"]["Tables"]["faculties"]["Row"]>> => {
-    const { data, error } = await supabase.from("faculties").insert(faculty).select().single();
-    return { data, error };
-  };
-
-  const updateFaculty = async (id: string, updates: Database["public"]["Tables"]["faculties"]["Update"]): Promise<Result<Database["public"]["Tables"]["faculties"]["Row"]>> => {
-    const { data, error } = await supabase.from("faculties").update(updates).eq("id", id).select().single();
-    return { data, error };
-  };
-
-  const deleteFaculty = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("faculties").delete().eq("id", id);
-    return { data, error };
-  };
-
-  // Academic Programs CRUD
-  const fetchPrograms = async (): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"][]>> => {
-    const { data, error } = await supabase.from("academic_programs").select("*").order("name");
-    return { data, error };
-  };
-
-  const fetchAcademicPrograms = async (): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"][]>> => {
-    return fetchPrograms();
-  };
-
-  const fetchAcademicProgramsByCampus = async (campusId: string): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"][]>> => {
-    const { data, error } = await supabase
-      .from("academic_programs")
-      .select("*")
-      .eq("campus_id", campusId)
-      .order("name");
-    return { data, error };
-  };
-
-  const createProgram = async (program: Database["public"]["Tables"]["academic_programs"]["Insert"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
-    const { data, error } = await supabase.from("academic_programs").insert(program).select().single();
-    return { data, error };
-  };
-
-  const createAcademicProgram = async (program: Database["public"]["Tables"]["academic_programs"]["Insert"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
-    return createProgram(program);
-  };
-
-  const updateProgram = async (id: string, updates: Database["public"]["Tables"]["academic_programs"]["Update"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
-    const { data, error } = await supabase.from("academic_programs").update(updates).eq("id", id).select().single();
-    return { data, error };
-  };
-
-  const updateAcademicProgram = async (id: string, updates: Database["public"]["Tables"]["academic_programs"]["Update"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
-    return updateProgram(id, updates);
-  };
-
-  const deleteProgram = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("academic_programs").delete().eq("id", id);
-    return { data, error };
-  };
-
-  const deleteAcademicProgram = async (id: string): Promise<Result<any>> => {
-    return deleteProgram(id);
-  };
-
-  // Strategic Axes CRUD
-  const fetchStrategicAxes = async (): Promise<Result<Database["public"]["Tables"]["strategic_axes"]["Row"][]>> => {
-    const { data, error } = await supabase.from("strategic_axes").select("*").order("name");
-    return { data, error };
-  };
-
-  const createStrategicAxis = async (axis: Database["public"]["Tables"]["strategic_axes"]["Insert"]): Promise<Result<Database["public"]["Tables"]["strategic_axes"]["Row"]>> => {
-    const { data, error } = await supabase.from("strategic_axes").insert(axis).select().single();
-    return { data, error };
-  };
-
-  const updateStrategicAxis = async (id: string, updates: Database["public"]["Tables"]["strategic_axes"]["Update"]): Promise<Result<Database["public"]["Tables"]["strategic_axes"]["Row"]>> => {
-    const { data, error } = await supabase.from("strategic_axes").update(updates).eq("id", id).select().single();
-    return { data, error };
-  };
-
-  const deleteStrategicAxis = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("strategic_axes").delete().eq("id", id);
-    return { data, error };
-  };
-
-  // Actions CRUD
-  const fetchActions = async (): Promise<Result<Database["public"]["Tables"]["actions"]["Row"][]>> => {
-    const { data, error } = await supabase.from("actions").select("*").order("name");
-    return { data, error };
-  };
-
-  const createAction = async (action: Database["public"]["Tables"]["actions"]["Insert"]): Promise<Result<Database["public"]["Tables"]["actions"]["Row"]>> => {
-    const { data, error } = await supabase.from("actions").insert(action).select().single();
-    return { data, error };
-  };
-
-  const updateAction = async (id: string, updates: Database["public"]["Tables"]["actions"]["Update"]): Promise<Result<Database["public"]["Tables"]["actions"]["Row"]>> => {
-    const { data, error } = await supabase.from("actions").update(updates).eq("id", id).select().single();
-    return { data, error };
-  };
-
-  const deleteAction = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("actions").delete().eq("id", id);
-    return { data, error };
-  };
-
-  // Products CRUD
-  const fetchProducts = async (): Promise<Result<Database["public"]["Tables"]["products"]["Row"][]>> => {
-    const { data, error } = await supabase.from("products").select("*").order("name");
-    return { data, error };
-  };
-
-  const createProduct = async (product: Database["public"]["Tables"]["products"]["Insert"]): Promise<Result<Database["public"]["Tables"]["products"]["Row"]>> => {
-    const { data, error } = await supabase.from("products").insert(product).select().single();
-    return { data, error };
-  };
-
-  const updateProduct = async (id: string, updates: Database["public"]["Tables"]["products"]["Update"]): Promise<Result<Database["public"]["Tables"]["products"]["Row"]>> => {
-    const { data, error } = await supabase.from("products").update(updates).eq("id", id).select().single();
-    return { data, error };
-  };
-
-  const deleteProduct = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("products").delete().eq("id", id);
-    return { data, error };
-  };
-
-  // Managers CRUD
-  const fetchManagers = async (): Promise<Result<Database["public"]["Tables"]["profiles"]["Row"][]>> => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("role", "Gestor")
-      .order("full_name");
-    return { data, error };
-  };
-
-  const fetchManagersByCampus = async (campusId: string): Promise<Result<Database["public"]["Tables"]["profiles"]["Row"][]>> => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("role", "Gestor")
-      .eq("campus_id", campusId)
-      .order("full_name");
-    return { data, error };
-  };
-
-  const updateManagerHours = async (managerId: string, updates: { weekly_hours?: number; total_hours?: number }): Promise<Result<Database["public"]["Tables"]["profiles"]["Row"]>> => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", managerId)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const getUserManagedCampus = async (userId: string): Promise<Result<Database["public"]["Tables"]["campus"]["Row"][]>> => {
-    const { data: userProfile, error: profileError } = await supabase
-      .from("profiles")
-      .select("managed_campus_ids")
-      .eq("id", userId)
-      .single();
-
-    if (profileError) return { data: null, error: profileError };
-
-    if (!userProfile.managed_campus_ids) {
-      // Super admin - fetch all campus
-      const { data, error } = await supabase.from("campus").select("*").order("name");
-      return { data, error };
-    }
-
-    // Fetch only managed campus
-    const { data, error } = await supabase
-      .from("campus")
-      .select("*")
-      .in("id", userProfile.managed_campus_ids)
-      .order("name");
-    return { data, error };
-  };
-
-  // Work Plans CRUD
-  const fetchWorkPlans = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .select(`
-        *,
-        manager:profiles!custom_plans_manager_id_fkey(*)
-      `)
-      .order("created_at", { ascending: false });
-    return { data, error };
-  };
-
-  // Custom Plans
-  const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .select(`
-        *,
-        plan_type:plan_types(*),
-        responses:custom_plan_responses(*)
-      `)
-      .eq("id", planId)
-      .single();
-    return { data, error };
-  };
-
-  const fetchPlanFields = async (planTypeId: string): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("plan_fields")
-      .select("*")
-      .eq("plan_type_id", planTypeId)
-      .order("field_order");
-    return { data, error };
-  };
-
-  const updateCustomPlan = async (planId: string, updates: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .update(updates)
-      .eq("id", planId)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const submitCustomPlan = async (planId: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .update({ 
-        status: "submitted",
-        submitted_date: new Date().toISOString()
-      })
-      .eq("id", planId)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const upsertCustomPlanResponse = async (response: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plan_responses")
-      .upsert(response)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  // Manager Reports CRUD
-  const fetchManagerReports = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("manager_reports")
-      .select(`
-        *,
-        manager:profiles!manager_reports_manager_id_fkey(*),
-        report_period:report_periods(*),
-        work_plan:custom_plans!manager_reports_work_plan_id_fkey(*)
-      `)
-      .order("created_at", { ascending: false });
-    return { data, error };
-  };
-
-  const updateManagerReport = async (id: string, updates: Database["public"]["Tables"]["manager_reports"]["Update"]): Promise<Result<Database["public"]["Tables"]["manager_reports"]["Row"]>> => {
-    const { data, error } = await supabase
-      .from("manager_reports")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  // Report Periods CRUD
-  const fetchReportPeriods = async (): Promise<Result<Database["public"]["Tables"]["report_periods"]["Row"][]>> => {
-    const { data, error } = await supabase
-      .from("report_periods")
-      .select("*")
-      .order("start_date", { ascending: false });
-    return { data, error };
-  };
-
-  const createReportPeriod = async (period: Database["public"]["Tables"]["report_periods"]["Insert"]): Promise<Result<Database["public"]["Tables"]["report_periods"]["Row"]>> => {
-    const { data, error } = await supabase.from("report_periods").insert(period).select().single();
-    return { data, error };
-  };
-
-  const updateReportPeriod = async (id: string, updates: Database["public"]["Tables"]["report_periods"]["Update"]): Promise<Result<Database["public"]["Tables"]["report_periods"]["Row"]>> => {
-    const { data, error } = await supabase.from("report_periods").update(updates).eq("id", id).select().single();
-    return { data, error };
-  };
-
-  const deleteReportPeriod = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("report_periods").delete().eq("id", id);
-    return { data, error };
-  };
-
-  // Document Templates CRUD
-  const fetchDocumentTemplates = async (): Promise<Result<Database["public"]["Tables"]["document_templates"]["Row"][]>> => {
-    const { data, error } = await supabase
-      .from("document_templates")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
-    return { data, error };
-  };
-
-  // Función auxiliar para crear funciones CRUD genéricas para tablas SNIES
+  // SNIES related functions
   const createSniesTableFunctions = (tableName: string) => {
     const fetchFunction = async (): Promise<Result<any[]>> => {
       const { data, error } = await supabase
@@ -448,7 +129,7 @@ export function useSupabaseData() {
     };
   };
 
-  // Funciones SNIES existentes
+  // SNIES functions
   const fetchSniesCountries = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('snies_countries')
@@ -494,14 +175,12 @@ export function useSupabaseData() {
     return { data: data || [], error };
   };
 
-  // Crear funciones para las nuevas tablas SNIES
   const sniesEducationLevels = createSniesTableFunctions('snies_education_levels');
   const sniesModalities = createSniesTableFunctions('snies_modalities');
   const sniesMethodologies = createSniesTableFunctions('snies_methodologies');
   const sniesKnowledgeAreas = createSniesTableFunctions('snies_knowledge_areas');
   const sniesInstitutions = createSniesTableFunctions('snies_institutions');
 
-  // Funciones para crear datos SNIES (corregir problemas de importación)
   const createSniesCountry = async (country: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('snies_countries')
@@ -546,13 +225,11 @@ export function useSupabaseData() {
   };
 
   const saveSniesReportData = async (reportId: string, reportData: any[]): Promise<Result<any[]>> => {
-    // First delete existing data
     await supabase
       .from('snies_report_data')
       .delete()
       .eq('report_id', reportId);
 
-    // Then insert new data
     const dataToInsert = reportData.map((row, index) => ({
       report_id: reportId,
       row_index: index,
@@ -568,7 +245,6 @@ export function useSupabaseData() {
   };
 
   const consolidateSniesReports = async (templateId: string, title: string): Promise<Result<any>> => {
-    // Get all submitted reports for this template
     const { data: reports, error: reportsError } = await supabase
       .from('snies_reports')
       .select(`
@@ -581,7 +257,6 @@ export function useSupabaseData() {
 
     if (reportsError) return { data: null, error: reportsError };
 
-    // Consolidate all data
     let consolidatedData: any[] = [];
     reports?.forEach(report => {
       if (report.snies_report_data) {
@@ -591,7 +266,6 @@ export function useSupabaseData() {
       }
     });
 
-    // Create consolidated report record
     const { data, error } = await supabase
       .from('snies_consolidated_reports')
       .insert({
@@ -612,77 +286,31 @@ export function useSupabaseData() {
     updateProfile,
     
     // Campus
-    fetchCampus,
-    createCampus,
-    updateCampus,
-    deleteCampus,
-    getUserManagedCampus,
+    ...campusHook,
     
     // Faculties
-    fetchFaculties,
-    fetchFacultiesByCampus,
-    createFaculty,
-    updateFaculty,
-    deleteFaculty,
+    ...facultiesHook,
     
     // Academic Programs
-    fetchPrograms,
-    fetchAcademicPrograms,
-    fetchAcademicProgramsByCampus,
-    createProgram,
-    createAcademicProgram,
-    updateProgram,
-    updateAcademicProgram,
-    deleteProgram,
-    deleteAcademicProgram,
-    
-    // Strategic Axes
-    fetchStrategicAxes,
-    createStrategicAxis,
-    updateStrategicAxis,
-    deleteStrategicAxis,
-    
-    // Actions
-    fetchActions,
-    createAction,
-    updateAction,
-    deleteAction,
-    
-    // Products
-    fetchProducts,
-    createProduct,
-    updateProduct,
-    deleteProduct,
+    fetchPrograms: academicProgramsHook.fetchAcademicPrograms,
+    ...academicProgramsHook,
     
     // Managers
-    fetchManagers,
-    fetchManagersByCampus,
-    updateManagerHours,
+    ...managersHook,
     
-    // Work Plans
-    fetchWorkPlans,
+    // Strategic Elements
+    ...strategicElementsHook,
     
-    // Custom Plans
-    fetchCustomPlanDetails,
-    fetchPlanFields,
-    updateCustomPlan,
-    submitCustomPlan,
-    upsertCustomPlanResponse,
-    
-    // Manager Reports
-    fetchManagerReports,
-    updateManagerReport,
-    
-    // Report Periods
-    fetchReportPeriods,
-    createReportPeriod,
-    updateReportPeriod,
-    deleteReportPeriod,
+    // Reports
+    ...reportsHook,
     
     // Document Templates
-    fetchDocumentTemplates,
+    ...documentTemplatesHook,
     
-    // Funciones SNIES existentes
+    // Custom Plans
+    ...customPlansHook,
+    
+    // SNIES functions
     fetchSniesCountries,
     fetchSniesMunicipalities,
     fetchSniesDocumentTypes,
@@ -693,7 +321,6 @@ export function useSupabaseData() {
     createSniesMunicipality,
     bulkCreateSniesMunicipalities,
     
-    // Nuevas funciones SNIES
     fetchSniesEducationLevels: sniesEducationLevels.fetch,
     createSniesEducationLevel: sniesEducationLevels.create,
     bulkCreateSniesEducationLevels: sniesEducationLevels.bulkCreate,
@@ -724,7 +351,6 @@ export function useSupabaseData() {
     updateSniesInstitution: sniesInstitutions.update,
     deleteSniesInstitution: sniesInstitutions.delete,
     
-    // Funciones de reportes SNIES
     fetchSniesReportData,
     saveSniesReportData,
     consolidateSniesReports
