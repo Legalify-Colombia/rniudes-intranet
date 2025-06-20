@@ -1,508 +1,389 @@
-
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Download, Plus, Edit, Trash2, Database } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-
-const SNIES_TABLES = {
-  countries: {
-    name: 'Países',
-    fetchFunction: 'fetchSniesCountries',
-    createFunction: 'createSniesCountry',
-    bulkCreateFunction: 'bulkCreateSniesCountries',
-    fields: [
-      { key: 'id', label: 'ID', required: true },
-      { key: 'name', label: 'Nombre', required: true },
-      { key: 'alpha_3', label: 'Código Alpha-3', required: false },
-      { key: 'alpha_2', label: 'Código Alpha-2', required: false }
-    ],
-    csvExample: "ID_PAIS\tDESC_PAIS\tALFA-3\tALFA-2\n535\tBONAIRE, SAN EUSTAQUIO Y SABA\tBES\tBQ"
-  },
-  municipalities: {
-    name: 'Municipios',
-    fetchFunction: 'fetchSniesMunicipalities',
-    createFunction: 'createSniesMunicipality',
-    bulkCreateFunction: 'bulkCreateSniesMunicipalities',
-    fields: [
-      { key: 'id', label: 'ID', required: true },
-      { key: 'name', label: 'Nombre', required: true },
-      { key: 'country_id', label: 'ID País', required: false },
-      { key: 'department_code', label: 'Código Departamento', required: false }
-    ],
-    csvExample: "ID_MUNICIPIO\tDESC_MUNICIPIO\tID_PAIS\tCOD_DEPTO\n001\tBOGOTÁ\t170\t11"
-  },
-  education_levels: {
-    name: 'Niveles de Formación',
-    fetchFunction: 'fetchSniesEducationLevels',
-    createFunction: 'createSniesEducationLevel',
-    bulkCreateFunction: 'bulkCreateSniesEducationLevels',
-    fields: [
-      { key: 'id', label: 'ID', required: true },
-      { key: 'name', label: 'Nombre', required: true },
-      { key: 'description', label: 'Descripción', required: false }
-    ],
-    csvExample: "ID\tNOMBRE\tDESCRIPCION\nTC\tTécnico Profesional\tTécnico Profesional"
-  },
-  modalities: {
-    name: 'Modalidades',
-    fetchFunction: 'fetchSniesModalities',
-    createFunction: 'createSniesModality',
-    bulkCreateFunction: 'bulkCreateSniesModalities',
-    fields: [
-      { key: 'id', label: 'ID', required: true },
-      { key: 'name', label: 'Nombre', required: true },
-      { key: 'description', label: 'Descripción', required: false }
-    ],
-    csvExample: "ID\tNOMBRE\tDESCRIPCION\nPR\tPresencial\tPresencial"
-  },
-  methodologies: {
-    name: 'Metodologías',
-    fetchFunction: 'fetchSniesMethodologies',
-    createFunction: 'createSniesMethodology',
-    bulkCreateFunction: 'bulkCreateSniesMethodologies',
-    fields: [
-      { key: 'id', label: 'ID', required: true },
-      { key: 'name', label: 'Nombre', required: true },
-      { key: 'description', label: 'Descripción', required: false }
-    ],
-    csvExample: "ID\tNOMBRE\tDESCRIPCION\nPR\tPropia\tPropia"
-  },
-  knowledge_areas: {
-    name: 'Áreas de Conocimiento',
-    fetchFunction: 'fetchSniesKnowledgeAreas',
-    createFunction: 'createSniesKnowledgeArea',
-    bulkCreateFunction: 'bulkCreateSniesKnowledgeAreas',
-    fields: [
-      { key: 'id', label: 'ID', required: true },
-      { key: 'name', label: 'Nombre', required: true },
-      { key: 'description', label: 'Descripción', required: false },
-      { key: 'parent_area_id', label: 'ID Área Padre', required: false }
-    ],
-    csvExample: "ID\tNOMBRE\tDESCRIPCION\tPARENT_AREA_ID\n01\tAGRONOMÍA, VETERINARIA Y AFINES\tAgronomía, Veterinaria y afines\t"
-  },
-  institutions: {
-    name: 'Instituciones',
-    fetchFunction: 'fetchSniesInstitutions',
-    createFunction: 'createSniesInstitution',
-    bulkCreateFunction: 'bulkCreateSniesInstitutions',
-    fields: [
-      { key: 'id', label: 'ID', required: true },
-      { key: 'name', label: 'Nombre', required: true },
-      { key: 'code', label: 'Código', required: false },
-      { key: 'address', label: 'Dirección', required: false },
-      { key: 'municipality_id', label: 'ID Municipio', required: false }
-    ],
-    csvExample: "ID\tNOMBRE\tCODIGO\tDIRECCION\tID_MUNICIPIO\n001\tUniversidad\t001\tCalle 123\t001"
-  }
-};
+import { useToast } from "@/hooks/use-toast";
+import { Plus, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 
 export function SniesConfigurationManagement() {
-  const [tableData, setTableData] = useState<Record<string, any[]>>({});
-  const [documentTypes, setDocumentTypes] = useState<any[]>([]);
-  const [biologicalSex, setBiologicalSex] = useState<any[]>([]);
-  const [maritalStatus, setMaritalStatus] = useState<any[]>([]);
-  
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<string>('countries');
-  const [csvData, setCsvData] = useState('');
-  const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
-  const [manualEntryTable, setManualEntryTable] = useState<string>('countries');
-  const [formData, setFormData] = useState<Record<string, string>>({});
-  
+  const {
+    fetchSniesCountries,
+    createSniesCountry,
+    bulkCreateSniesCountries,
+    fetchSniesMunicipalities,
+    createSniesMunicipality,
+    bulkCreateSniesMunicipalities,
+  } = useSupabaseData();
   const { toast } = useToast();
-  const supabaseData = useSupabaseData();
+
+  const [countries, setCountries] = useState<any[]>([]);
+  const [municipalities, setMunicipalities] = useState<any[]>([]);
+  const [newCountryName, setNewCountryName] = useState("");
+  const [newCountryCode, setNewCountryCode] = useState("");
+  const [newCountryAlpha2, setNewCountryAlpha2] = useState("");
+  const [newCountryAlpha3, setNewCountryAlpha3] = useState("");
+  const [bulkCountryData, setBulkCountryData] = useState("");
+  const [newMunicipalityName, setNewMunicipalityName] = useState("");
+  const [newMunicipalityCode, setNewMunicipalityCode] = useState("");
+  const [bulkMunicipalityData, setBulkMunicipalityData] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      const promises = [];
-      
-      // Cargar todas las tablas SNIES
-      for (const [key, config] of Object.entries(SNIES_TABLES)) {
-        const fetchFunction = (supabaseData as any)[config.fetchFunction];
-        if (fetchFunction) {
-          promises.push(
-            fetchFunction().then((result: any) => ({ key, data: result.data || [] }))
-          );
-        }
-      }
-      
-      // Cargar tablas adicionales
-      promises.push(
-        supabaseData.fetchSniesDocumentTypes().then((result: any) => ({ key: 'documents', data: result.data || [] })),
-        supabaseData.fetchSniesBiologicalSex().then((result: any) => ({ key: 'biological_sex', data: result.data || [] })),
-        supabaseData.fetchSniesMaritalStatus().then((result: any) => ({ key: 'marital_status', data: result.data || [] }))
-      );
+      const [countriesResult, municipalitiesResult] = await Promise.all([
+        fetchSniesCountries(),
+        fetchSniesMunicipalities(),
+      ]);
 
-      const results = await Promise.all(promises);
-      
-      const newTableData: Record<string, any[]> = {};
-      results.forEach(result => {
-        if (result.key === 'documents') {
-          setDocumentTypes(result.data);
-        } else if (result.key === 'biological_sex') {
-          setBiologicalSex(result.data);
-        } else if (result.key === 'marital_status') {
-          setMaritalStatus(result.data);
-        } else {
-          newTableData[result.key] = result.data;
-        }
-      });
-      
-      setTableData(newTableData);
+      setCountries(countriesResult.data || []);
+      setMunicipalities(municipalitiesResult.data || []);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading data:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos de configuración",
+        description: "No se pudieron cargar los datos",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCsvUpload = async () => {
-    if (!csvData.trim()) {
+  const handleCreateCountry = async () => {
+    if (!newCountryName || !newCountryCode) {
       toast({
         title: "Error",
-        description: "Por favor ingresa los datos CSV",
+        description: "El nombre y el código del país son obligatorios",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const lines = csvData.trim().split('\n');
-      const headers = lines[0].split('\t');
-      const data = lines.slice(1).map(line => {
-        const values = line.split('\t');
-        const obj: any = {};
-        headers.forEach((header, index) => {
-          const cleanHeader = header.trim();
-          const value = values[index]?.trim() || '';
-          
-          // Mapear headers comunes a nombres de campos
-          const fieldMap: Record<string, string> = {
-            'ID_PAIS': 'id',
-            'DESC_PAIS': 'name',
-            'ALFA-3': 'alpha_3',
-            'ALFA-2': 'alpha_2',
-            'ID_MUNICIPIO': 'id',
-            'DESC_MUNICIPIO': 'name',
-            'COD_DEPTO': 'department_code',
-            'ID': 'id',
-            'NOMBRE': 'name',
-            'DESCRIPCION': 'description',
-            'PARENT_AREA_ID': 'parent_area_id',
-            'CODIGO': 'code',
-            'DIRECCION': 'address',
-            'ID_MUNICIPIO': 'municipality_id'
-          };
-          
-          const fieldName = fieldMap[cleanHeader] || cleanHeader.toLowerCase();
-          obj[fieldName] = value;
-        });
-        return obj;
-      });
+      const validCountryData = {
+        id: newCountryCode,
+        name: newCountryName,
+        alpha_2: newCountryAlpha2 || null,
+        alpha_3: newCountryAlpha3 || null,
+        is_active: true
+      };
 
-      const config = SNIES_TABLES[selectedTable as keyof typeof SNIES_TABLES];
-      if (!config) {
-        throw new Error('Tabla no encontrada');
+      const { error } = await createSniesCountry(validCountryData);
+
+      if (error) {
+        throw error;
       }
-
-      const bulkCreateFunction = (supabaseData as any)[config.bulkCreateFunction];
-      if (!bulkCreateFunction) {
-        throw new Error('Función de creación masiva no encontrada');
-      }
-
-      const result = await bulkCreateFunction(data);
-      if (result.error) throw result.error;
 
       toast({
         title: "Éxito",
-        description: `Se importaron ${data.length} registros correctamente`,
+        description: "País creado correctamente",
       });
 
-      setCsvData('');
-      setIsUploadDialogOpen(false);
-      loadData();
+      setNewCountryName("");
+      setNewCountryCode("");
+      setNewCountryAlpha2("");
+      setNewCountryAlpha3("");
+      await loadData();
     } catch (error) {
-      console.error('Error uploading data:', error);
+      console.error("Error creating country:", error);
       toast({
         title: "Error",
-        description: "Error al importar los datos: " + (error as Error).message,
+        description: "No se pudo crear el país",
         variant: "destructive",
       });
     }
   };
 
-  const handleManualEntry = async () => {
+  const handleBulkCreateCountries = async () => {
+    if (!bulkCountryData) {
+      toast({
+        title: "Error",
+        description: "Los datos del país a granel son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const config = SNIES_TABLES[manualEntryTable as keyof typeof SNIES_TABLES];
-      if (!config) {
-        throw new Error('Tabla no encontrada');
+      const countriesData = JSON.parse(bulkCountryData);
+      if (!Array.isArray(countriesData)) {
+        throw new Error("Los datos deben ser un array de países");
       }
 
-      const requiredFields = config.fields.filter(field => field.required);
-      for (const field of requiredFields) {
-        if (!formData[field.key]) {
-          toast({
-            title: "Error",
-            description: `${field.label} es requerido`,
-            variant: "destructive",
-          });
-          return;
-        }
-      }
+      const { error } = await bulkCreateSniesCountries(countriesData);
 
-      const createFunction = (supabaseData as any)[config.createFunction];
-      if (!createFunction) {
-        throw new Error('Función de creación no encontrada');
+      if (error) {
+        throw error;
       }
-
-      const result = await createFunction(formData);
-      if (result.error) throw result.error;
 
       toast({
         title: "Éxito",
-        description: "Registro creado correctamente",
+        description: "Países creados correctamente a granel",
       });
 
-      setFormData({});
-      setIsManualEntryOpen(false);
-      loadData();
+      setBulkCountryData("");
+      await loadData();
     } catch (error) {
-      console.error('Error creating entry:', error);
+      console.error("Error creating countries in bulk:", error);
       toast({
         title: "Error",
-        description: "Error al crear el registro: " + (error as Error).message,
+        description: "No se pudieron crear los países a granel",
         variant: "destructive",
       });
     }
   };
 
-  const renderTableData = (tableName: string, data: any[], fields: any[]) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {fields.map(field => (
-            <TableHead key={field.key}>{field.label}</TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((item) => (
-          <TableRow key={item.id}>
-            {fields.map(field => (
-              <TableCell key={field.key}>{item[field.key] || '-'}</TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
+  const handleCreateMunicipality = async () => {
+    if (!newMunicipalityName || !newMunicipalityCode) {
+      toast({
+        title: "Error",
+        description: "El nombre y el código del municipio son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const municipalityData = {
+        id: newMunicipalityCode,
+        name: newMunicipalityName,
+        is_active: true,
+      };
+
+      const { error } = await createSniesMunicipality(municipalityData);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Municipio creado correctamente",
+      });
+
+      setNewMunicipalityName("");
+      setNewMunicipalityCode("");
+      await loadData();
+    } catch (error) {
+      console.error("Error creating municipality:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear el municipio",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkCreateMunicipalities = async () => {
+    if (!bulkMunicipalityData) {
+      toast({
+        title: "Error",
+        description: "Los datos del municipio a granel son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const municipalitiesData = JSON.parse(bulkMunicipalityData);
+      if (!Array.isArray(municipalitiesData)) {
+        throw new Error("Los datos deben ser un array de municipios");
+      }
+
+      const { error } = await bulkCreateSniesMunicipalities(municipalitiesData);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Municipios creados correctamente a granel",
+      });
+
+      setBulkMunicipalityData("");
+      await loadData();
+    } catch (error) {
+      console.error("Error creating municipalities in bulk:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron crear los municipios a granel",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusBadge = (isActive: boolean) => {
+    return isActive ? (
+      <CheckCircle className="w-4 h-4 text-green-500" />
+    ) : (
+      <XCircle className="w-4 h-4 text-red-500" />
+    );
+  };
+
+  if (loading) {
+    return <div className="flex justify-center p-8">Cargando datos...</div>;
+  }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Configuración de Datos SNIES
-          </CardTitle>
+          <CardTitle>Configuración de Países SNIES</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="countries" className="space-y-4">
-            <TabsList className="grid grid-cols-4 lg:grid-cols-8">
-              {Object.entries(SNIES_TABLES).map(([key, config]) => (
-                <TabsTrigger key={key} value={key} className="text-xs">
-                  {config.name}
-                </TabsTrigger>
-              ))}
-              <TabsTrigger value="documents" className="text-xs">Documentos</TabsTrigger>
-              <TabsTrigger value="biological_sex" className="text-xs">Sexo</TabsTrigger>
-              <TabsTrigger value="marital_status" className="text-xs">Estado Civil</TabsTrigger>
-            </TabsList>
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Crear País</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="countryName">Nombre del País</Label>
+                <Input
+                  type="text"
+                  id="countryName"
+                  value={newCountryName}
+                  onChange={(e) => setNewCountryName(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="countryCode">Código del País</Label>
+                <Input
+                  type="text"
+                  id="countryCode"
+                  value={newCountryCode}
+                  onChange={(e) => setNewCountryCode(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="countryAlpha2">Código Alpha-2</Label>
+                <Input
+                  type="text"
+                  id="countryAlpha2"
+                  value={newCountryAlpha2}
+                  onChange={(e) => setNewCountryAlpha2(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="countryAlpha3">Código Alpha-3</Label>
+                <Input
+                  type="text"
+                  id="countryAlpha3"
+                  value={newCountryAlpha3}
+                  onChange={(e) => setNewCountryAlpha3(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button onClick={handleCreateCountry}>Crear País</Button>
 
-            {Object.entries(SNIES_TABLES).map(([key, config]) => (
-              <TabsContent key={key} value={key}>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Dialog open={isUploadDialogOpen && selectedTable === key} onOpenChange={setIsUploadDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          onClick={() => {
-                            setSelectedTable(key);
-                            setIsUploadDialogOpen(true);
-                          }}
-                          className="institutional-gradient text-white"
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          Importar {config.name}
-                        </Button>
-                      </DialogTrigger>
-                    </Dialog>
+            <h3 className="text-lg font-medium mt-6">Creación Masiva de Países (JSON)</h3>
+            <div>
+              <Label htmlFor="bulkCountryData">Datos JSON de Países</Label>
+              <Input
+                type="textarea"
+                id="bulkCountryData"
+                value={bulkCountryData}
+                onChange={(e) => setBulkCountryData(e.target.value)}
+                placeholder="[{&quot;id&quot;: &quot;USA&quot;, &quot;name&quot;: &quot;Estados Unidos&quot;}, ...]"
+              />
+            </div>
+            <Button onClick={handleBulkCreateCountries}>Crear Países en Lote</Button>
 
-                    <Dialog open={isManualEntryOpen && manualEntryTable === key} onOpenChange={setIsManualEntryOpen}>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline"
-                          onClick={() => {
-                            setManualEntryTable(key);
-                            setIsManualEntryOpen(true);
-                            setFormData({});
-                          }}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Agregar {config.name.slice(0, -1)}
-                        </Button>
-                      </DialogTrigger>
-                    </Dialog>
-                  </div>
-
-                  {renderTableData(key, tableData[key] || [], config.fields)}
-                </div>
-              </TabsContent>
-            ))}
-
-            <TabsContent value="documents">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead>
+            <h3 className="text-lg font-medium mt-6">Lista de Países</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {countries.map((country) => (
+                  <TableRow key={country.id}>
+                    <TableCell>{country.id}</TableCell>
+                    <TableCell>{country.name}</TableCell>
+                    <TableCell>{getStatusBadge(country.is_active)}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {documentTypes.map((docType) => (
-                    <TableRow key={docType.id}>
-                      <TableCell>{docType.id}</TableCell>
-                      <TableCell>{docType.name}</TableCell>
-                      <TableCell>{docType.description}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-
-            <TabsContent value="biological_sex">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nombre</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {biologicalSex.map((sex) => (
-                    <TableRow key={sex.id}>
-                      <TableCell>{sex.id}</TableCell>
-                      <TableCell>{sex.name}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-
-            <TabsContent value="marital_status">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nombre</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {maritalStatus.map((status) => (
-                    <TableRow key={status.id}>
-                      <TableCell>{status.id}</TableCell>
-                      <TableCell>{status.name}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          </Tabs>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Upload Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              Importar {SNIES_TABLES[selectedTable as keyof typeof SNIES_TABLES]?.name}
-            </DialogTitle>
-          </DialogHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuración de Municipios SNIES</CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-4">
-            <div>
-              <Label>Datos CSV (separados por tabulaciones)</Label>
-              <Textarea
-                value={csvData}
-                onChange={(e) => setCsvData(e.target.value)}
-                placeholder={SNIES_TABLES[selectedTable as keyof typeof SNIES_TABLES]?.csvExample}
-                rows={10}
-                className="font-mono text-sm"
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCsvUpload} className="institutional-gradient text-white">
-                Importar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manual Entry Dialog */}
-      <Dialog open={isManualEntryOpen} onOpenChange={setIsManualEntryOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Agregar {SNIES_TABLES[manualEntryTable as keyof typeof SNIES_TABLES]?.name.slice(0, -1)}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {SNIES_TABLES[manualEntryTable as keyof typeof SNIES_TABLES]?.fields.map(field => (
-              <div key={field.key}>
-                <Label htmlFor={field.key}>
-                  {field.label} {field.required && '*'}
-                </Label>
+            <h3 className="text-lg font-medium">Crear Municipio</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="municipalityName">Nombre del Municipio</Label>
                 <Input
-                  id={field.key}
-                  value={formData[field.key] || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                  placeholder={field.label}
-                  required={field.required}
+                  type="text"
+                  id="municipalityName"
+                  value={newMunicipalityName}
+                  onChange={(e) => setNewMunicipalityName(e.target.value)}
                 />
               </div>
-            ))}
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsManualEntryOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleManualEntry} className="institutional-gradient text-white">
-                Crear
-              </Button>
+              <div>
+                <Label htmlFor="municipalityCode">Código del Municipio</Label>
+                <Input
+                  type="text"
+                  id="municipalityCode"
+                  value={newMunicipalityCode}
+                  onChange={(e) => setNewMunicipalityCode(e.target.value)}
+                />
+              </div>
             </div>
+            <Button onClick={handleCreateMunicipality}>Crear Municipio</Button>
+
+            <h3 className="text-lg font-medium mt-6">Creación Masiva de Municipios (JSON)</h3>
+            <div>
+              <Label htmlFor="bulkMunicipalityData">Datos JSON de Municipios</Label>
+              <Input
+                type="textarea"
+                id="bulkMunicipalityData"
+                value={bulkMunicipalityData}
+                onChange={(e) => setBulkMunicipalityData(e.target.value)}
+                placeholder="[{&quot;id&quot;: &quot;11001&quot;, &quot;name&quot;: &quot;Bogotá D.C.&quot;}, ...]"
+              />
+            </div>
+            <Button onClick={handleBulkCreateMunicipalities}>
+              Crear Municipios en Lote
+            </Button>
+
+            <h3 className="text-lg font-medium mt-6">Lista de Municipios</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {municipalities.map((municipality) => (
+                  <TableRow key={municipality.id}>
+                    <TableCell>{municipality.id}</TableCell>
+                    <TableCell>{municipality.name}</TableCell>
+                    <TableCell>{getStatusBadge(municipality.is_active)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }

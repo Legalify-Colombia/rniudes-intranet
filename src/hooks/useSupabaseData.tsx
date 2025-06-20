@@ -1,9 +1,9 @@
 
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
+import type { Result } from "@/types/supabase";
 
 // Import all the modular hooks
 import { useCampus } from "./useCampus";
@@ -21,8 +21,30 @@ import { useSniesReports } from "./useSniesReports";
 import { useTemplateReports } from "./useTemplateReports";
 import { useReportConfiguration } from "./useReportConfiguration";
 import { usePlanTypes } from "./usePlanTypes";
+import { useUsers } from "./useUsers";
+import { useWorkPlans } from "./useWorkPlans";
 
-type Result<T> = { data: T | null; error: any };
+// Re-export types for components that need them
+export type {
+  Campus,
+  Faculty,
+  AcademicProgram,
+  DocumentTemplate,
+  StrategicAxis,
+  Action,
+  Product,
+  ReportPeriod,
+  ManagerReport,
+  Profile,
+  CustomPlan,
+  Indicator,
+  IndicatorReport,
+  ReportTemplate,
+  ManagerReportVersion,
+  SniesReport,
+  SniesReportTemplate,
+  SniesTemplateField
+} from "@/types/supabase";
 
 export function useSupabaseData() {
   const [profile, setProfile] = useState<Database["public"]["Tables"]["profiles"]["Row"] | null>(null);
@@ -44,6 +66,8 @@ export function useSupabaseData() {
   const templateReportsHook = useTemplateReports();
   const reportConfigurationHook = useReportConfiguration();
   const planTypesHook = usePlanTypes();
+  const usersHook = useUsers();
+  const workPlansHook = useWorkPlans();
 
   useEffect(() => {
     const getProfile = async () => {
@@ -97,11 +121,14 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const fetchUnifiedReports = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("unified_reports")
-      .select("*")
-      .order("created_at", { ascending: false });
+  const fetchUnifiedReports = async (managerId?: string): Promise<Result<any[]>> => {
+    let query = supabase.from("unified_reports").select("*");
+    
+    if (managerId) {
+      query = query.eq("manager_id", managerId);
+    }
+    
+    const { data, error } = await query.order("created_at", { ascending: false });
     return { data, error };
   };
 
@@ -196,6 +223,12 @@ export function useSupabaseData() {
 
     // Plan Types
     ...planTypesHook,
+
+    // Users
+    ...usersHook,
+
+    // Work Plans
+    ...workPlansHook,
 
     // Additional functions
     createManagerReport,
@@ -352,4 +385,3 @@ export function useSupabaseData() {
     }
   };
 }
-
