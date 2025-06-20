@@ -171,6 +171,42 @@ export type Database = {
           },
         ]
       }
+      faculty_campus: {
+        Row: {
+          campus_id: string
+          created_at: string | null
+          faculty_id: string
+          id: string
+        }
+        Insert: {
+          campus_id: string
+          created_at?: string | null
+          faculty_id: string
+          id?: string
+        }
+        Update: {
+          campus_id?: string
+          created_at?: string | null
+          faculty_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_campus_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_campus_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           action_id: string

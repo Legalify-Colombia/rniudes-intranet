@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -15,6 +14,7 @@ export interface Faculty {
   dean_name: string;
   campus_id: string;
   campus?: Campus;
+  faculty_campus?: Array<{ campus: Campus }>;
 }
 
 export interface AcademicProgram {
@@ -117,29 +117,91 @@ export function useSupabaseData() {
       .from('faculties')
       .select(`
         *,
-        campus:campus_id(*)
+        campus:campus_id(*),
+        faculty_campus!inner(
+          campus(*)
+        )
       `)
       .order('name');
     return { data, error };
   };
 
-  const createFaculty = async (faculty: Omit<Faculty, 'id'>) => {
-    const { data, error } = await supabase
+  const createFaculty = async (faculty: Omit<Faculty, 'id'> & { campus_ids?: string[] }) => {
+    const { campus_ids, ...facultyData } = faculty;
+    
+    // Crear la facultad
+    const { data: facultyResult, error: facultyError } = await supabase
       .from('faculties')
-      .insert([faculty])
+      .insert([facultyData])
       .select()
       .single();
-    return { data, error };
+
+    if (facultyError || !facultyResult) {
+      return { data: null, error: facultyError };
+    }
+
+    // Crear las relaciones con campus si se proporcionaron
+    if (campus_ids && campus_ids.length > 0) {
+      const facultyCampusRelations = campus_ids.map(campus_id => ({
+        faculty_id: facultyResult.id,
+        campus_id
+      }));
+
+      const { error: relationError } = await supabase
+        .from('faculty_campus')
+        .insert(facultyCampusRelations);
+
+      if (relationError) {
+        // Si hay error en las relaciones, eliminar la facultad creada
+        await supabase.from('faculties').delete().eq('id', facultyResult.id);
+        return { data: null, error: relationError };
+      }
+    }
+
+    return { data: facultyResult, error: null };
   };
 
-  const updateFaculty = async (id: string, updates: Partial<Faculty>) => {
-    const { data, error } = await supabase
+  const updateFaculty = async (id: string, updates: Partial<Faculty> & { campus_ids?: string[] }) => {
+    const { campus_ids, ...facultyUpdates } = updates;
+    
+    // Actualizar la facultad
+    const { data: facultyResult, error: facultyError } = await supabase
       .from('faculties')
-      .update(updates)
+      .update(facultyUpdates)
       .eq('id', id)
       .select()
       .single();
-    return { data, error };
+
+    if (facultyError) {
+      return { data: null, error: facultyError };
+    }
+
+    // Si se proporcionaron campus_ids, actualizar las relaciones
+    if (campus_ids !== undefined) {
+      // Eliminar relaciones existentes
+      await supabase
+        .from('faculty_campus')
+        .delete()
+        .eq('faculty_id', id);
+
+      // Crear nuevas relaciones
+      if (campus_ids.length > 0) {
+        const facultyCampusRelations = campus_ids.map(campus_id => ({
+          faculty_id: id,
+          campus_id
+        }));
+
+        const { error: relationError } = await supabase
+          .from('faculty_campus')
+          .insert(facultyCampusRelations);
+
+        if (relationError) {
+          return { data: null, error: relationError };
+        }
+      }
+    }
+
+    return { data: facultyResult, error: null };
   };
 
   const deleteFaculty = async (id: string) => {
@@ -191,21 +253,32 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  // Manager functions
+  // Manager functions - filtrar solo gestores disponibles
   const fetchManagers = async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select(`
-        *,
-        academic_programs!academic_programs_manager_id_fkey(
-          id,
-          name,
-          campus:campus_id(name),
-          faculty:faculty_id(name)
-        )
-      `)
+      .select('*')
       .eq('role', 'Gestor')
-      .not('academic_programs', 'is', null);
+      .order('full_name');
+    return { data, error };
+  };
+
+  // Función para actualizar las horas de trabajo de un gestor
+  const updateManagerHours = async (managerId: string, weeklyHours: number, numberOfWeeks: number = 16) => {
+    const totalHours = weeklyHours * numberOfWeeks;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ 
+        weekly_hours: weeklyHours,
+        number_of_weeks: numberOfWeeks,
+        total_hours: totalHours
+      })
+      .eq('id', managerId)
+      .eq('role', 'Gestor')
+      .select()
+      .single();
+    
     return { data, error };
   };
 
@@ -420,6 +493,7 @@ export function useSupabaseData() {
     deleteAcademicProgram,
     // Managers
     fetchManagers,
+    updateManagerHours,
     // Strategic Axes
     fetchStrategicAxes,
     createStrategicAxis,

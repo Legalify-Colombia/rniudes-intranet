@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,8 @@ export function CampusManagement() {
     createAcademicProgram,
     updateAcademicProgram,
     deleteAcademicProgram,
-    fetchManagers
+    fetchManagers,
+    updateManagerHours
   } = useSupabaseData();
 
   // Campus Management
@@ -44,7 +46,14 @@ export function CampusManagement() {
 
   // Faculty Management
   const [facultyDialog, setFacultyDialog] = useState(false);
-  const [facultyForm, setFacultyForm] = useState({ name: "", dean_name: "", campus_ids: [] as string[] });
+  const [facultyForm, setFacultyForm] = useState({ 
+    name: "", 
+    dean_name: "", 
+    campus_ids: [] as string[],
+    manager_id: "",
+    weekly_hours: 0,
+    number_of_weeks: 16
+  });
   const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
 
   // Program Management
@@ -150,16 +159,15 @@ export function CampusManagement() {
     e.preventDefault();
     
     try {
-      // For now, we'll use the first selected campus as the main campus
-      // In a future iteration, we could support multiple campus associations
-      const mainCampusId = facultyForm.campus_ids[0];
+      const facultyData = {
+        name: facultyForm.name,
+        dean_name: facultyForm.dean_name,
+        campus_id: facultyForm.campus_ids[0], // Primer campus seleccionado como principal
+        campus_ids: facultyForm.campus_ids,
+      };
       
       if (editingFaculty) {
-        const { error } = await updateFaculty(editingFaculty.id, {
-          name: facultyForm.name,
-          dean_name: facultyForm.dean_name,
-          campus_id: mainCampusId,
-        });
+        const { error } = await updateFaculty(editingFaculty.id, facultyData);
 
         if (error) {
           toast({
@@ -172,11 +180,7 @@ export function CampusManagement() {
 
         toast({ title: "Facultad actualizada exitosamente" });
       } else {
-        const { error } = await createFaculty({
-          name: facultyForm.name,
-          dean_name: facultyForm.dean_name,
-          campus_id: mainCampusId,
-        });
+        const { error } = await createFaculty(facultyData);
 
         if (error) {
           toast({
@@ -190,7 +194,32 @@ export function CampusManagement() {
         toast({ title: "Facultad creada exitosamente" });
       }
 
-      setFacultyForm({ name: "", dean_name: "", campus_ids: [] });
+      // Si se asignó un gestor y se definieron horas, actualizar las horas del gestor
+      if (facultyForm.manager_id && facultyForm.manager_id !== "none" && facultyForm.weekly_hours > 0) {
+        const { error: hoursError } = await updateManagerHours(
+          facultyForm.manager_id, 
+          facultyForm.weekly_hours, 
+          facultyForm.number_of_weeks
+        );
+
+        if (hoursError) {
+          console.error('Error updating manager hours:', hoursError);
+          toast({
+            title: "Advertencia",
+            description: "Facultad creada pero no se pudieron actualizar las horas del gestor",
+            variant: "destructive"
+          });
+        }
+      }
+
+      setFacultyForm({ 
+        name: "", 
+        dean_name: "", 
+        campus_ids: [],
+        manager_id: "",
+        weekly_hours: 0,
+        number_of_weeks: 16
+      });
       setEditingFaculty(null);
       setFacultyDialog(false);
       loadData();
@@ -311,8 +340,20 @@ export function CampusManagement() {
     }
   };
 
-  const availableFaculties = faculties.filter(f => f.campus_id === programForm.campus_id);
+  const availableFaculties = faculties.filter(f => 
+    !programForm.campus_id || 
+    f.faculty_campus?.some(fc => fc.campus.id === programForm.campus_id)
+  );
+  
   const availableManagers = managers.filter(m => m.role === 'Gestor');
+
+  // Función para obtener los campus asociados a una facultad
+  const getFacultyCampusNames = (faculty: Faculty) => {
+    if (faculty.faculty_campus && faculty.faculty_campus.length > 0) {
+      return faculty.faculty_campus.map(fc => fc.campus.name).join(', ');
+    }
+    return faculty.campus?.name || 'Sin campus asignado';
+  };
 
   if (loading) {
     return (
@@ -443,7 +484,7 @@ export function CampusManagement() {
                     Nueva Facultad
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[600px]">
                   <DialogHeader>
                     <DialogTitle>{editingFaculty ? "Editar" : "Crear"} Facultad</DialogTitle>
                   </DialogHeader>
@@ -467,7 +508,7 @@ export function CampusManagement() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Campus Asociados</Label>
+                      <Label>Campus Asociados (Seleccione al menos uno)</Label>
                       <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
                         {campuses.map((campus) => (
                           <div key={campus.id} className="flex items-center space-x-2">
@@ -498,6 +539,60 @@ export function CampusManagement() {
                         <p className="text-sm text-gray-500">Seleccione al menos un campus</p>
                       )}
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="facultyManager">Gestor Asignado (Opcional)</Label>
+                      <Select value={facultyForm.manager_id || "none"} onValueChange={(value) => setFacultyForm(prev => ({ ...prev, manager_id: value === "none" ? "" : value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar gestor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sin asignar</SelectItem>
+                          {availableManagers.map((manager) => (
+                            <SelectItem key={manager.id} value={manager.id}>
+                              {manager.full_name} - {manager.document_number}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {facultyForm.manager_id && facultyForm.manager_id !== "none" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="weeklyHours">Horas Semanales Asignadas</Label>
+                          <Input
+                            id="weeklyHours"
+                            type="number"
+                            min="1"
+                            max="40"
+                            value={facultyForm.weekly_hours}
+                            onChange={(e) => setFacultyForm(prev => ({ ...prev, weekly_hours: parseInt(e.target.value) || 0 }))}
+                            placeholder="Ej: 20"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="numberOfWeeks">Número de Semanas del Periodo</Label>
+                          <Input
+                            id="numberOfWeeks"
+                            type="number"
+                            min="1"
+                            max="52"
+                            value={facultyForm.number_of_weeks}
+                            onChange={(e) => setFacultyForm(prev => ({ ...prev, number_of_weeks: parseInt(e.target.value) || 16 }))}
+                            placeholder="16"
+                          />
+                        </div>
+                        {facultyForm.weekly_hours > 0 && (
+                          <div className="bg-blue-50 p-3 rounded-md">
+                            <p className="text-sm text-blue-800">
+                              <strong>Total de horas calculadas:</strong> {facultyForm.weekly_hours * facultyForm.number_of_weeks} horas
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
                     <div className="flex justify-end space-x-2">
                       <Button type="button" variant="outline" onClick={() => setFacultyDialog(false)}>
                         Cancelar
@@ -520,7 +615,7 @@ export function CampusManagement() {
                 <TableRow>
                   <TableHead>Facultad</TableHead>
                   <TableHead>Decano</TableHead>
-                  <TableHead>Campus</TableHead>
+                  <TableHead>Campus Asociados</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -529,15 +624,21 @@ export function CampusManagement() {
                   <TableRow key={faculty.id}>
                     <TableCell className="font-medium">{faculty.name}</TableCell>
                     <TableCell>{faculty.dean_name}</TableCell>
-                    <TableCell>{faculty.campus?.name}</TableCell>
+                    <TableCell>{getFacultyCampusNames(faculty)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button size="sm" variant="outline" onClick={() => {
                           setEditingFaculty(faculty);
+                          const campusIds = faculty.faculty_campus ? 
+                            faculty.faculty_campus.map(fc => fc.campus.id) : 
+                            (faculty.campus_id ? [faculty.campus_id] : []);
                           setFacultyForm({ 
                             name: faculty.name, 
                             dean_name: faculty.dean_name, 
-                            campus_ids: [faculty.campus_id] 
+                            campus_ids: campusIds,
+                            manager_id: "",
+                            weekly_hours: 0,
+                            number_of_weeks: 16
                           });
                           setFacultyDialog(true);
                         }}>
@@ -645,7 +746,7 @@ export function CampusManagement() {
                           <SelectItem value="none">Sin asignar</SelectItem>
                           {availableManagers.map((manager) => (
                             <SelectItem key={manager.id} value={manager.id}>
-                              {manager.full_name}
+                              {manager.full_name} - {manager.document_number}
                             </SelectItem>
                           ))}
                         </SelectContent>
