@@ -1247,7 +1247,7 @@ export const useSupabaseData = () => {
     return { data, error };
   };
 
-  // Plan Fields Management with new field types
+  // Plan Fields Management with improved validation
   const fetchPlanFields = async (planTypeId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('plan_fields')
@@ -1258,12 +1258,37 @@ export const useSupabaseData = () => {
   };
 
   const createPlanField = async (fieldData: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from('plan_fields')
-      .insert(fieldData)
-      .select()
-      .single();
-    return { data, error };
+    try {
+      // Clean and validate field data
+      const cleanedData = {
+        plan_type_id: fieldData.plan_type_id,
+        field_name: fieldData.field_name?.trim(),
+        field_type: fieldData.field_type,
+        is_required: Boolean(fieldData.is_required),
+        field_order: fieldData.field_order || 0,
+        dropdown_options: fieldData.field_type === 'dropdown' && fieldData.dropdown_options 
+          ? fieldData.dropdown_options.filter((opt: string) => opt?.trim())
+          : null
+      };
+
+      console.log('Creating field with cleaned data:', cleanedData);
+
+      const { data, error } = await supabase
+        .from('plan_fields')
+        .insert(cleanedData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error creating field:', error);
+        throw error;
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in createPlanField:', error);
+      return { data: null, error };
+    }
   };
 
   const updatePlanField = async (id: string, fieldData: any): Promise<Result<any>> => {
