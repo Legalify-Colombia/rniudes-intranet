@@ -1,3 +1,4 @@
+
 export interface Profile {
   id: string;
   created_at: string;
@@ -6,6 +7,9 @@ export interface Profile {
   avatar_url: string;
   role: "Administrador" | "Coordinador" | "Gestor";
   email: string;
+  campus?: {
+    name: string;
+  };
 }
 
 export interface StrategicAxis {
@@ -202,13 +206,16 @@ export interface PlanType {
   created_by: string;
   created_at: string;
   updated_at: string;
+  min_weekly_hours: number;
+  max_weekly_hours: number | null;
+  is_visible: boolean;
 }
 
 export interface PlanField {
   id: string;
   plan_type_id: string;
   field_name: string;
-  field_type: "numeric" | "short_text" | "long_text" | "dropdown" | "file";
+  field_type: "numeric" | "short_text" | "long_text" | "dropdown" | "file" | "section" | "manager_name" | "campus_name" | "program_director" | "strategic_axes";
   dropdown_options?: any;
   is_required: boolean;
   field_order: number;
