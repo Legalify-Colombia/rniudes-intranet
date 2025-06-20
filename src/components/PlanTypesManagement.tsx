@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -120,7 +119,7 @@ export function PlanTypesManagement() {
     try {
       const result = await fetchPlanFields(planTypeId);
       if (result.data) {
-        setPlanFields(result.data);
+        setPlanFields(result.data.sort((a, b) => a.field_order - b.field_order));
       }
     } catch (error) {
       console.error('Error loading plan fields:', error);
@@ -128,7 +127,14 @@ export function PlanTypesManagement() {
   };
 
   const handleCreatePlanType = async () => {
-    if (!newPlanType.name.trim()) return;
+    if (!newPlanType.name.trim()) {
+      toast({
+        title: "Error",
+        description: "El nombre del tipo de plan es requerido",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const result = await createPlanType(newPlanType);
@@ -214,18 +220,35 @@ export function PlanTypesManagement() {
   };
 
   const handleCreateField = async () => {
-    if (!selectedPlanType || !newField.field_name.trim()) return;
+    if (!selectedPlanType || !newField.field_name.trim()) {
+      toast({
+        title: "Error",
+        description: "Selecciona un tipo de plan y proporciona un nombre para el campo",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
+      // Calcular el siguiente order basado en los campos existentes
+      const nextOrder = planFields.length > 0 
+        ? Math.max(...planFields.map(f => f.field_order)) + 1 
+        : 1;
+
       const fieldData = {
         ...newField,
         plan_type_id: selectedPlanType.id,
-        dropdown_options: newField.field_type === 'dropdown' ? newField.dropdown_options : null
+        field_order: nextOrder,
+        dropdown_options: newField.field_type === 'dropdown' && newField.dropdown_options 
+          ? newField.dropdown_options 
+          : null
       };
+
+      console.log('Creating field with data:', fieldData);
 
       const result = await createPlanField(fieldData);
       if (result.data) {
-        setPlanFields([...planFields, result.data]);
+        setPlanFields([...planFields, result.data].sort((a, b) => a.field_order - b.field_order));
         
         // Actualizar conteo de campos
         setPlanTypes(planTypes.map(pt => 
@@ -234,6 +257,7 @@ export function PlanTypesManagement() {
             : pt
         ));
 
+        // Resetear formulario
         setNewField({
           field_name: "",
           field_type: "short_text",
@@ -242,6 +266,7 @@ export function PlanTypesManagement() {
           field_order: 0
         });
         setIsCreatingField(false);
+        
         toast({
           title: "Éxito",
           description: "Campo creado correctamente",
@@ -251,7 +276,7 @@ export function PlanTypesManagement() {
       console.error('Error creating field:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear el campo",
+        description: "No se pudo crear el campo. Verifique los datos.",
         variant: "destructive",
       });
     }
@@ -336,35 +361,47 @@ export function PlanTypesManagement() {
         </Button>
       </div>
 
-      {/* Lista de Tipos de Plan en Tabla */}
+      {/* Lista de Tipos de Plan */}
       <Card>
         <CardHeader>
           <CardTitle>Tipos de Plan</CardTitle>
         </CardHeader>
         <CardContent>
           {isCreating && (
-            <div className="p-4 border rounded-lg space-y-3 mb-4">
+            <div className="p-4 border rounded-lg space-y-3 mb-4 bg-blue-50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  placeholder="Nombre del tipo de plan"
-                  value={newPlanType.name}
-                  onChange={(e) => setNewPlanType({ ...newPlanType, name: e.target.value })}
-                />
-                <Input
-                  type="number"
-                  placeholder="Horas mínimas semanales"
-                  value={newPlanType.min_weekly_hours}
-                  onChange={(e) => setNewPlanType({ ...newPlanType, min_weekly_hours: parseInt(e.target.value) || 0 })}
-                />
+                <div>
+                  <Label htmlFor="planName">Nombre del Plan *</Label>
+                  <Input
+                    id="planName"
+                    placeholder="Nombre del tipo de plan"
+                    value={newPlanType.name}
+                    onChange={(e) => setNewPlanType({ ...newPlanType, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="minHours">Horas Mínimas Semanales</Label>
+                  <Input
+                    id="minHours"
+                    type="number"
+                    placeholder="0"
+                    value={newPlanType.min_weekly_hours}
+                    onChange={(e) => setNewPlanType({ ...newPlanType, min_weekly_hours: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  type="number"
-                  placeholder="Horas máximas semanales (opcional)"
-                  value={newPlanType.max_weekly_hours || ''}
-                  onChange={(e) => setNewPlanType({ ...newPlanType, max_weekly_hours: e.target.value ? parseInt(e.target.value) : null })}
-                />
-                <div className="flex items-center space-x-2">
+                <div>
+                  <Label htmlFor="maxHours">Horas Máximas Semanales</Label>
+                  <Input
+                    id="maxHours"
+                    type="number"
+                    placeholder="Sin límite"
+                    value={newPlanType.max_weekly_hours || ''}
+                    onChange={(e) => setNewPlanType({ ...newPlanType, max_weekly_hours: e.target.value ? parseInt(e.target.value) : null })}
+                  />
+                </div>
+                <div className="flex items-center space-x-2 pt-6">
                   <Switch
                     id="visible"
                     checked={newPlanType.is_visible}
@@ -373,17 +410,21 @@ export function PlanTypesManagement() {
                   <Label htmlFor="visible">Visible para gestores</Label>
                 </div>
               </div>
-              <Textarea
-                placeholder="Descripción (opcional)"
-                value={newPlanType.description}
-                onChange={(e) => setNewPlanType({ ...newPlanType, description: e.target.value })}
-              />
+              <div>
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Descripción del tipo de plan (opcional)"
+                  value={newPlanType.description}
+                  onChange={(e) => setNewPlanType({ ...newPlanType, description: e.target.value })}
+                />
+              </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleCreatePlanType}>
+                <Button onClick={handleCreatePlanType}>
                   <Save className="h-4 w-4 mr-1" />
                   Guardar
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setIsCreating(false)}>
+                <Button variant="outline" onClick={() => setIsCreating(false)}>
                   <X className="h-4 w-4 mr-1" />
                   Cancelar
                 </Button>
@@ -397,7 +438,7 @@ export function PlanTypesManagement() {
                 <TableHead>Nombre del Plan</TableHead>
                 <TableHead>No. de Campos</TableHead>
                 <TableHead>Horas (Min-Max)</TableHead>
-                <TableHead>Mostrar</TableHead>
+                <TableHead>Visible</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -405,20 +446,12 @@ export function PlanTypesManagement() {
               {planTypes.map((planType) => (
                 <TableRow key={planType.id}>
                   <TableCell>
-                    {editingPlanType?.id === planType.id ? (
-                      <Input
-                        value={editingPlanType.name}
-                        onChange={(e) => setEditingPlanType({ ...editingPlanType, name: e.target.value })}
-                        className="w-full"
-                      />
-                    ) : (
-                      <div>
-                        <div className="font-medium">{planType.name}</div>
-                        {planType.description && (
-                          <div className="text-sm text-gray-600">{planType.description}</div>
-                        )}
-                      </div>
-                    )}
+                    <div>
+                      <div className="font-medium">{planType.name}</div>
+                      {planType.description && (
+                        <div className="text-sm text-gray-600">{planType.description}</div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
@@ -426,104 +459,40 @@ export function PlanTypesManagement() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {editingPlanType?.id === planType.id ? (
-                      <div className="flex gap-1">
-                        <Input
-                          type="number"
-                          value={editingPlanType.min_weekly_hours || 0}
-                          onChange={(e) => setEditingPlanType({ 
-                            ...editingPlanType, 
-                            min_weekly_hours: parseInt(e.target.value) || 0 
-                          })}
-                          className="w-16"
-                        />
-                        <span className="self-center">-</span>
-                        <Input
-                          type="number"
-                          value={editingPlanType.max_weekly_hours || ''}
-                          onChange={(e) => setEditingPlanType({ 
-                            ...editingPlanType, 
-                            max_weekly_hours: e.target.value ? parseInt(e.target.value) : null 
-                          })}
-                          placeholder="∞"
-                          className="w-16"
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-sm">
-                        {planType.min_weekly_hours || 0} - {planType.max_weekly_hours || '∞'}
-                      </span>
-                    )}
+                    <span className="text-sm">
+                      {planType.min_weekly_hours || 0} - {planType.max_weekly_hours || '∞'}
+                    </span>
                   </TableCell>
                   <TableCell>
-                    {editingPlanType?.id === planType.id ? (
-                      <Switch
-                        checked={editingPlanType.is_visible}
-                        onCheckedChange={(checked) => setEditingPlanType({ 
-                          ...editingPlanType, 
-                          is_visible: checked 
-                        })}
-                      />
+                    {planType.is_visible ? (
+                      <Eye className="h-4 w-4 text-green-600" />
                     ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleVisibility(planType)}
-                      >
-                        {planType.is_visible ? (
-                          <Eye className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
+                      <EyeOff className="h-4 w-4 text-gray-400" />
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      {editingPlanType?.id === planType.id ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpdatePlanType(editingPlanType)}
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingPlanType(null)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingPlanType(planType)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedPlanType(planType);
-                              loadPlanFields(planType.id);
-                            }}
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeletePlanType(planType.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedPlanType(planType);
+                          loadPlanFields(planType.id);
+                        }}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (confirm('¿Estás seguro de eliminar este tipo de plan?')) {
+                            // handleDeletePlanType(planType.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -533,14 +502,13 @@ export function PlanTypesManagement() {
         </CardContent>
       </Card>
 
-      {/* Configuración del Tipo de Plan Seleccionado */}
+      {/* Configuración de Campos */}
       {selectedPlanType && (
         <Card>
           <CardHeader>
-            <CardTitle>Configurar: {selectedPlanType.name}</CardTitle>
+            <CardTitle>Configurar Campos: {selectedPlanType.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Campos del Plan */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-base font-medium">Campos del Plan</Label>
@@ -551,42 +519,60 @@ export function PlanTypesManagement() {
               </div>
 
               {isCreatingField && (
-                <div className="p-3 border rounded-lg space-y-3 mb-3">
-                  <Input
-                    placeholder="Nombre del campo"
-                    value={newField.field_name}
-                    onChange={(e) => setNewField({ ...newField, field_name: e.target.value })}
-                  />
-                  <Select
-                    value={newField.field_type}
-                    onValueChange={(value: any) => setNewField({ ...newField, field_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo de campo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="section">Sección</SelectItem>
-                      <SelectItem value="manager_name">Nombre del Gestor</SelectItem>
-                      <SelectItem value="campus_name">Campus</SelectItem>
-                      <SelectItem value="program_director">Director de Programa</SelectItem>
-                      <SelectItem value="strategic_axes">Ejes Estratégicos</SelectItem>
-                      <SelectItem value="numeric">Numérico</SelectItem>
-                      <SelectItem value="short_text">Texto Corto</SelectItem>
-                      <SelectItem value="long_text">Texto Extenso</SelectItem>
-                      <SelectItem value="dropdown">Lista Desplegable</SelectItem>
-                      <SelectItem value="file">Archivo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="p-4 border rounded-lg space-y-4 mb-4 bg-green-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fieldName">Nombre del Campo *</Label>
+                      <Input
+                        id="fieldName"
+                        placeholder="Ej: Objetivos del Plan"
+                        value={newField.field_name}
+                        onChange={(e) => setNewField({ ...newField, field_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="fieldType">Tipo de Campo *</Label>
+                      <Select
+                        value={newField.field_type}
+                        onValueChange={(value: any) => setNewField({ 
+                          ...newField, 
+                          field_type: value,
+                          dropdown_options: value === 'dropdown' ? [] : undefined
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="section">📋 Sección (Título)</SelectItem>
+                          <SelectItem value="manager_name">👤 Nombre del Gestor</SelectItem>
+                          <SelectItem value="campus_name">🏢 Campus</SelectItem>
+                          <SelectItem value="program_director">👨‍💼 Director de Programa</SelectItem>
+                          <SelectItem value="strategic_axes">🎯 Ejes Estratégicos</SelectItem>
+                          <SelectItem value="numeric">🔢 Numérico</SelectItem>
+                          <SelectItem value="short_text">📝 Texto Corto</SelectItem>
+                          <SelectItem value="long_text">📄 Texto Extenso</SelectItem>
+                          <SelectItem value="dropdown">📋 Lista Desplegable</SelectItem>
+                          <SelectItem value="file">📎 Archivo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   
                   {newField.field_type === 'dropdown' && (
-                    <Textarea
-                      placeholder="Opciones (una por línea)"
-                      value={newField.dropdown_options?.join('\n') || ''}
-                      onChange={(e) => setNewField({ 
-                        ...newField, 
-                        dropdown_options: e.target.value.split('\n').filter(option => option.trim())
-                      })}
-                    />
+                    <div>
+                      <Label htmlFor="dropdownOptions">Opciones (una por línea)</Label>
+                      <Textarea
+                        id="dropdownOptions"
+                        placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
+                        value={newField.dropdown_options?.join('\n') || ''}
+                        onChange={(e) => setNewField({ 
+                          ...newField, 
+                          dropdown_options: e.target.value.split('\n').filter(option => option.trim())
+                        })}
+                        rows={4}
+                      />
+                    </div>
                   )}
 
                   <div className="flex items-center space-x-2">
@@ -599,11 +585,11 @@ export function PlanTypesManagement() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleCreateField}>
+                    <Button onClick={handleCreateField}>
                       <Save className="h-4 w-4 mr-1" />
-                      Guardar
+                      Guardar Campo
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setIsCreatingField(false)}>
+                    <Button variant="outline" onClick={() => setIsCreatingField(false)}>
                       <X className="h-4 w-4 mr-1" />
                       Cancelar
                     </Button>
@@ -612,35 +598,59 @@ export function PlanTypesManagement() {
               )}
 
               <div className="space-y-2">
-                {planFields.map((field) => (
-                  <div key={field.id} className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-medium">{field.field_name}</span>
-                        <span className="ml-2 text-sm text-gray-500">
-                          ({getFieldTypeLabel(field.field_type)})
-                        </span>
-                        {field.is_required && (
-                          <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                            Requerido
-                          </span>
-                        )}
-                        {field.field_type === 'section' && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
-                            Sección
-                          </span>
-                        )}
-                      </div>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => handleDeleteField(field.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </div>
+                {planFields.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No hay campos configurados para este tipo de plan</p>
+                    <p className="text-sm">Haz clic en "Agregar Campo" para comenzar</p>
                   </div>
-                ))}
+                ) : (
+                  planFields.map((field, index) => (
+                    <div key={field.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-sm bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <span className="font-medium">{field.field_name}</span>
+                            <span className="ml-2 text-sm text-gray-500">
+                              ({getFieldTypeLabel(field.field_type)})
+                            </span>
+                            {field.is_required && (
+                              <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+                                Requerido
+                              </span>
+                            )}
+                            {field.field_type === 'section' && (
+                              <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+                                Sección
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm('¿Estás seguro de eliminar este campo?')) {
+                              // handleDeleteField(field.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                      {field.dropdown_options && (
+                        <div className="mt-2 ml-12">
+                          <p className="text-xs text-gray-600">
+                            Opciones: {JSON.stringify(field.dropdown_options).slice(1, -1)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </CardContent>
@@ -648,4 +658,20 @@ export function PlanTypesManagement() {
       )}
     </div>
   );
+
+  function getFieldTypeLabel(fieldType: string) {
+    const labels = {
+      'numeric': 'Numérico',
+      'short_text': 'Texto Corto',
+      'long_text': 'Texto Extenso',
+      'dropdown': 'Lista Desplegable',
+      'file': 'Archivo',
+      'section': 'Sección',
+      'manager_name': 'Nombre del Gestor',
+      'campus_name': 'Campus',
+      'program_director': 'Director de Programa',
+      'strategic_axes': 'Ejes Estratégicos'
+    };
+    return labels[fieldType as keyof typeof labels] || fieldType;
+  }
 }

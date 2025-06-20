@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,7 @@ import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationFeed } from "@/components/NotificationFeed";
 import { StrategicAxesProgress } from "@/components/StrategicAxesProgress";
+import { AdminDashboard } from "@/components/AdminDashboard";
 import { 
   Target,
   TrendingUp,
@@ -71,6 +73,11 @@ export function Dashboard() {
       setLoading(false);
     }
   };
+
+  // Mostrar dashboard específico para administradores
+  if (profile?.role === 'Administrador') {
+    return <AdminDashboard />;
+  }
 
   if (loading) {
     return (
