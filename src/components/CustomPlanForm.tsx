@@ -28,7 +28,9 @@ export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormPro
     updateCustomPlan,
     submitCustomPlan,
     upsertCustomPlanResponse,
-    fetchAcademicPrograms
+    fetchAcademicPrograms,
+    fetchActions,
+    fetchProducts
   } = useSupabaseData();
 
   const [plan, setPlan] = useState<any>(null);
@@ -36,6 +38,8 @@ export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormPro
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
   const [academicPrograms, setAcademicPrograms] = useState<any[]>([]);
+  const [actions, setActions] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -46,13 +50,17 @@ export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormPro
   const loadData = async () => {
     setLoading(true);
     try {
-      const [strategicAxesResult, programsResult] = await Promise.all([
+      const [strategicAxesResult, programsResult, actionsResult, productsResult] = await Promise.all([
         fetchStrategicAxes(),
-        fetchAcademicPrograms()
+        fetchAcademicPrograms(),
+        fetchActions(),
+        fetchProducts()
       ]);
 
       if (strategicAxesResult.data) setStrategicAxes(strategicAxesResult.data);
       if (programsResult.data) setAcademicPrograms(programsResult.data);
+      if (actionsResult.data) setActions(actionsResult.data);
+      if (productsResult.data) setProducts(productsResult.data);
 
       if (planId) {
         const planResult = await fetchCustomPlanDetails(planId);
@@ -199,7 +207,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormPro
       );
     }
 
-    // Para ejes estratégicos, mostrar selector múltiple
+    // Para ejes estratégicos, mostrar selector múltiple con datos de la base de datos
     if (field.field_type === 'strategic_axes') {
       return (
         <div className="space-y-2">
@@ -218,6 +226,70 @@ export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormPro
               />
               <Label htmlFor={`axis-${axis.id}`} className="text-sm">
                 {axis.code} - {axis.name}
+              </Label>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Para acciones, mostrar selector múltiple con datos de la base de datos
+    if (field.field_type === 'actions') {
+      // Filtrar acciones por ejes estratégicos seleccionados si aplica
+      const selectedAxes = responses[strategicAxes.find(a => a.field_type === 'strategic_axes')?.id]?.response_value || [];
+      const filteredActions = selectedAxes.length > 0 
+        ? actions.filter(action => selectedAxes.includes(action.strategic_axis_id))
+        : actions;
+
+      return (
+        <div className="space-y-2 max-h-40 overflow-y-auto">
+          {filteredActions.map((action) => (
+            <div key={action.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`action-${action.id}`}
+                checked={(response as string[])?.includes(action.id) || false}
+                onCheckedChange={(checked) => {
+                  const currentActions = (response as string[]) || [];
+                  const newActions = checked
+                    ? [...currentActions, action.id]
+                    : currentActions.filter(id => id !== action.id);
+                  handleResponseChange(field.id, newActions);
+                }}
+              />
+              <Label htmlFor={`action-${action.id}`} className="text-sm">
+                {action.code} - {action.name}
+              </Label>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Para productos, mostrar selector múltiple con datos de la base de datos
+    if (field.field_type === 'products') {
+      // Filtrar productos por acciones seleccionadas si aplica
+      const selectedActions = responses[actions.find(a => a.field_type === 'actions')?.id]?.response_value || [];
+      const filteredProducts = selectedActions.length > 0 
+        ? products.filter(product => selectedActions.includes(product.action_id))
+        : products;
+
+      return (
+        <div className="space-y-2 max-h-40 overflow-y-auto">
+          {filteredProducts.map((product) => (
+            <div key={product.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`product-${product.id}`}
+                checked={(response as string[])?.includes(product.id) || false}
+                onCheckedChange={(checked) => {
+                  const currentProducts = (response as string[]) || [];
+                  const newProducts = checked
+                    ? [...currentProducts, product.id]
+                    : currentProducts.filter(id => id !== product.id);
+                  handleResponseChange(field.id, newProducts);
+                }}
+              />
+              <Label htmlFor={`product-${product.id}`} className="text-sm">
+                {product.name}
               </Label>
             </div>
           ))}

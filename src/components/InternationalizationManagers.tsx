@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,23 +6,41 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useManagers } from "@/hooks/useManagers";
-import { Eye, Users, FileText } from "lucide-react";
+import { Eye, Users, FileText, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 
 export function InternationalizationManagers() {
   const [managers, setManagers] = useState<any[]>([]);
   const [selectedManager, setSelectedManager] = useState<any | null>(null);
   const [managerPlanTypes, setManagerPlanTypes] = useState<any[]>([]);
+  const [availablePlanTypes, setAvailablePlanTypes] = useState<any[]>([]);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isAssignPlanDialogOpen, setIsAssignPlanDialogOpen] = useState(false);
+  const [selectedPlanTypeForAssignment, setSelectedPlanTypeForAssignment] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   
   const { profile } = useAuth();
   const { toast } = useToast();
   const { fetchManagersByCampus, fetchAvailablePlanTypes } = useManagers();
+  const { fetchPlanTypes, createCustomPlan } = useSupabaseData();
 
   useEffect(() => {
     loadManagers();
+    loadAvailablePlanTypes();
   }, []);
+
+  const loadAvailablePlanTypes = async () => {
+    try {
+      const result = await fetchPlanTypes();
+      if (result.data) {
+        setAvailablePlanTypes(result.data);
+      }
+    } catch (error) {
+      console.error("Error loading plan types:", error);
+    }
+  };
 
   const loadManagers = async () => {
     try {
@@ -72,6 +89,49 @@ export function InternationalizationManagers() {
     }
     
     setIsDetailsDialogOpen(true);
+  };
+
+  const openAssignPlanDialog = (manager: any) => {
+    setSelectedManager(manager);
+    setIsAssignPlanDialogOpen(true);
+  };
+
+  const handleAssignPlan = async () => {
+    if (!selectedManager || !selectedPlanTypeForAssignment) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar un tipo de plan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const planType = availablePlanTypes.find(pt => pt.id === selectedPlanTypeForAssignment);
+      const result = await createCustomPlan({
+        plan_type_id: selectedPlanTypeForAssignment,
+        title: `Plan de ${planType?.name} - ${selectedManager.full_name}`,
+        manager_id: selectedManager.id,
+        status: 'draft'
+      });
+
+      if (result.data) {
+        toast({
+          title: "Éxito",
+          description: "Plan asignado correctamente al gestor",
+        });
+        setIsAssignPlanDialogOpen(false);
+        setSelectedPlanTypeForAssignment("");
+        loadManagers();
+      }
+    } catch (error) {
+      console.error("Error assigning plan:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo asignar el plan",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadge = (manager: any) => {
@@ -173,13 +233,23 @@ export function InternationalizationManagers() {
                         {getStatusBadge(manager)}
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => openManagerDetails(manager)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => openManagerDetails(manager)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => openAssignPlanDialog(manager)}
+                            className="bg-blue-50 hover:bg-blue-100"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -288,6 +358,63 @@ export function InternationalizationManagers() {
                     <p className="text-orange-800">Debe configurar las horas semanales del gestor para ver los tipos de plan disponibles.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para asignar plan */}
+      <Dialog open={isAssignPlanDialogOpen} onOpenChange={setIsAssignPlanDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Asignar Tipo de Plan</DialogTitle>
+          </DialogHeader>
+          
+          {selectedManager && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Gestor:</p>
+                <p className="font-medium">{selectedManager.full_name}</p>
+                <p className="text-sm text-gray-500">{selectedManager.email}</p>
+              </div>
+
+              <div>
+                <Label htmlFor="planType">Tipo de Plan</Label>
+                <Select 
+                  value={selectedPlanTypeForAssignment} 
+                  onValueChange={setSelectedPlanTypeForAssignment}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo de plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePlanTypes.map((planType) => (
+                      <SelectItem key={planType.id} value={planType.id}>
+                        <div>
+                          <div className="font-medium">{planType.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {planType.min_weekly_hours} - {planType.max_weekly_hours || '∞'} hrs/semana
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPlanTypeForAssignment && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    {availablePlanTypes.find(pt => pt.id === selectedPlanTypeForAssignment)?.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleAssignPlan} disabled={!selectedPlanTypeForAssignment}>
+                  Asignar Plan
+                </Button>
+                <Button variant="outline" onClick={() => setIsAssignPlanDialogOpen(false)}>
+                  Cancelar
+                </Button>
               </div>
             </div>
           )}
