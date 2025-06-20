@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   AcademicProgram,
@@ -22,7 +23,8 @@ import {
   InternationalizationReport,
   StrategicAxis,
   DocumentTemplate,
-  ProductProgressReport
+  ProductProgressReport,
+  User
 } from "@/types";
 
 export const useSupabaseData = () => {
@@ -108,8 +110,13 @@ export const useSupabaseData = () => {
     return await supabase.from('profiles').select('*').eq('role', 'Gestor').in('campus_id', campusIds);
   };
 
-  const updateManagerHours = async (managerId: string, hours: number) => {
-    return await supabase.from('profiles').update({ weekly_hours: hours }).eq('id', managerId).select().single();
+  const updateManagerHours = async (managerId: string, weeklyHours: number, numberOfWeeks?: number) => {
+    const updateData: any = { weekly_hours: weeklyHours };
+    if (numberOfWeeks !== undefined) {
+      updateData.number_of_weeks = numberOfWeeks;
+      updateData.total_hours = weeklyHours * numberOfWeeks;
+    }
+    return await supabase.from('profiles').update(updateData).eq('id', managerId).select().single();
   };
 
   const getUserManagedCampus = async (userId: string) => {
@@ -387,14 +394,7 @@ export const useSupabaseData = () => {
   };
 
   const createPartnerInstitution = async (data: Omit<ProjectPartnerInstitution, 'id' | 'created_at'>) => {
-    const institutionData = {
-      ...data,
-      institution_country: data.country,
-      contact_person: data.contact_professor_name,
-      contact_email: data.contact_professor_email,
-      collaboration_type: 'academic'
-    };
-    return await supabase.from('project_partner_institutions').insert(institutionData).select().single();
+    return await supabase.from('project_partner_institutions').insert(data).select().single();
   };
 
   const createInternationalizationReport = async (data: Omit<InternationalizationReport, 'id' | 'created_at' | 'updated_at'>) => {
@@ -608,5 +608,6 @@ export type {
   InternationalizationReport,
   StrategicAxis,
   DocumentTemplate,
-  ProductProgressReport
+  ProductProgressReport,
+  User
 };

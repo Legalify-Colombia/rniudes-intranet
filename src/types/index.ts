@@ -1,3 +1,4 @@
+
 // Strategic configuration types
 export interface StrategicAxis {
   id: string;
@@ -96,7 +97,25 @@ export interface Profile {
   total_hours?: number;
   created_at: string;
   updated_at: string;
-  campus?: Campus;
+  campus?: Campus | string;
+}
+
+// User type for UserManagement
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  document_number: string;
+  position: string;
+  role: 'Administrador' | 'Gestor' | 'Usuario' | 'Coordinador';
+  campus_id?: string;
+  managed_campus_ids?: string[];
+  weekly_hours?: number;
+  number_of_weeks?: number;
+  total_hours?: number;
+  created_at: string;
+  updated_at: string;
+  campus?: { id: string; name: string; } | string;
 }
 
 // Report types
@@ -153,7 +172,7 @@ export interface DocumentTemplate {
   id: string;
   name: string;
   description?: string;
-  template_type: 'pdf' | 'doc';
+  template_type: string; // Allow any string from database
   template_content: string;
   file_url?: string;
   file_name?: string;
@@ -210,7 +229,7 @@ export interface SpecificLine {
 export interface Indicator {
   id: string;
   name: string;
-  data_type: 'numeric' | 'link' | 'file' | 'short_text' | 'long_text';
+  data_type: string; // Allow any string from database
   is_active: boolean;
   created_by: string;
   created_at: string;
@@ -275,7 +294,7 @@ export interface InternationalizationReport {
   objectives_achieved: string;
   activities_executed: string;
   activities_in_progress: string;
-  project_timing: 'ahead' | 'on_time' | 'delayed';
+  project_timing: string; // Allow any string from forms
   project_status?: string;
   abnormal_reason?: string;
   difficulties: string[];
