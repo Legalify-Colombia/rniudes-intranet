@@ -20,6 +20,7 @@ export function SniesReportManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isReportFormOpen, setIsReportFormOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -41,6 +42,7 @@ export function SniesReportManagement() {
 
   const loadData = async () => {
     try {
+      setIsLoading(true);
       const [reportsResult, templatesResult] = await Promise.all([
         fetchSniesReports(),
         fetchSniesReportTemplates()
@@ -48,12 +50,22 @@ export function SniesReportManagement() {
 
       if (reportsResult.error) {
         console.error('Error loading reports:', reportsResult.error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los reportes",
+          variant: "destructive",
+        });
       } else {
         setReports(reportsResult.data || []);
       }
 
       if (templatesResult.error) {
         console.error('Error loading templates:', templatesResult.error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las plantillas",
+          variant: "destructive",
+        });
       } else {
         setTemplates(templatesResult.data || []);
       }
@@ -61,33 +73,55 @@ export function SniesReportManagement() {
       console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos",
+        description: "Error inesperado al cargar los datos",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleCreateReport = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!reportForm.title || !reportForm.template_id) {
+    if (!reportForm.title.trim() || !reportForm.template_id) {
       toast({
         title: "Error",
-        description: "Por favor completa todos los campos",
+        description: "Por favor completa todos los campos requeridos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!profile?.id) {
+      toast({
+        title: "Error",
+        description: "No se pudo identificar el usuario",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      console.log('Creating report with data:', reportForm);
-      const result = await createSniesReport(reportForm);
+      setIsLoading(true);
+      console.log('Creating report with form data:', reportForm);
+      
+      const result = await createSniesReport({
+        title: reportForm.title.trim(),
+        template_id: reportForm.template_id
+      });
       
       if (result.error) {
         console.error('Error creating report:', result.error);
-        throw result.error;
+        toast({
+          title: "Error",
+          description: `Error al crear el reporte: ${result.error.message || 'Error desconocido'}`,
+          variant: "destructive",
+        });
+        return;
       }
 
+      console.log('Report created successfully:', result.data);
       toast({ 
         title: "Éxito",
         description: "Reporte creado correctamente" 
@@ -95,37 +129,51 @@ export function SniesReportManagement() {
       
       setReportForm({ title: '', template_id: '' });
       setIsCreateDialogOpen(false);
-      loadData();
+      await loadData(); // Recargar datos
     } catch (error) {
-      console.error('Error creating report:', error);
+      console.error('Unexpected error creating report:', error);
       toast({
         title: "Error",
-        description: "Error al crear el reporte",
+        description: "Error inesperado al crear el reporte",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSubmitReport = async (reportId: string) => {
     try {
+      setIsLoading(true);
       const result = await updateSniesReport(reportId, {
         status: 'submitted',
         submitted_date: new Date().toISOString()
       });
-      if (result.error) throw result.error;
+      
+      if (result.error) {
+        console.error('Error submitting report:', result.error);
+        toast({
+          title: "Error",
+          description: "Error al enviar el reporte",
+          variant: "destructive",
+        });
+        return;
+      }
 
       toast({ 
         title: "Éxito",
         description: "Reporte enviado correctamente" 
       });
-      loadData();
+      await loadData();
     } catch (error) {
-      console.error('Error submitting report:', error);
+      console.error('Unexpected error submitting report:', error);
       toast({
         title: "Error",
-        description: "Error al enviar el reporte",
+        description: "Error inesperado al enviar el reporte",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -151,6 +199,14 @@ export function SniesReportManagement() {
     ? reports.filter(r => r.manager_id === profile.id)
     : reports;
 
+  if (isLoading && reports.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p>Cargando reportes SNIES...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -163,7 +219,10 @@ export function SniesReportManagement() {
             {profile?.role === 'Gestor' && (
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="institutional-gradient text-white">
+                  <Button 
+                    className="institutional-gradient text-white"
+                    disabled={isLoading}
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Nuevo Reporte
                   </Button>
@@ -174,20 +233,26 @@ export function SniesReportManagement() {
                   </DialogHeader>
                   <form onSubmit={handleCreateReport} className="space-y-4">
                     <div>
-                      <Label htmlFor="reportTitle">Título del Reporte</Label>
+                      <Label htmlFor="reportTitle">
+                        Título del Reporte <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         id="reportTitle"
                         value={reportForm.title}
                         onChange={(e) => setReportForm(prev => ({ ...prev, title: e.target.value }))}
-                        placeholder="Título del reporte"
+                        placeholder="Ingresa el título del reporte"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="reportTemplate">Plantilla</Label>
+                      <Label htmlFor="reportTemplate">
+                        Plantilla <span className="text-red-500">*</span>
+                      </Label>
                       <Select 
                         value={reportForm.template_id} 
                         onValueChange={(value) => setReportForm(prev => ({ ...prev, template_id: value }))}
+                        disabled={isLoading}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar plantilla" />
@@ -202,11 +267,20 @@ export function SniesReportManagement() {
                       </Select>
                     </div>
                     <div className="flex justify-end space-x-2">
-                      <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsCreateDialogOpen(false)}
+                        disabled={isLoading}
+                      >
                         Cancelar
                       </Button>
-                      <Button type="submit" className="institutional-gradient text-white">
-                        Crear Reporte
+                      <Button 
+                        type="submit" 
+                        className="institutional-gradient text-white"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Creando...' : 'Crear Reporte'}
                       </Button>
                     </div>
                   </form>
@@ -248,11 +322,20 @@ export function SniesReportManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button size="sm" variant="outline" onClick={() => openReportForm(report)}>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => openReportForm(report)}
+                        disabled={isLoading}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
                       {report.status === 'draft' && profile?.role === 'Gestor' && (
-                        <Button size="sm" onClick={() => handleSubmitReport(report.id)}>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleSubmitReport(report.id)}
+                          disabled={isLoading}
+                        >
                           <Send className="w-4 h-4" />
                         </Button>
                       )}
@@ -263,9 +346,12 @@ export function SniesReportManagement() {
             </TableBody>
           </Table>
 
-          {userReports.length === 0 && (
+          {userReports.length === 0 && !isLoading && (
             <div className="text-center py-8 text-gray-500">
-              No hay reportes disponibles
+              {profile?.role === 'Gestor' ? 
+                'No tienes reportes SNIES creados. Haz clic en "Nuevo Reporte" para crear uno.' :
+                'No hay reportes SNIES disponibles.'
+              }
             </div>
           )}
         </CardContent>
