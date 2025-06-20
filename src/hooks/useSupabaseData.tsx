@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile, Result } from "@/types/supabase";
 
@@ -979,6 +978,160 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Document Templates functions
+  const fetchDocumentTemplates = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const createDocumentTemplate = async (templateData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .insert(templateData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateDocumentTemplate = async (templateId: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .update(updates)
+      .eq("id", templateId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteDocumentTemplate = async (templateId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .delete()
+      .eq("id", templateId);
+    return { data, error };
+  };
+
+  // Indicators functions
+  const fetchIndicators = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const createIndicator = async (indicatorData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .insert(indicatorData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateIndicator = async (indicatorId: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .update(updates)
+      .eq("id", indicatorId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteIndicator = async (indicatorId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .delete()
+      .eq("id", indicatorId);
+    return { data, error };
+  };
+
+  // Manager Reports functions (additional)
+  const fetchManagerReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .select(`
+        *,
+        manager:manager_id (
+          id,
+          full_name,
+          email
+        ),
+        work_plan:work_plan_id (
+          id,
+          program:program_id (
+            id,
+            name
+          )
+        )
+      `)
+      .eq("manager_id", managerId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const createManagerReport = async (reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .insert(reportData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchUnifiedReports = async (managerId?: string): Promise<Result<any[]>> => {
+    let query = supabase
+      .from("unified_reports")
+      .select("*");
+
+    if (managerId) {
+      query = query.eq("manager_id", managerId);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const deleteIndicatorReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .delete()
+      .eq("id", reportId);
+    return { data, error };
+  };
+
+  // Plan Types functions
+  const createPlanType = async (planTypeData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .insert(planTypeData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePlanType = async (planTypeId: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .update(updates)
+      .eq("id", planTypeId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanType = async (planTypeId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .delete()
+      .eq("id", planTypeId);
+    return { data, error };
+  };
+
   // File upload function
   const uploadFile = async (file: File, bucket: string, path: string): Promise<Result<any>> => {
     const { data, error } = await supabase.storage
@@ -1072,6 +1225,10 @@ export function useSupabaseData() {
     fetchProductProgressReports,
     upsertProductProgressReport,
     deleteProductProgressReport,
+    fetchManagerReportsByManager,
+    createManagerReport,
+    fetchUnifiedReports,
+    deleteIndicatorReport,
     
     // Report Templates
     fetchReportTemplates,
@@ -1109,6 +1266,21 @@ export function useSupabaseData() {
     updateCustomPlan,
     submitCustomPlan,
     upsertCustomPlanResponse,
+    createPlanType,
+    updatePlanType,
+    deletePlanType,
+    
+    // Document Templates
+    fetchDocumentTemplates,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
+    
+    // Indicators
+    fetchIndicators,
+    createIndicator,
+    updateIndicator,
+    deleteIndicator,
     
     // Utilities
     uploadFile,

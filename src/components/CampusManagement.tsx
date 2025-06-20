@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +43,7 @@ export function CampusManagement() {
   const [programs, setPrograms] = useState<any[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
   const [selectedCampus, setSelectedCampus] = useState<string>("");
+  const [userManagedCampus, setUserManagedCampus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Dialog states
@@ -51,6 +53,30 @@ export function CampusManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editType, setEditType] = useState<'campus' | 'faculty' | 'program'>('campus');
+
+  // Form states
+  const [campusForm, setCampusForm] = useState({
+    name: "",
+    description: "",
+    address: ""
+  });
+
+  const [facultyForm, setFacultyForm] = useState({
+    name: "",
+    description: "",
+    dean_name: "",
+    campus_id: ""
+  });
+
+  const [programForm, setProgramForm] = useState({
+    name: "",
+    description: "",
+    director_name: "",
+    director_email: "",
+    faculty_id: "",
+    campus_id: "",
+    manager_id: "",
+  });
 
   const canManageCampus = (campusId: string) => {
     if (profile?.role !== 'Administrador') return false;
