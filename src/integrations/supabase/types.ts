@@ -1903,6 +1903,103 @@ export type Database = {
         }
         Relationships: []
       }
+      snies_education_levels: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_institutions: {
+        Row: {
+          address: string | null
+          code: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          municipality_id: string | null
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          code?: string | null
+          created_at?: string | null
+          id: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name: string
+        }
+        Update: {
+          address?: string | null
+          code?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_institutions_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "snies_municipalities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_knowledge_areas: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_area_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+          parent_area_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_area_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_knowledge_areas_parent_area_id_fkey"
+            columns: ["parent_area_id"]
+            isOneToOne: false
+            referencedRelation: "snies_knowledge_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       snies_marital_status: {
         Row: {
           created_at: string | null
@@ -1919,6 +2016,54 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: number
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_methodologies: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_modalities: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
           is_active?: boolean | null
           name?: string
         }
