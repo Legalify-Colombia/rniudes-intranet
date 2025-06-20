@@ -44,7 +44,7 @@ export interface Product {
 export interface Campus {
   id: string;
   name: string;
-  address?: string;
+  address: string;
   created_at: string;
   updated_at: string;
 }
@@ -52,19 +52,18 @@ export interface Campus {
 export interface Faculty {
   id: string;
   name: string;
-  dean_name?: string;
+  dean_name: string;
   campus_id: string;
   created_at: string;
   updated_at: string;
   campus?: Campus;
-  faculty_campus?: Array<{ campus: Campus }>;
 }
 
 export interface AcademicProgram {
   id: string;
   name: string;
-  director_name?: string;
-  director_email?: string;
+  director_name: string;
+  director_email: string;
   faculty_id: string;
   campus_id: string;
   manager_id?: string;
@@ -80,7 +79,7 @@ export interface DocumentTemplate {
   id: string;
   name: string;
   description?: string;
-  template_type: string;
+  template_type: "pdf" | "doc";
   template_content: string;
   file_url?: string;
   file_name?: string;
@@ -148,7 +147,7 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('actions')
-        .select('*, strategic_axis(id, code, name)')
+        .select('*, strategic_axes!inner(id, code, name)')
         .order('code');
 
       if (error) {
@@ -167,7 +166,7 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*, action(id, code, name, strategic_axis(id, code, name))')
+        .select('*, actions!inner(id, code, name, strategic_axes(id, code, name))')
         .order('name');
 
       if (error) {
@@ -205,7 +204,7 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('work_plan_assignments')
-        .select('*, product(id, name, action(id, strategic_axis(id)))')
+        .select('*, products(id, name, actions(id, strategic_axes(id)))')
         .eq('work_plan_id', workPlanId);
 
       if (error) {
@@ -666,7 +665,7 @@ export function useSupabaseData() {
     }
   };
 
-  const createCampus = async (campusData: Omit<Campus, 'id' | 'created_at' | 'updated_at'>) => {
+  const createCampus = async (campusData: { name: string; address: string }) => {
     try {
       const { data, error } = await supabase
         .from('campus')
@@ -686,7 +685,7 @@ export function useSupabaseData() {
     }
   };
 
-  const updateCampus = async (campusId: string, updates: Partial<Campus>) => {
+  const updateCampus = async (campusId: string, updates: { name?: string; address?: string }) => {
     try {
       const { data, error } = await supabase
         .from('campus')
@@ -771,7 +770,7 @@ export function useSupabaseData() {
     }
   };
 
-  const createFaculty = async (facultyData: Omit<Faculty, 'id' | 'created_at' | 'updated_at'>) => {
+  const createFaculty = async (facultyData: { name: string; dean_name: string; campus_id: string }) => {
     try {
       const { data, error } = await supabase
         .from('faculties')
@@ -791,7 +790,7 @@ export function useSupabaseData() {
     }
   };
 
-  const updateFaculty = async (facultyId: string, updates: Partial<Faculty>) => {
+  const updateFaculty = async (facultyId: string, updates: { name?: string; dean_name?: string; campus_id?: string }) => {
     try {
       const { data, error } = await supabase
         .from('faculties')
@@ -835,7 +834,7 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('academic_programs')
-        .select('*, faculty(id, name, campus(id, name))')
+        .select('*, faculties(id, name, campus(id, name))')
         .order('name');
 
       if (error) {
@@ -854,7 +853,7 @@ export function useSupabaseData() {
     try {
       let query = supabase
         .from('academic_programs')
-        .select('*, faculty(id, name), campus(id, name)')
+        .select('*, faculties(id, name), campus(id, name)')
         .order('name');
 
       if (campusIds) {
@@ -876,7 +875,14 @@ export function useSupabaseData() {
     }
   };
 
-  const createAcademicProgram = async (programData: Omit<AcademicProgram, 'id' | 'created_at' | 'updated_at'>) => {
+  const createAcademicProgram = async (programData: { 
+    name: string; 
+    director_name: string; 
+    director_email: string; 
+    faculty_id: string; 
+    campus_id: string; 
+    manager_id?: string 
+  }) => {
     try {
       const { data, error } = await supabase
         .from('academic_programs')
@@ -896,7 +902,14 @@ export function useSupabaseData() {
     }
   };
 
-  const updateAcademicProgram = async (programId: string, updates: Partial<AcademicProgram>) => {
+  const updateAcademicProgram = async (programId: string, updates: { 
+    name?: string; 
+    director_name?: string; 
+    director_email?: string; 
+    faculty_id?: string; 
+    campus_id?: string; 
+    manager_id?: string 
+  }) => {
     try {
       const { data, error } = await supabase
         .from('academic_programs')
@@ -1177,9 +1190,9 @@ export function useSupabaseData() {
         .from('template_report_responses')
         .select(`
           *,
-          strategic_axis:strategic_axes(id, code, name),
-          action:actions(id, code, name),
-          product:products(id, name)
+          strategic_axes(id, code, name),
+          actions(id, code, name),
+          products(id, name)
         `)
         .eq('template_report_id', templateReportId)
         .order('created_at');
@@ -1260,6 +1273,171 @@ export function useSupabaseData() {
     }
   };
 
+  // Strategic configuration functions
+  const createStrategicAxis = async (axisData: { code: string; name: string; created_by: string }) => {
+    try {
+      const { data, error } = await supabase
+        .from('strategic_axes')
+        .insert(axisData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating strategic axis:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createAction = async (actionData: { code: string; name: string; strategic_axis_id: string; created_by: string }) => {
+    try {
+      const { data, error } = await supabase
+        .from('actions')
+        .insert(actionData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating action:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createProduct = async (productData: { name: string; action_id: string; created_by: string }) => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert(productData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating product:', error);
+      return { data: null, error };
+    }
+  };
+
+  // Work plan functions
+  const fetchPendingWorkPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans_with_manager')
+        .select('*')
+        .in('status', ['pending', 'submitted'])
+        .order('submitted_date', { ascending: false });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching pending work plans:', error);
+      return { data: null, error };
+    }
+  };
+
+  const approveWorkPlan = async (workPlanId: string, status: 'approved' | 'rejected', comments?: string) => {
+    try {
+      const updateData: any = {
+        status,
+        approval_comments: comments,
+        approved_date: status === 'approved' ? new Date().toISOString() : null
+      };
+
+      const { data, error } = await supabase
+        .from('work_plans')
+        .update(updateData)
+        .eq('id', workPlanId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error approving work plan:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createWorkPlan = async (workPlanData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .insert(workPlanData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating work plan:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateWorkPlan = async (workPlanId: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .update(updates)
+        .eq('id', workPlanId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating work plan:', error);
+      return { data: null, error };
+    }
+  };
+
+  const upsertWorkPlanAssignment = async (assignmentData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plan_assignments')
+        .upsert(assignmentData, {
+          onConflict: 'work_plan_id,product_id'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error upserting work plan assignment:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchWorkPlanDetails = async (workPlanId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .select(`
+          *,
+          manager:profiles(id, full_name, email),
+          program:academic_programs(
+            id, 
+            name, 
+            faculty:faculties(id, name),
+            campus(id, name)
+          )
+        `)
+        .eq('id', workPlanId)
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching work plan details:', error);
+      return { data: null, error };
+    }
+  };
+
   return {
     fetchStrategicAxes,
     fetchActions,
@@ -1324,5 +1502,16 @@ export function useSupabaseData() {
     createManagerReportVersion,
     updateManagerReportVersion,
     getNextVersionNumber,
+    // Strategic configuration
+    createStrategicAxis,
+    createAction,
+    createProduct,
+    // Work plan functions
+    fetchPendingWorkPlans,
+    approveWorkPlan,
+    createWorkPlan,
+    updateWorkPlan,
+    upsertWorkPlanAssignment,
+    fetchWorkPlanDetails,
   };
 }
