@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -41,10 +42,15 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('Loading data for workPlanId:', workPlanId, 'reportId:', reportId);
+      
       const [assignmentsResult, progressResult] = await Promise.all([
         fetchWorkPlanAssignments(workPlanId),
         fetchProductProgressReports(reportId)
       ]);
+
+      console.log('Assignments result:', assignmentsResult);
+      console.log('Progress result:', progressResult);
 
       setAssignments(assignmentsResult.data || []);
       setProgressReports(progressResult.data || []);
@@ -164,17 +170,39 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
 
   // Organizar asignaciones por eje estratégico
   const organizeAssignments = () => {
+    console.log('Organizing assignments:', assignments);
+    
+    if (!assignments || assignments.length === 0) {
+      return [];
+    }
+
     const organized: any = {};
     
     assignments.forEach(assignment => {
+      console.log('Processing assignment:', assignment);
+      
+      // Obtener el producto desde la asignación
       const product = assignment.product;
-      if (!product) return;
+      if (!product) {
+        console.log('No product found in assignment:', assignment);
+        return;
+      }
       
+      // Obtener la acción desde el producto
       const action = product.action;
-      const axis = action?.strategic_axis;
+      if (!action) {
+        console.log('No action found in product:', product);
+        return;
+      }
       
-      if (!axis) return;
+      // Obtener el eje estratégico desde la acción
+      const axis = action.strategic_axis;
+      if (!axis) {
+        console.log('No strategic_axis found in action:', action);
+        return;
+      }
       
+      // Organizar por eje estratégico
       if (!organized[axis.id]) {
         organized[axis.id] = {
           ...axis,
@@ -182,6 +210,7 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
         };
       }
       
+      // Organizar por acción
       if (!organized[axis.id].actions[action.id]) {
         organized[axis.id].actions[action.id] = {
           ...action,
@@ -189,13 +218,16 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
         };
       }
       
+      // Agregar el producto con su reporte de progreso
       organized[axis.id].actions[action.id].products.push({
         ...assignment,
         progressReport: getProgressReport(product.id, assignment.id)
       });
     });
     
-    return Object.values(organized);
+    const result = Object.values(organized);
+    console.log('Organized data:', result);
+    return result;
   };
 
   if (loading) {
@@ -219,6 +251,13 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
           <FileText className="h-4 w-4" />
           <AlertDescription>
             No hay productos asignados en el plan de trabajo para reportar.
+            {assignments.length > 0 && (
+              <div className="mt-2 text-sm">
+                <p>Datos de debug:</p>
+                <p>Asignaciones encontradas: {assignments.length}</p>
+                <p>Reportes de progreso: {progressReports.length}</p>
+              </div>
+            )}
           </AlertDescription>
         </Alert>
       ) : (
