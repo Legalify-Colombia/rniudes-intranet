@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, DocumentTemplate } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/hooks/useAuth";
 import { Plus, Edit, Trash2, FileText, Download, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -21,6 +21,7 @@ export function DocumentTemplatesManagement() {
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const {
     fetchDocumentTemplates,
@@ -55,9 +56,26 @@ export function DocumentTemplatesManagement() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await createDocumentTemplate(formData);
+    
+    if (!profile?.id) {
+      toast({
+        title: "Error",
+        description: "No se pudo identificar el usuario",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const templateData = {
+      ...formData,
+      created_by: profile.id,
+      is_active: true
+    };
+
+    const { data, error } = await createDocumentTemplate(templateData);
     
     if (error) {
+      console.error('Error creating document template:', error);
       toast({
         title: "Error",
         description: "No se pudo crear la plantilla de documento",

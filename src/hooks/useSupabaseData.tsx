@@ -1024,15 +1024,13 @@ export function useSupabaseData() {
     description: string;
     template_type: "pdf" | "doc";
     template_content: string;
+    created_by: string;
+    is_active: boolean;
   }) => {
     try {
       const { data, error } = await supabase
         .from('document_templates')
-        .insert({
-          ...templateData,
-          created_by: 'current-user-id', // TODO: Replace with actual user ID
-          is_active: true
-        })
+        .insert(templateData)
         .select()
         .single();
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Edit, Trash2, FileText, Globe, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, ReportTemplate, StrategicAxis, Action, Product } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/hooks/useAuth";
 
 export function ReportTemplatesManagement() {
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
@@ -21,6 +21,7 @@ export function ReportTemplatesManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ReportTemplate | null>(null);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   const {
     fetchReportTemplates,
@@ -150,6 +151,15 @@ export function ReportTemplatesManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!profile?.id) {
+      toast({
+        title: "Error",
+        description: "No se pudo identificar el usuario",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const templateData = {
         name: templateForm.name,
@@ -169,7 +179,7 @@ export function ReportTemplatesManagement() {
       } else {
         const { error } = await createReportTemplate({
           ...templateData,
-          created_by: 'current-user-id'
+          created_by: profile.id
         });
         if (error) throw error;
         toast({ title: "Plantilla creada exitosamente" });
