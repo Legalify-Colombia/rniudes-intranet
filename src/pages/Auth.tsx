@@ -25,18 +25,13 @@ export default function Auth() {
     numberOfWeeks: 16,
   });
 
+  // Define positions as a simple array without complex filtering
   const positions = [
     'Director DRNI',
     'Coordinador de Campus', 
     'Director de Programa',
     'Gestor de Internacionalización'
-  ].filter(position => {
-    const isValid = position && typeof position === 'string' && position.trim() !== '';
-    console.log('Auth - Position validation:', position, 'isValid:', isValid);
-    return isValid;
-  });
-
-  console.log('Auth - Final positions array:', positions);
+  ];
 
   const getRoleFromPosition = (position: string) => {
     switch (position) {
@@ -53,20 +48,11 @@ export default function Auth() {
   };
 
   const handlePositionChange = (position: string) => {
-    console.log('Auth - Position selected (before validation):', position, 'type:', typeof position);
+    console.log('Auth - Position selected:', position);
     
-    // Extra validation to ensure position is not empty
-    if (!position || typeof position !== 'string' || position.trim() === '') {
-      console.error('Auth - Invalid position received:', position);
-      return;
-    }
-    
-    // Only set position if it's a valid position
+    // Simple validation - only set if it's a valid position from our array
     if (positions.includes(position)) {
-      console.log('Auth - Setting valid position:', position);
       setFormData(prev => ({ ...prev, position }));
-    } else {
-      console.error('Auth - Position not in valid list:', position, 'valid positions:', positions);
     }
   };
 
@@ -180,27 +166,11 @@ export default function Auth() {
                       <SelectValue placeholder="Seleccionar cargo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.length > 0 ? (
-                        positions.map((position) => {
-                          console.log('Auth - Rendering SelectItem with value:', `"${position}"`);
-                          
-                          // Triple check the position is valid
-                          if (!position || typeof position !== 'string' || position.trim() === '') {
-                            console.error('Auth - Skipping empty/invalid position:', position);
-                            return null;
-                          }
-                          
-                          return (
-                            <SelectItem key={position} value={position}>
-                              {position}
-                            </SelectItem>
-                          );
-                        })
-                      ) : (
-                        <SelectItem value="no-positions" disabled>
-                          No hay cargos disponibles
+                      {positions.map((position) => (
+                        <SelectItem key={position} value={position}>
+                          {position}
                         </SelectItem>
-                      )}
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
