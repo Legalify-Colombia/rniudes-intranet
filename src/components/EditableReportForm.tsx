@@ -136,7 +136,6 @@ export function EditableReportForm({
     try {
       console.log('Guardando borrador con cambios locales:', localChanges);
       
-      // Guardar cada cambio local en la base de datos uno por uno para mejor manejo de errores
       const saveResults = [];
       const saveErrors = [];
       
@@ -144,7 +143,7 @@ export function EditableReportForm({
         try {
           const assignment = assignments.find(a => a.product.id === productId);
           if (!assignment) {
-            console.log('No se encontró assignment para producto:', productId);
+            console.warn('No se encontró assignment para producto:', productId);
             continue;
           }
 
@@ -173,15 +172,12 @@ export function EditableReportForm({
 
       console.log('Resultados del guardado:', { saveResults, saveErrors });
       
-      // Si hay errores, mostrarlos pero no fallar completamente si al menos algunos se guardaron
       if (saveErrors.length > 0) {
         console.error('Errores al guardar:', saveErrors);
         
         if (saveResults.length === 0) {
-          // Si todos fallaron, mostrar error
-          throw new Error(`No se pudo guardar ningún reporte. Errores: ${saveErrors.length}`);
+          throw new Error(`No se pudo guardar ningún reporte. ${saveErrors.map(e => `Producto ${e.productId}: ${e.error?.message || 'Error desconocido'}`).join(', ')}`);
         } else {
-          // Si algunos se guardaron, mostrar advertencia
           toast({
             title: "Guardado parcial",
             description: `Se guardaron ${saveResults.length} reportes, pero ${saveErrors.length} fallaron. Intenta guardar nuevamente.`,
@@ -190,7 +186,6 @@ export function EditableReportForm({
         }
       }
       
-      // Si al menos algunos se guardaron, limpiar solo esos cambios locales
       if (saveResults.length > 0) {
         setLocalChanges(prev => {
           const newChanges = { ...prev };
@@ -200,7 +195,6 @@ export function EditableReportForm({
           return newChanges;
         });
         
-        // Actualizar el estado del informe principal
         const updateResult = await updateManagerReport(reportId, { 
           status: 'draft',
           updated_at: new Date().toISOString()
@@ -217,7 +211,6 @@ export function EditableReportForm({
           });
         }
         
-        // Recargar datos para mostrar lo guardado
         await loadData();
       }
     } catch (error) {
@@ -239,13 +232,11 @@ export function EditableReportForm({
     try {
       console.log('Enviando informe...');
       
-      // Primero guardar cualquier cambio local pendiente
       if (Object.keys(localChanges).length > 0) {
         console.log('Guardando cambios pendientes antes de enviar...');
         await saveDraft();
       }
       
-      // Luego cambiar el estado del informe a 'submitted'
       const updateResult = await updateManagerReport(reportId, { 
         status: 'submitted',
         submitted_date: new Date().toISOString(),
@@ -317,11 +308,26 @@ export function EditableReportForm({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Borrador</Badge>;
+        return (
+          <Badge variant="secondary">
+            <Clock className="w-3 h-3 mr-1" />
+            Borrador
+          </Badge>
+        );
       case 'submitted':
-        return <Badge variant="default"><Send className="w-3 h-3 mr-1" />Enviado</Badge>;
+        return (
+          <Badge variant="default">
+            <Send className="w-3 h-3 mr-1" />
+            Enviado
+          </Badge>
+        );
       case 'reviewed':
-        return <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Revisado</Badge>;
+        return (
+          <Badge variant="default" className="bg-green-600">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Revisado
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Sin estado</Badge>;
     }
