@@ -1,239 +1,973 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import {
-  AcademicProgram,
-  Action,
-  Campus,
-  Faculty,
-  Indicator,
-  InternationalizationProject,
-  ManagerReport,
-  Product,
-  Profile,
-  ReportPeriod,
-  ReportTemplate,
-  SpecificLine,
-  TemplateBasedReport,
-  TemplateReportResponse,
-  WorkPlan,
-  WorkPlanAssignment,
-  ReportSystemConfig,
-  ManagerReportVersion,
-  ProjectPartnerInstitution,
-  InternationalizationReport,
-  StrategicAxis,
-  DocumentTemplate,
-  ProductProgressReport,
-  User
-} from "@/types";
+import { useAuth } from "./useAuth";
 
-// Tipos para las inserciones y actualizaciones, omitiendo campos generados por la BD
-type Insert<T extends { id: any, created_at: any, updated_at?: any }> = Omit<T, 'id' | 'created_at' | 'updated_at'>;
-type Update<T> = Partial<T>;
+export interface Result<T> {
+  data: T | null;
+  error: any;
+}
 
-export const useSupabaseData = () => {
-    // --- Fetch (Read) Operations ---
+export interface Campus {
+  id: string;
+  name: string;
+  address: string;
+  created_at: string;
+  updated_at: string;
+}
 
-    const fetchAcademicPrograms = async () => {
-        return await supabase.from('academic_programs').select('*, campus(*), faculty:faculties(*)');
+export interface Faculty {
+  id: string;
+  name: string;
+  dean_name: string;
+  campus_id: string;
+  created_at: string;
+  updated_at: string;
+  campus?: Campus;
+  faculty_campus?: Array<{
+    campus: Campus;
+  }>;
+}
+
+export interface AcademicProgram {
+  id: string;
+  name: string;
+  campus_id: string;
+  faculty_id: string;
+  director_name: string;
+  director_email: string;
+  manager_id?: string;
+  created_at: string;
+  updated_at: string;
+  campus?: Campus;
+  faculty?: Faculty;
+  manager?: {
+    id: string;
+    full_name: string;
+  };
+}
+
+export interface StrategicAxis {
+  id: string;
+  code: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Action {
+  id: string;
+  code: string;
+  name: string;
+  strategic_axis_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  strategic_axis?: StrategicAxis;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  action_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  action?: Action & {
+    strategic_axis?: StrategicAxis;
+  };
+}
+
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  strategic_axis_id?: string;
+  action_id?: string;
+  product_id?: string;
+  strategic_axes_ids?: string[];
+  actions_ids?: string[];
+  products_ids?: string[];
+  sharepoint_base_url?: string;
+  max_versions: number;
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagerReportVersion {
+  id: string;
+  manager_report_id?: string;
+  template_id?: string;
+  version_number: number;
+  progress_percentage?: number;
+  observations?: string;
+  evidence_links?: string[];
+  sharepoint_folder_url?: string;
+  submitted_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_type: 'pdf' | 'doc';
+  template_content: string;
+  file_url?: string;
+  file_name?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useSupabaseData() {
+  const { profile } = useAuth();
+
+  // Strategic Axes
+  const fetchStrategicAxes = async (): Promise<Result<StrategicAxis[]>> => {
+    const { data, error } = await supabase
+      .from('strategic_axes')
+      .select('*')
+      .order('code');
+    return { data: data || [], error };
+  };
+
+  const createStrategicAxis = async (axisData: Omit<StrategicAxis, 'id' | 'created_at' | 'updated_at'>): Promise<Result<StrategicAxis>> => {
+    const { data, error } = await supabase
+      .from('strategic_axes')
+      .insert(axisData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Actions
+  const fetchActions = async (): Promise<Result<Action[]>> => {
+    const { data, error } = await supabase
+      .from('actions')
+      .select(`
+        *,
+        strategic_axis:strategic_axes(*)
+      `)
+      .order('code');
+    return { data: data || [], error };
+  };
+
+  const createAction = async (actionData: Omit<Action, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Action>> => {
+    const { data, error } = await supabase
+      .from('actions')
+      .insert(actionData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Products
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        action:actions(
+          *,
+          strategic_axis:strategic_axes(*)
+        )
+      `)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const createProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Product>> => {
+    const { data, error } = await supabase
+      .from('products')
+      .insert(productData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Campus Management
+  const fetchCampus = async (): Promise<Result<Campus[]>> => {
+    const { data, error } = await supabase
+      .from('campus')
+      .select('*')
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const createCampus = async (campusData: Omit<Campus, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Campus>> => {
+    const { data, error } = await supabase
+      .from('campus')
+      .insert(campusData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateCampus = async (id: string, campusData: Partial<Campus>): Promise<Result<Campus>> => {
+    const { data, error } = await supabase
+      .from('campus')
+      .update(campusData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteCampus = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('campus')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Faculty Management
+  const fetchFaculties = async (): Promise<Result<Faculty[]>> => {
+    const { data, error } = await supabase
+      .from('faculties')
+      .select(`
+        *,
+        campus:campus(*),
+        faculty_campus:faculty_campus(
+          campus:campus(*)
+        )
+      `)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const fetchFacultiesByCampus = async (campusIds?: string[]): Promise<Result<Faculty[]>> => {
+    let query = supabase
+      .from('faculties')
+      .select(`
+        *,
+        campus:campus(*),
+        faculty_campus:faculty_campus(
+          campus:campus(*)
+        )
+      `);
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    const { data, error } = await query.order('name');
+    return { data: data || [], error };
+  };
+
+  const createFaculty = async (facultyData: Omit<Faculty, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Faculty>> => {
+    const { data, error } = await supabase
+      .from('faculties')
+      .insert(facultyData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateFaculty = async (id: string, facultyData: Partial<Faculty>): Promise<Result<Faculty>> => {
+    const { data, error } = await supabase
+      .from('faculties')
+      .update(facultyData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteFaculty = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('faculties')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Academic Programs
+  const fetchAcademicPrograms = async (): Promise<Result<AcademicProgram[]>> => {
+    const { data, error } = await supabase
+      .from('academic_programs')
+      .select(`
+        *,
+        campus:campus(*),
+        faculty:faculties(*),
+        manager:profiles(id, full_name)
+      `)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const fetchAcademicProgramsByCampus = async (campusIds?: string[]): Promise<Result<AcademicProgram[]>> => {
+    let query = supabase
+      .from('academic_programs')
+      .select(`
+        *,
+        campus:campus(*),
+        faculty:faculties(*),
+        manager:profiles(id, full_name)
+      `);
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    const { data, error } = await query.order('name');
+    return { data: data || [], error };
+  };
+
+  const createAcademicProgram = async (programData: Omit<AcademicProgram, 'id' | 'created_at' | 'updated_at'>): Promise<Result<AcademicProgram>> => {
+    const { data, error } = await supabase
+      .from('academic_programs')
+      .insert(programData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateAcademicProgram = async (id: string, programData: Partial<AcademicProgram>): Promise<Result<AcademicProgram>> => {
+    const { data, error } = await supabase
+      .from('academic_programs')
+      .update(programData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteAcademicProgram = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('academic_programs')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Managers Management
+  const fetchManagers = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus(*),
+        academic_programs:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        )
+      `)
+      .eq('role', 'Gestor')
+      .order('full_name');
+    return { data: data || [], error };
+  };
+
+  const fetchManagersByCampus = async (campusIds?: string[]): Promise<Result<any[]>> => {
+    let query = supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus(*),
+        academic_programs:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        )
+      `)
+      .eq('role', 'Gestor');
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    const { data, error } = await query.order('full_name');
+    return { data: data || [], error };
+  };
+
+  const updateManagerHours = async (managerId: string, weeklyHours: number, numberOfWeeks: number): Promise<Result<any>> => {
+    const totalHours = weeklyHours * numberOfWeeks;
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        weekly_hours: weeklyHours,
+        number_of_weeks: numberOfWeeks,
+        total_hours: totalHours
+      })
+      .eq('id', managerId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const getUserManagedCampus = async (userId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('campus_id, managed_campus_ids')
+      .eq('id', userId)
+      .single();
+    return { data, error };
+  };
+
+  // Users Management
+  const fetchUsers = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus(*)
+      `)
+      .order('full_name');
+    return { data: data || [], error };
+  };
+
+  const fetchUsersByCampus = async (campusIds?: string[]): Promise<Result<any[]>> => {
+    let query = supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus(*)
+      `);
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    const { data, error } = await query.order('full_name');
+    return { data: data || [], error };
+  };
+
+  const updateUser = async (id: string, userData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(userData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateUserCampusAccess = async (userId: string, campusIds: string[]): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ managed_campus_ids: campusIds })
+      .eq('id', userId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteUser = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // File Upload
+  const uploadFile = async (file: File, bucket: string, fileName?: string): Promise<Result<{ publicUrl: string }>> => {
+    const fileNameToUse = fileName || `${Date.now()}_${file.name}`;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileNameToUse, file);
+
+    if (error) {
+      return { data: null, error };
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(fileNameToUse);
+
+    return { data: { publicUrl }, error: null };
+  };
+
+  // Document Templates
+  const fetchDocumentTemplates = async (): Promise<Result<DocumentTemplate[]>> => {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: (data || []).map(item => ({ ...item, template_type: item.template_type as 'pdf' | 'doc' })), error };
+  };
+
+  const createDocumentTemplate = async (templateData: Omit<DocumentTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<Result<DocumentTemplate>> => {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .insert(templateData)
+      .select()
+      .single();
+    return { data: data ? { ...data, template_type: data.template_type as 'pdf' | 'doc' } : null, error };
+  };
+
+  const updateDocumentTemplate = async (id: string, templateData: Partial<DocumentTemplate>): Promise<Result<DocumentTemplate>> => {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .update(templateData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data: data ? { ...data, template_type: data.template_type as 'pdf' | 'doc' } : null, error };
+  };
+
+  const deleteDocumentTemplate = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .update({ is_active: false })
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Report Periods
+  const fetchReportPeriods = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .select('*')
+      .eq('is_active', true)
+      .order('start_date', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const createReportPeriod = async (periodData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .insert({
+        ...periodData,
+        created_by: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateReportPeriod = async (id: string, periodData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .update(periodData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteReportPeriod = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .update({ is_active: false })
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Report System Config
+  const fetchReportSystemConfig = async (): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('report_system_config')
+      .select('*')
+      .single();
+    return { data, error };
+  };
+
+  const updateReportSystemConfig = async (configData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('report_system_config')
+      .update(configData)
+      .eq('id', configData.id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Report Templates
+  const fetchReportTemplates = async (): Promise<Result<ReportTemplate[]>> => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const createReportTemplate = async (templateData: Omit<ReportTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<Result<ReportTemplate>> => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .insert({
+        ...templateData,
+        created_by: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateReportTemplate = async (id: string, templateData: Partial<ReportTemplate>): Promise<Result<ReportTemplate>> => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .update(templateData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteReportTemplate = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .update({ is_active: false })
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Manager Report Versions
+  const createManagerReportVersion = async (versionData: Omit<ManagerReportVersion, 'id' | 'created_at' | 'updated_at'>): Promise<Result<ManagerReportVersion>> => {
+    const { data, error } = await supabase
+      .from('manager_report_versions')
+      .insert(versionData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReportVersion = async (id: string, versionData: Partial<ManagerReportVersion>): Promise<Result<ManagerReportVersion>> => {
+    const { data, error } = await supabase
+      .from('manager_report_versions')
+      .update(versionData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const getNextVersionNumber = async (managerReportId: string, templateId: string): Promise<Result<number>> => {
+    const { data, error } = await supabase
+      .rpc('get_next_version_number', {
+        p_manager_report_id: managerReportId,
+        p_template_id: templateId
+      });
+    return { data: data || 1, error };
+  };
+
+  // Work Plans
+  const fetchWorkPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('work_plans_with_manager')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('work_plans_with_manager')
+      .select('*')
+      .eq('status', 'submitted')
+      .order('submitted_date', { ascending: true });
+    return { data: data || [], error };
+  };
+
+  const fetchWorkPlanDetails = async (workPlanId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('work_plans')
+      .select(`
+        *,
+        program:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        ),
+        manager:profiles(*)
+      `)
+      .eq('id', workPlanId)
+      .single();
+    return { data, error };
+  };
+
+  const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('work_plan_assignments')
+      .select(`
+        *,
+        product:products(
+          *,
+          action:actions(
+            *,
+            strategic_axis:strategic_axes(*)
+          )
+        )
+      `)
+      .eq('work_plan_id', workPlanId)
+      .order('created_at');
+    return { data: data || [], error };
+  };
+
+  const createWorkPlan = async (workPlanData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('work_plans')
+      .insert({
+        ...workPlanData,
+        manager_id: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateWorkPlan = async (id: string, workPlanData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('work_plans')
+      .update(workPlanData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const approveWorkPlan = async (id: string, status: 'approved' | 'rejected', comments?: string): Promise<Result<any>> => {
+    const updateData: any = {
+      status,
+      approved_by: profile?.id,
+      approved_date: new Date().toISOString()
     };
-
-    const fetchStrategicAxes = async () => await supabase.from('strategic_axes').select('*');
-    const fetchActions = async () => await supabase.from('actions').select('*, strategic_axis:strategic_axes(*)');
-    const fetchProducts = async () => await supabase.from('products').select('*, action:actions(*, strategic_axis:strategic_axes(*))');
-    const fetchCampus = async () => await supabase.from('campus').select('*');
     
-    const fetchFaculties = async () => {
-        return await supabase.from('faculties').select('*, campus(*), faculty_campus(*, campus(*))');
-    };
-
-    const fetchFacultiesByCampus = async (campusIds?: string[]) => {
-        let query = supabase.from('faculties').select('*, campus(*), faculty_campus(*, campus(*))');
-        if (campusIds && campusIds.length > 0) {
-            query = query.in('campus_id', campusIds);
-        }
-        return query;
-    };
-
-    const fetchAcademicProgramsByCampus = async (campusIds?: string[]) => {
-        let query = supabase.from('academic_programs').select('*, campus(*), faculty:faculties(*)');
-        if (campusIds && campusIds.length > 0) {
-            query = query.in('campus_id', campusIds);
-        }
-        return query;
-    };
-
-    const fetchManagersByCampus = async (campusIds?: string[]) => {
-        let query = supabase.from('profiles').select('*, campus:campus_id(*)').eq('role', 'Gestor');
-        if (campusIds && campusIds.length > 0) {
-            query = query.in('campus_id', campusIds);
-        }
-        return query;
-    };
-
-    const fetchManagerReportsByManager = async (managerId: string) => {
-        return await supabase.from('manager_reports').select('*, manager:profiles(*), work_plan:work_plans(*), report_period:report_periods(*)').eq('manager_id', managerId);
-    };
-
-    const fetchReportPeriods = async () => await supabase.from('report_periods').select('*');
-    const fetchSpecificLines = async () => await supabase.from('specific_lines').select('*');
-    const fetchIndicators = async () => await supabase.from('indicators').select('*');
+    if (comments) {
+      updateData.approval_comments = comments;
+    }
     
-    const fetchProfiles = async () => {
-        return await supabase.from('profiles').select('*, campus:campus_id(*)');
-    };
+    const { data, error } = await supabase
+      .from('work_plans')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const upsertWorkPlanAssignment = async (assignmentData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('work_plan_assignments')
+      .upsert(assignmentData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Manager Reports
+  const fetchManagerReports = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        manager:profiles(*),
+        work_plan:work_plans(*),
+        report_period:report_periods(*)
+      `)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const fetchManagerReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        manager:profiles(*),
+        work_plan:work_plans(*),
+        report_period:report_periods(*)
+      `)
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const createManagerReport = async (reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .insert({
+        ...reportData,
+        manager_id: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReport = async (id: string, reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .update(reportData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Product Progress Reports
+  const fetchProductProgressReports = async (managerReportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .select('*')
+      .eq('manager_report_id', managerReportId);
+    return { data: data || [], error };
+  };
+
+  const upsertProductProgressReport = async (reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .upsert(reportData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteProductProgressReport = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Template Based Reports
+  const fetchTemplateBasedReports = async (managerId?: string): Promise<Result<any[]>> => {
+    let query = supabase
+      .from('template_based_reports_with_details')
+      .select('*');
     
-    const fetchManagers = async () => {
-        return await supabase.from('profiles').select('*, campus:campus_id(*), academic_programs(*, campus(*), faculty:faculties(*))').eq('role', 'Gestor');
-    };
-
-    const fetchReportTemplates = async () => await supabase.from('report_templates').select('*');
-    const fetchWorkPlans = async () => await supabase.from('work_plans').select('*');
-    const fetchManagerReports = async () => await supabase.from('manager_reports').select('*, manager:profiles(*), work_plan:work_plans(*), report_period:report_periods(*)');
-    const fetchWorkPlanAssignments = async (workPlanId: string) => await supabase.from('work_plan_assignments').select('*, product:products(*, action:actions(*, strategic_axis:strategic_axes(*)))').eq('work_plan_id', workPlanId);
-    const fetchProductProgressReports = async (managerReportId: string) => await supabase.from('product_progress_reports').select('*').eq('manager_report_id', managerReportId);
-    const fetchDocumentTemplates = async () => await supabase.from('document_templates').select('*');
-    const fetchTemplateBasedReports = async (managerId: string) => await supabase.from('template_based_reports_with_details').select('*').eq('manager_id', managerId);
-    const fetchReportSystemConfig = async () => await supabase.from('report_system_config').select('*').single();
-    const fetchInternationalizationProjects = async () => await supabase.from('internationalization_projects').select('*');
-    const fetchTemplateReportResponses = async (templateReportId: string) => await supabase.from('template_report_responses').select('*').eq('template_report_id', templateReportId);
-    const fetchPendingWorkPlans = async () => await supabase.from('work_plans_with_manager').select('*').eq('status', 'submitted');
-    const fetchWorkPlanDetails = async (workPlanId: string) => await supabase.from('work_plans').select('*, manager:profiles(*), program:academic_programs(*, campus(*), faculty:faculties(*)), work_plan_assignments(*,product:products(*))').eq('id', workPlanId).single();
-
-    const fetchUsersByCampus = async (campusIds?: string[]) => {
-        let query = supabase.from('profiles').select('*, campus:campus_id(id, name)');
-        if (campusIds && campusIds.length > 0) {
-            query = query.in('campus_id', campusIds);
-        }
-        return query;
-    };
+    if (managerId) {
+      query = query.eq('manager_id', managerId);
+    }
     
-    const getUserManagedCampus = async (userId: string) => await supabase.from('profiles').select('managed_campus_ids, campus_id').eq('id', userId).single();
-    
-    // --- Create, Update, Delete Operations ---
+    const { data, error } = await query.order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
 
-    const uploadFile = async (file: File, bucket: string = 'reports', folder?: string) => {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = folder ? `${folder}/${fileName}` : fileName;
-        const { data, error } = await supabase.storage.from(bucket).upload(filePath, file);
-        if (error) return { data: null, error };
-        const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filePath);
-        return { data: { ...data, publicUrl }, error: null };
-    };
+  const fetchTemplateBasedReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports_with_details')
+      .select('*')
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
 
-    // Generic CRUD functions
-    const createRecord = async (table: string, data: any) => await supabase.from(table).insert(data).select().single();
-    const updateRecord = async (table: string, id: string, data: any) => await supabase.from(table).update(data).eq('id', id).select().single();
-    const deleteRecord = async (table: string, id: string) => await supabase.from(table).delete().eq('id', id);
-    const upsertRecord = async (table: string, data: any) => await supabase.from(table).upsert(data).select().single();
+  const createTemplateBasedReport = async (reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports')
+      .insert({
+        ...reportData,
+        manager_id: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
 
-    return {
-        // Fetch
-        fetchAcademicPrograms, 
-        fetchStrategicAxes, 
-        fetchActions, 
-        fetchProducts, 
-        fetchCampus, 
-        fetchFaculties, 
-        fetchFacultiesByCampus,
-        fetchAcademicProgramsByCampus,
-        fetchManagersByCampus,
-        fetchManagerReportsByManager,
-        fetchReportPeriods, 
-        fetchSpecificLines, 
-        fetchIndicators, 
-        fetchProfiles, 
-        fetchManagers, 
-        fetchReportTemplates, 
-        fetchWorkPlans, 
-        fetchManagerReports, 
-        fetchWorkPlanAssignments, 
-        fetchProductProgressReports, 
-        fetchDocumentTemplates, 
-        fetchTemplateBasedReports, 
-        fetchReportSystemConfig, 
-        fetchInternationalizationProjects, 
-        fetchTemplateReportResponses, 
-        fetchPendingWorkPlans, 
-        fetchWorkPlanDetails, 
-        fetchUsersByCampus, 
-        getUserManagedCampus,
-        
-        // CUD
-        uploadFile,
-        createCampus: (d: Insert<Campus>) => createRecord('campus', d),
-        updateCampus: (id: string, d: Update<Campus>) => updateRecord('campus', id, d),
-        deleteCampus: (id: string) => deleteRecord('campus', id),
-        
-        createFaculty: (d: Insert<Faculty>) => createRecord('faculties', d),
-        updateFaculty: (id: string, d: Update<Faculty>) => updateRecord('faculties', id, d),
-        deleteFaculty: (id: string) => deleteRecord('faculties', id),
+  const updateTemplateBasedReport = async (id: string, reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports')
+      .update(reportData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
 
-        createAcademicProgram: (d: Insert<AcademicProgram>) => createRecord('academic_programs', d),
-        updateAcademicProgram: (id: string, d: Update<AcademicProgram>) => updateRecord('academic_programs', id, d),
-        deleteAcademicProgram: (id: string) => deleteRecord('academic_programs', id),
+  const deleteTemplateBasedReport = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
 
-        createReportPeriod: (d: Insert<ReportPeriod>) => createRecord('report_periods', d),
-        updateReportPeriod: (id: string, d: Update<ReportPeriod>) => updateRecord('report_periods', id, d),
-        deleteReportPeriod: (id: string) => deleteRecord('report_periods', id),
+  // Template Report Responses
+  const fetchTemplateReportResponses = async (templateReportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('template_report_responses')
+      .select('*')
+      .eq('template_report_id', templateReportId);
+    return { data: data || [], error };
+  };
 
-        createSpecificLine: (d: Insert<SpecificLine>) => createRecord('specific_lines', d),
-        updateSpecificLine: (id: string, d: Update<SpecificLine>) => updateRecord('specific_lines', id, d),
-        deleteSpecificLine: (id: string) => deleteRecord('specific_lines', id),
+  const upsertTemplateReportResponse = async (responseData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('template_report_responses')
+      .upsert(responseData)
+      .select()
+      .single();
+    return { data, error };
+  };
 
-        createIndicator: (d: Insert<Indicator>) => createRecord('indicators', d),
-        updateIndicator: (id: string, d: Update<Indicator>) => updateRecord('indicators', id, d),
-        deleteIndicator: (id: string) => deleteRecord('indicators', id),
-
-        createStrategicAxis: (d: Insert<StrategicAxis>) => createRecord('strategic_axes', { ...d, usage_type: d.usage_type || ['work_plan'] }),
-        updateStrategicAxis: (id: string, d: Update<StrategicAxis>) => updateRecord('strategic_axes', id, d),
-        deleteStrategicAxis: (id: string) => deleteRecord('strategic_axes', id),
-        updateStrategicAxisUsage: (id: string, usageType: string[]) => updateRecord('strategic_axes', id, { usage_type: usageType }),
-        
-        createAction: (d: Insert<Action>) => createRecord('actions', { ...d, usage_type: d.usage_type || ['work_plan'] }),
-        updateAction: (id: string, d: Update<Action>) => updateRecord('actions', id, d),
-        deleteAction: (id: string) => deleteRecord('actions', id),
-        updateActionUsage: (id: string, usageType: string[]) => updateRecord('actions', id, { usage_type: usageType }),
-
-        createProduct: (d: Insert<Product>) => createRecord('products', { ...d, usage_type: d.usage_type || ['work_plan'] }),
-        updateProduct: (id: string, d: Update<Product>) => updateRecord('products', id, d),
-        deleteProduct: (id: string) => deleteRecord('products', id),
-        updateProductUsage: (id: string, usageType: string[]) => updateRecord('products', id, { usage_type: usageType }),
-
-        createWorkPlan: (d: Insert<WorkPlan>) => createRecord('work_plans', d),
-        updateWorkPlan: (id: string, d: Update<WorkPlan>) => updateRecord('work_plans', id, d),
-        upsertWorkPlanAssignment: (d: Insert<WorkPlanAssignment>) => upsertRecord('work_plan_assignments', d),
-
-        createManagerReport: (d: Insert<ManagerReport>) => createRecord('manager_reports', d),
-        updateManagerReport: (id: string, d: Update<ManagerReport>) => updateRecord('manager_reports', id, d),
-        upsertProductProgressReport: (d: Insert<ProductProgressReport>) => upsertRecord('product_progress_reports', d),
-        deleteProductProgressReport: (id: string) => deleteRecord('product_progress_reports', id),
-
-        createDocumentTemplate: (d: Insert<DocumentTemplate>) => createRecord('document_templates', d),
-        updateDocumentTemplate: (id: string, d: Update<DocumentTemplate>) => updateRecord('document_templates', id, d),
-        deleteDocumentTemplate: (id: string) => deleteRecord('document_templates', id),
-        
-        createReportTemplate: (d: Insert<ReportTemplate>) => createRecord('report_templates', d),
-        updateReportTemplate: (id: string, d: Update<ReportTemplate>) => updateRecord('report_templates', id, d),
-        deleteReportTemplate: (id: string) => deleteRecord('report_templates', id),
-        
-        createTemplateBasedReport: (d: Insert<TemplateBasedReport>) => createRecord('template_based_reports', d),
-        updateTemplateBasedReport: (id: string, d: Update<TemplateBasedReport>) => updateRecord('template_based_reports', id, d),
-        deleteTemplateBasedReport: (id: string) => deleteRecord('template_based_reports', id),
-        upsertTemplateReportResponse: (d: Insert<TemplateReportResponse>) => upsertRecord('template_report_responses', d),
-
-        approveWorkPlan: (workPlanId: string, status: 'approved' | 'rejected', comments?: string) => updateRecord('work_plans', workPlanId, { status, approval_comments: comments, approved_date: new Date().toISOString() }),
-        updateManagerHours: (managerId: string, weeklyHours: number, numberOfWeeks: number) => updateRecord('profiles', managerId, { weekly_hours: weeklyHours, number_of_weeks: numberOfWeeks, total_hours: weeklyHours * numberOfWeeks }),
-        updateUserCampusAccess: (userId: string, campusIds: string[]) => updateRecord('profiles', userId, { managed_campus_ids: campusIds }),
-        createInternationalizationProject: (d: Insert<InternationalizationProject>) => createRecord('internationalization_projects', d),
-        createPartnerInstitution: (d: Insert<ProjectPartnerInstitution>) => createRecord('project_partner_institutions', d),
-        createInternationalizationReport: (d: Insert<InternationalizationReport>) => createRecord('internationalization_reports', d),
-        
-        checkReportEditPermission: async (reportId: string) => supabase.rpc('is_period_active', { period_id: reportId }),
-        updateReportSystemConfig: async (data: Update<ReportSystemConfig>) => updateRecord('report_system_config', data.id!, data),
-        createManagerReportVersion: async (data: Insert<ManagerReportVersion>) => createRecord('manager_report_versions', data),
-        updateManagerReportVersion: async (id: string, data: Update<ManagerReportVersion>) => updateRecord('manager_report_versions', id, data),
-        getNextVersionNumber: async (managerReportId: string, templateId: string) => supabase.rpc('get_next_version_number', { p_manager_report_id: managerReportId, p_template_id: templateId }),
-    };
-};
+  return {
+    fetchStrategicAxes,
+    createStrategicAxis,
+    fetchActions,
+    createAction,
+    fetchProducts,
+    createProduct,
+    fetchCampus,
+    createCampus,
+    updateCampus,
+    deleteCampus,
+    fetchFaculties,
+    fetchFacultiesByCampus,
+    createFaculty,
+    updateFaculty,
+    deleteFaculty,
+    fetchAcademicPrograms,
+    fetchAcademicProgramsByCampus,
+    createAcademicProgram,
+    updateAcademicProgram,
+    deleteAcademicProgram,
+    fetchManagers,
+    fetchManagersByCampus,
+    updateManagerHours,
+    getUserManagedCampus,
+    fetchUsers,
+    fetchUsersByCampus,
+    updateUser,
+    updateUserCampusAccess,
+    deleteUser,
+    uploadFile,
+    fetchDocumentTemplates,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
+    fetchReportPeriods,
+    createReportPeriod,
+    updateReportPeriod,
+    deleteReportPeriod,
+    fetchReportSystemConfig,
+    updateReportSystemConfig,
+    fetchReportTemplates,
+    createReportTemplate,
+    updateReportTemplate,
+    deleteReportTemplate,
+    createManagerReportVersion,
+    updateManagerReportVersion,
+    getNextVersionNumber,
+    fetchWorkPlans,
+    fetchPendingWorkPlans,
+    fetchWorkPlanDetails,
+    fetchWorkPlanAssignments,
+    createWorkPlan,
+    updateWorkPlan,
+    approveWorkPlan,
+    upsertWorkPlanAssignment,
+    fetchManagerReports,
+    fetchManagerReportsByManager,
+    createManagerReport,
+    updateManagerReport,
+    fetchProductProgressReports,
+    upsertProductProgressReport,
+    deleteProductProgressReport,
+    fetchTemplateBasedReports,
+    fetchTemplateBasedReportsByManager,
+    createTemplateBasedReport,
+    updateTemplateBasedReport,
+    deleteTemplateBasedReport,
+    fetchTemplateReportResponses,
+    upsertTemplateReportResponse,
+  };
+}

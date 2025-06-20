@@ -362,16 +362,8 @@ export function UserManagement() {
         title: "Éxito",
         description: "Acceso a campus actualizado correctamente"
       });
-      
-      // Recargar usuarios con los nuevos permisos
-      await loadUsers();
     } catch (error) {
       console.error('Error updating campus access:', error);
-      toast({
-        title: "Error",
-        description: "Ocurrió un error inesperado",
-        variant: "destructive"
-      });
     }
   };
 
