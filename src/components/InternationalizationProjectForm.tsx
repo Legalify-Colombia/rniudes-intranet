@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useAuth } from '@/hooks/useAuth';
