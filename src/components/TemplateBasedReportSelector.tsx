@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,8 +49,25 @@ export function TemplateBasedReportSelector({
         fetchReportPeriods()
       ]);
 
-      setTemplates(templatesResult.data || []);
-      setPeriods(periodsResult.data || []);
+      // Filter templates with valid IDs
+      if (templatesResult.data) {
+        const validTemplates = templatesResult.data.filter(template => 
+          template.id && 
+          typeof template.id === 'string' && 
+          template.id.trim().length > 0
+        );
+        setTemplates(validTemplates);
+      }
+
+      // Filter periods with valid IDs
+      if (periodsResult.data) {
+        const validPeriods = periodsResult.data.filter(period => 
+          period.id && 
+          typeof period.id === 'string' && 
+          period.id.trim().length > 0
+        );
+        setPeriods(validPeriods);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -187,17 +203,24 @@ export function TemplateBasedReportSelector({
                     <SelectValue placeholder="Seleccionar período" />
                   </SelectTrigger>
                   <SelectContent>
-                    {periods.map((period) => (
-                      <SelectItem key={period.id} value={period.id}>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>{period.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {periods.map((period) => {
+                      // Validate period ID before rendering
+                      if (!period.id || typeof period.id !== 'string' || period.id.trim().length === 0) {
+                        console.warn('TemplateBasedReportSelector - Skipping invalid period:', period);
+                        return null;
+                      }
+                      return (
+                        <SelectItem key={period.id} value={period.id}>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>{period.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    }).filter(Boolean)}
                   </SelectContent>
                 </Select>
               </div>
@@ -215,14 +238,21 @@ export function TemplateBasedReportSelector({
                     <SelectValue placeholder="Seleccionar plantilla" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableTemplates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>{template.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {availableTemplates.map((template) => {
+                      // Validate template ID before rendering
+                      if (!template.id || typeof template.id !== 'string' || template.id.trim().length === 0) {
+                        console.warn('TemplateBasedReportSelector - Skipping invalid template:', template);
+                        return null;
+                      }
+                      return (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>{template.name}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    }).filter(Boolean)}
                   </SelectContent>
                 </Select>
                 {selectedPeriod && availableTemplates.length === 0 && (

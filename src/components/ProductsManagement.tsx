@@ -49,7 +49,17 @@ export function ProductsManagement() {
       ]);
       
       if (productsResult.data) setProducts(productsResult.data);
-      if (actionsResult.data) setActions(actionsResult.data);
+      
+      // Filter actions with valid IDs
+      if (actionsResult.data) {
+        const validActions = actionsResult.data.filter(action => 
+          action.id && 
+          typeof action.id === 'string' && 
+          action.id.trim().length > 0
+        );
+        setActions(validActions);
+      }
+      
       if (axesResult.data) setStrategicAxes(axesResult.data);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -184,11 +194,18 @@ export function ProductsManagement() {
                   <SelectValue placeholder="Selecciona una acción" />
                 </SelectTrigger>
                 <SelectContent>
-                  {actions.map((action) => (
-                    <SelectItem key={action.id} value={action.id}>
-                      {action.code} - {action.name}
-                    </SelectItem>
-                  ))}
+                  {actions.map((action) => {
+                    // Validate action ID before rendering
+                    if (!action.id || typeof action.id !== 'string' || action.id.trim().length === 0) {
+                      console.warn('ProductsManagement - Skipping invalid action:', action);
+                      return null;
+                    }
+                    return (
+                      <SelectItem key={action.id} value={action.id}>
+                        {action.code} - {action.name}
+                      </SelectItem>
+                    );
+                  }).filter(Boolean)}
                 </SelectContent>
               </Select>
             </div>
