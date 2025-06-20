@@ -1,28 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, DocumentTemplate } from "@/hooks/useSupabaseData";
-import { useAuth } from "@/hooks/useAuth";
-import { Plus, Edit, Trash2, FileText, Download, Eye } from "lucide-react";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { DocumentTemplate } from "@/types/supabase";
+import { Plus, Edit, Trash2, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function DocumentTemplatesManagement() {
-  const [documentTemplates, setDocumentTemplates] = useState<DocumentTemplate[]>([]);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const { toast } = useToast();
-  const { profile } = useAuth();
-
   const {
     fetchDocumentTemplates,
     createDocumentTemplate,
@@ -30,6 +23,11 @@ export function DocumentTemplatesManagement() {
     deleteDocumentTemplate,
   } = useSupabaseData();
 
+  const [documentTemplates, setDocumentTemplates] = useState<DocumentTemplate[]>([]);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     description: "",

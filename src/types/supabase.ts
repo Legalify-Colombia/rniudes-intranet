@@ -12,5 +12,7 @@ export type ReportPeriod = Database["public"]["Tables"]["report_periods"]["Row"]
 export type ManagerReport = Database["public"]["Tables"]["manager_reports"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type CustomPlan = Database["public"]["Tables"]["custom_plans"]["Row"];
+export type Indicator = Database["public"]["Tables"]["indicators"]["Row"];
+export type IndicatorReport = Database["public"]["Tables"]["indicator_reports"]["Row"];
 
 export type Result<T> = { data: T | null; error: any };

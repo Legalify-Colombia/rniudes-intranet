@@ -50,7 +50,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
   };
 
   const handleCreate = async () => {
-    if (!selectedPlanType || !title.trim()) {
+    if (!selectedPlanType || !title.trim() || !profile?.id) {
       toast({
         title: "Error",
         description: "Por favor selecciona un tipo de plan y proporciona un título",
@@ -64,6 +64,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
       const result = await createCustomPlan({
         plan_type_id: selectedPlanType,
         title: title.trim(),
+        manager_id: profile.id,
         status: 'draft'
       });
 
