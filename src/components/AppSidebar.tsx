@@ -122,11 +122,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
             alt="UDES Logo" 
             className="h-12 w-auto"
           />
-          <div>
-            <h2 className="text-lg font-bold">DRNI - Gestión</h2>
-            <p className="text-sm text-sidebar-foreground/70">Oficina de Relaciones Internacionales</p>
-          </div>
-        </div>
+         
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
