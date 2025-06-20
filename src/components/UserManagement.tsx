@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { getValidPositions, getRoleFromPosition, validatePosition, type Position } from '@/utils/positionUtils';
 
 interface User {
   id: string;
@@ -41,45 +42,7 @@ export function UserManagement() {
     numberOfWeeks: 16,
   });
 
-  // Define positions with comprehensive validation
-  const allPositions = [
-    "Director DRNI",
-    "Coordinador de Campus",
-    "Director de Programa",
-    "Gestor de Internacionalización"
-  ];
-
-  // Filter out any potential empty values with multiple checks
-  const positions = allPositions.filter(position => {
-    const isValid = position && 
-                   typeof position === 'string' && 
-                   position.trim().length > 0 && 
-                   position !== '';
-    console.log('UserManagement - Position validation:', position, 'Valid:', isValid);
-    return isValid;
-  });
-
-  console.log('UserManagement - Final positions array:', positions);
-
-  const getRoleFromPosition = (position: string) => {
-    if (!position || typeof position !== 'string' || position.trim() === '') {
-      console.log('UserManagement - getRoleFromPosition: Invalid position:', position);
-      return '';
-    }
-    
-    switch (position.trim()) {
-      case "Director DRNI":
-      case "Coordinador de Campus":
-        return "Administrador";
-      case "Director de Programa":
-        return "Coordinador";
-      case "Gestor de Internacionalización":
-        return "Gestor";
-      default:
-        console.log('UserManagement - getRoleFromPosition: Unknown position:', position);
-        return "";
-    }
-  };
+  const positions = getValidPositions();
 
   useEffect(() => {
     loadUsers();
@@ -113,25 +76,14 @@ export function UserManagement() {
   const handlePositionChange = (position: string) => {
     console.log('UserManagement - Position change called with:', position, 'Type:', typeof position);
     
-    // Comprehensive validation
-    if (!position || 
-        typeof position !== 'string' || 
-        position.trim() === '' || 
-        position.length === 0) {
-      console.log('UserManagement - Invalid position detected, not setting:', position);
-      return;
-    }
-
-    // Additional check to ensure it's in our valid positions array
-    const trimmedPosition = position.trim();
-    if (positions.includes(trimmedPosition)) {
-      console.log('UserManagement - Setting valid position:', trimmedPosition);
+    if (validatePosition(position)) {
+      console.log('UserManagement - Setting valid position:', position);
       setFormData(prev => ({
         ...prev,
-        position: trimmedPosition,
+        position,
       }));
     } else {
-      console.log('UserManagement - Position not in valid list:', trimmedPosition, 'Valid positions:', positions);
+      console.log('UserManagement - Invalid position detected, not setting:', position);
     }
   };
 
@@ -375,22 +327,11 @@ export function UserManagement() {
                     <SelectValue placeholder="Seleccionar cargo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {positions.map((position) => {
-                      // Extra safety check before rendering SelectItem
-                      if (!position || typeof position !== 'string' || position.trim() === '') {
-                        console.warn('UserManagement - Skipping invalid position in render:', position);
-                        return null;
-                      }
-                      
-                      const trimmedPosition = position.trim();
-                      console.log('UserManagement - Rendering SelectItem for position:', trimmedPosition);
-                      
-                      return (
-                        <SelectItem key={trimmedPosition} value={trimmedPosition}>
-                          {trimmedPosition}
-                        </SelectItem>
-                      );
-                    })}
+                    {positions.map((position) => (
+                      <SelectItem key={position} value={position}>
+                        {position}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
