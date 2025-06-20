@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import {
   AcademicProgram,
@@ -26,12 +27,46 @@ interface SpecificLine {
 interface Indicator {
   id: string;
   name: string;
-  data_type: string;
+  data_type: 'numeric' | 'short_text' | 'long_text' | 'file' | 'link';
   is_active: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
 }
+
+// Export additional interfaces needed by other components
+export interface Campus {
+  id: string;
+  name: string;
+  address: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Faculty {
+  id: string;
+  name: string;
+  dean_name: string;
+  campus_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_type: string;
+  template_content: string;
+  file_url?: string;
+  file_name?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export { AcademicProgram };
 
 export const useSupabaseData = () => {
   const fetchAcademicPrograms = async () => {
@@ -276,7 +311,7 @@ export const useSupabaseData = () => {
         .select('*')
         .order('name');
 
-      return { data, error };
+      return { data: data as Campus[], error };
     } catch (error) {
       console.error('Error fetching campus:', error);
       return { data: null, error };
@@ -469,9 +504,9 @@ export const useSupabaseData = () => {
     }
   };
 
-  const uploadFile = async (file: File, folder: string) => {
+  const uploadFile = async (file: File, folder: string, fileName?: string) => {
     try {
-      const filePath = `${folder}/${file.name}`;
+      const filePath = fileName || `${folder}/${file.name}`;
       const { data, error } = await supabase.storage
         .from('files')
         .upload(filePath, file, {
@@ -488,6 +523,343 @@ export const useSupabaseData = () => {
       return { data: { ...data, publicUrl }, error: null };
     } catch (error) {
       console.error('Error uploading file:', error);
+      return { data: null, error };
+    }
+  };
+
+  // Missing functions from other components
+  const fetchFaculties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .select('*')
+        .order('name');
+
+      return { data: data as Faculty[], error };
+    } catch (error) {
+      console.error('Error fetching faculties:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchManagers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'Gestor')
+        .order('full_name');
+
+      return { data: data as Profile[], error };
+    } catch (error) {
+      console.error('Error fetching managers:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchWorkPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching work plans:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchWorkPlanAssignments = async (workPlanId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plan_assignments')
+        .select(`
+          *,
+          product:products(*)
+        `)
+        .eq('work_plan_id', workPlanId);
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching work plan assignments:', error);
+      return { data: null, error };
+    }
+  };
+
+  const upsertProductProgressReport = async (reportData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_progress_reports')
+        .upsert(reportData)
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error upserting product progress report:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchDocumentTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .select('*')
+        .order('name');
+
+      return { data: data as DocumentTemplate[], error };
+    } catch (error) {
+      console.error('Error fetching document templates:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createDocumentTemplate = async (templateData: Omit<DocumentTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .insert([templateData])
+        .select()
+        .single();
+
+      return { data: data as DocumentTemplate, error };
+    } catch (error) {
+      console.error('Error creating document template:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateDocumentTemplate = async (id: string, updates: Partial<DocumentTemplate>) => {
+    try {
+      const { data, error } = await supabase
+        .from('document_templates')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      return { data: data as DocumentTemplate, error };
+    } catch (error) {
+      console.error('Error updating document template:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteDocumentTemplate = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('document_templates')
+        .delete()
+        .eq('id', id);
+
+      return { error };
+    } catch (error) {
+      console.error('Error deleting document template:', error);
+      return { error };
+    }
+  };
+
+  // Campus management functions
+  const createCampus = async (campusData: Omit<Campus, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('campus')
+        .insert([campusData])
+        .select()
+        .single();
+
+      return { data: data as Campus, error };
+    } catch (error) {
+      console.error('Error creating campus:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateCampus = async (id: string, updates: Partial<Campus>) => {
+    try {
+      const { data, error } = await supabase
+        .from('campus')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      return { data: data as Campus, error };
+    } catch (error) {
+      console.error('Error updating campus:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteCampus = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('campus')
+        .delete()
+        .eq('id', id);
+
+      return { error };
+    } catch (error) {
+      console.error('Error deleting campus:', error);
+      return { error };
+    }
+  };
+
+  const fetchFacultiesByCampus = async (campusId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .select('*')
+        .eq('campus_id', campusId)
+        .order('name');
+
+      return { data: data as Faculty[], error };
+    } catch (error) {
+      console.error('Error fetching faculties by campus:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createFaculty = async (facultyData: Omit<Faculty, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .insert([facultyData])
+        .select()
+        .single();
+
+      return { data: data as Faculty, error };
+    } catch (error) {
+      console.error('Error creating faculty:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateFaculty = async (id: string, updates: Partial<Faculty>) => {
+    try {
+      const { data, error } = await supabase
+        .from('faculties')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      return { data: data as Faculty, error };
+    } catch (error) {
+      console.error('Error updating faculty:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteFaculty = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('faculties')
+        .delete()
+        .eq('id', id);
+
+      return { error };
+    } catch (error) {
+      console.error('Error deleting faculty:', error);
+      return { error };
+    }
+  };
+
+  const fetchAcademicProgramsByCampus = async (campusId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('academic_programs')
+        .select(`
+          *,
+          campus(*),
+          faculties(*)
+        `)
+        .eq('campus_id', campusId)
+        .order('name');
+
+      return { data: data as AcademicProgram[], error };
+    } catch (error) {
+      console.error('Error fetching academic programs by campus:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createAcademicProgram = async (programData: Omit<AcademicProgram, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('academic_programs')
+        .insert([programData])
+        .select()
+        .single();
+
+      return { data: data as AcademicProgram, error };
+    } catch (error) {
+      console.error('Error creating academic program:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateAcademicProgram = async (id: string, updates: Partial<AcademicProgram>) => {
+    try {
+      const { data, error } = await supabase
+        .from('academic_programs')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      return { data: data as AcademicProgram, error };
+    } catch (error) {
+      console.error('Error updating academic program:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteAcademicProgram = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('academic_programs')
+        .delete()
+        .eq('id', id);
+
+      return { error };
+    } catch (error) {
+      console.error('Error deleting academic program:', error);
+      return { error };
+    }
+  };
+
+  const fetchManagersByCampus = async (campusId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'Gestor')
+        .eq('campus_id', campusId)
+        .order('full_name');
+
+      return { data: data as Profile[], error };
+    } catch (error) {
+      console.error('Error fetching managers by campus:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateManagerHours = async (managerId: string, updates: { weekly_hours?: number; number_of_weeks?: number; total_hours?: number }) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', managerId)
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating manager hours:', error);
       return { data: null, error };
     }
   };
@@ -797,6 +1169,30 @@ export const useSupabaseData = () => {
     updateManagerReport,
     deleteManagerReport,
     uploadFile,
+    
+    // Missing functions restored
+    fetchFaculties,
+    fetchManagers,
+    fetchWorkPlans,
+    fetchWorkPlanAssignments,
+    upsertProductProgressReport,
+    fetchDocumentTemplates,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
+    createCampus,
+    updateCampus,
+    deleteCampus,
+    fetchFacultiesByCampus,
+    createFaculty,
+    updateFaculty,
+    deleteFaculty,
+    fetchAcademicProgramsByCampus,
+    createAcademicProgram,
+    updateAcademicProgram,
+    deleteAcademicProgram,
+    fetchManagersByCampus,
+    updateManagerHours,
     
     // Nuevas funciones
     fetchSpecificLines,
