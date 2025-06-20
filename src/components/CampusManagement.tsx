@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +42,7 @@ export function CampusManagement() {
     createCampus,
     updateCampus,
     deleteCampus,
-    fetchFacultiesByCampus,
+    fetchFaculties,
     getUserManagedCampus,
     profile
   } = useSupabaseData();
@@ -94,20 +93,14 @@ export function CampusManagement() {
         : campusData || [];
       setCampuses(filteredCampuses);
 
-      // Load faculties with proper filtering - pass each campus ID individually
-      if (managedCampusIds.length > 0) {
-        const allFaculties = [];
-        for (const campusId of managedCampusIds) {
-          const { data: facultiesData } = await fetchFacultiesByCampus(campusId);
-          if (facultiesData) {
-            allFaculties.push(...facultiesData);
-          }
-        }
-        setFaculties(allFaculties);
-      } else {
-        // For super admin, fetch all faculties by passing undefined
-        const { data: facultiesData } = await fetchFacultiesByCampus(undefined);
-        setFaculties(facultiesData || []);
+      // Load ALL faculties and then filter locally
+      const { data: facultiesData } = await fetchFaculties();
+      if (facultiesData) {
+        // Filter faculties based on managed campuses
+        const filteredFaculties = managedCampusIds.length > 0 
+          ? facultiesData.filter(faculty => managedCampusIds.includes(faculty.campus_id))
+          : facultiesData;
+        setFaculties(filteredFaculties);
       }
     } catch (error) {
       console.error('Error loading data:', error);

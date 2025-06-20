@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +23,7 @@ export function UserManagement() {
   
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchUsersByCampus, fetchCampuses } = useSupabaseData();
+  const { fetchUsersByCampus, fetchCampus } = useSupabaseData();
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -52,8 +51,8 @@ export function UserManagement() {
     try {
       setIsLoading(true);
       
-      // Load campuses first
-      const campusResult = await fetchCampuses();
+      // Load campuses using fetchCampus instead of fetchCampuses
+      const campusResult = await fetchCampus();
       if (campusResult.data) {
         setCampuses(campusResult.data);
       }
