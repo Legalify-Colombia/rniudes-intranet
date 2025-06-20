@@ -50,49 +50,107 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    let mounted = true;
+
+    // Función para cargar el perfil del usuario
+    const loadUserProfile = async (userId: string) => {
+      try {
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (error) {
+          console.error('Error loading profile:', error);
+          return;
+        }
+
+        if (mounted) {
+          setProfile(profileData);
+        }
+      } catch (error) {
+        console.error('Error in loadUserProfile:', error);
+      }
+    };
+
+    // Configurar el listener de cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
-          setTimeout(async () => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            setProfile(profileData);
-            setLoading(false);
-          }, 0);
+          // Cargar perfil de usuario con un pequeño delay para evitar problemas de concurrencia
+          setTimeout(() => {
+            if (mounted) {
+              loadUserProfile(session.user.id);
+            }
+          }, 100);
         } else {
           setProfile(null);
-          setLoading(false);
         }
+        
+        if (event === 'SIGNED_OUT' || !session) {
+          setProfile(null);
+        }
+        
+        setLoading(false);
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session) {
-        setLoading(false);
-      }
-    });
+    // Verificar sesión existente
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
 
-    return () => subscription.unsubscribe();
+        if (!mounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    getInitialSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error };
+    } catch (error) {
+      console.error('SignIn error:', error);
+      return { error };
+    }
   };
 
   const signUp = async (data: {
@@ -105,32 +163,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     weeklyHours?: number;
     numberOfWeeks?: number;
   }) => {
-    const totalHours = data.weeklyHours && data.numberOfWeeks 
-      ? data.weeklyHours * data.numberOfWeeks 
-      : undefined;
+    try {
+      const totalHours = data.weeklyHours && data.numberOfWeeks 
+        ? data.weeklyHours * data.numberOfWeeks 
+        : undefined;
 
-    const { error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          full_name: data.fullName,
-          document_number: data.documentNumber,
-          position: data.position,
-          role: data.role,
-          weekly_hours: data.weeklyHours,
-          number_of_weeks: data.numberOfWeeks,
-          total_hours: totalHours,
+      const { error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: data.fullName,
+            document_number: data.documentNumber,
+            position: data.position,
+            role: data.role,
+            weekly_hours: data.weeklyHours,
+            number_of_weeks: data.numberOfWeeks,
+            total_hours: totalHours,
+          }
         }
-      }
-    });
-    return { error };
+      });
+      return { error };
+    } catch (error) {
+      console.error('SignUp error:', error);
+      return { error };
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    try {
+      // Limpiar estado local primero
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
+      const { error } = await supabase.auth.signOut();
+      return { error };
+    } catch (error) {
+      console.error('SignOut error:', error);
+      return { error };
+    }
   };
 
   const value = {

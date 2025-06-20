@@ -18,7 +18,7 @@ interface NotificationItem {
 export function NotificationFeed() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { fetchWorkPlans, fetchManagerReports, fetchProfiles, fetchAcademicPrograms, fetchCampus } = useSupabaseData();
+  const { fetchWorkPlans, fetchManagerReports, fetchManagers, fetchAcademicPrograms, fetchCampus } = useSupabaseData();
 
   useEffect(() => {
     loadNotifications();
@@ -26,17 +26,17 @@ export function NotificationFeed() {
 
   const loadNotifications = async () => {
     try {
-      const [workPlansResult, reportsResult, profilesResult, programsResult, campusResult] = await Promise.all([
+      const [workPlansResult, reportsResult, managersResult, programsResult, campusResult] = await Promise.all([
         fetchWorkPlans(),
         fetchManagerReports(),
-        fetchProfiles(),
+        fetchManagers(),
         fetchAcademicPrograms(),
         fetchCampus()
       ]);
 
       const workPlans = workPlansResult.data || [];
       const reports = reportsResult.data || [];
-      const profiles = profilesResult.data || [];
+      const managers = managersResult.data || [];
       const programs = programsResult.data || [];
       const campuses = campusResult.data || [];
 
@@ -46,7 +46,7 @@ export function NotificationFeed() {
       workPlans
         .filter(plan => plan.status === 'submitted' || plan.status === 'approved')
         .forEach(plan => {
-          const manager = profiles.find(p => p.id === plan.manager_id);
+          const manager = managers.find(m => m.id === plan.manager_id);
           const program = programs.find(p => p.id === plan.program_id);
           const campus = campuses.find(c => c.id === program?.campus_id);
 
@@ -66,7 +66,7 @@ export function NotificationFeed() {
       reports
         .filter(report => report.status === 'submitted' || report.status === 'reviewed')
         .forEach(report => {
-          const manager = profiles.find(p => p.id === report.manager_id);
+          const manager = managers.find(m => m.id === report.manager_id);
           const workPlan = workPlans.find(wp => wp.id === report.work_plan_id);
           const program = programs.find(p => p.id === workPlan?.program_id);
           const campus = campuses.find(c => c.id === program?.campus_id);

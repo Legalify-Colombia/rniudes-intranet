@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,12 +41,22 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
     setLoading(true);
     try {
       const [assignmentsResult, progressResult] = await Promise.all([
-        fetchWorkPlanAssignments(workPlanId),
-        fetchProductProgressReports(reportId)
+        fetchWorkPlanAssignments(),
+        fetchProductProgressReports()
       ]);
 
-      setAssignments(assignmentsResult.data || []);
-      setProgressReports(progressResult.data || []);
+      // Filtrar las asignaciones por el plan de trabajo específico
+      const filteredAssignments = (assignmentsResult.data || []).filter(
+        (assignment: any) => assignment.work_plan_id === workPlanId
+      );
+
+      // Filtrar los reportes de progreso por el ID del informe
+      const filteredProgress = (progressResult.data || []).filter(
+        (progress: any) => progress.manager_report_id === reportId
+      );
+
+      setAssignments(filteredAssignments);
+      setProgressReports(filteredProgress);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
