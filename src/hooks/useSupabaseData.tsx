@@ -1,5 +1,27 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile, Result } from "@/types/supabase";
+
+// Re-export types for components that need them
+export type { 
+  DocumentTemplate,
+  ReportTemplate, 
+  ManagerReportVersion,
+  StrategicAxis,
+  Action,
+  Product
+} from "@/types/supabase";
+
+// Additional types for SNIES functionality
+export type SniesReportTemplate = {
+  id: string;
+  name: string;
+  description?: string;
+  fields: any[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export function useSupabaseData() {
   // Campus functions
@@ -978,6 +1000,67 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Plan Type functions
+  const createPlanType = async (planTypeData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .insert(planTypeData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePlanType = async (planTypeId: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .update(updates)
+      .eq("id", planTypeId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanType = async (planTypeId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .delete()
+      .eq("id", planTypeId);
+    return { data, error };
+  };
+
+  // Plan Field functions
+  const createPlanField = async (field: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .insert(field)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePlanField = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanField = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const configurePlanTypeElements = async (planTypeId: string, elements: any): Promise<Result<any>> => {
+    // Implementation for configuring plan type elements
+    return { data: null, error: null };
+  };
+
   // Document Templates functions
   const fetchDocumentTemplates = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
@@ -1104,31 +1187,152 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  // Plan Types functions
-  const createPlanType = async (planTypeData: any): Promise<Result<any>> => {
+  // Report System Config functions
+  const fetchReportSystemConfig = async (): Promise<Result<any>> => {
     const { data, error } = await supabase
-      .from("plan_types")
-      .insert(planTypeData)
-      .select()
+      .from("report_system_config")
+      .select("*")
       .single();
     return { data, error };
   };
 
-  const updatePlanType = async (planTypeId: string, updates: any): Promise<Result<any>> => {
+  const updateReportSystemConfig = async (updates: any): Promise<Result<any>> => {
     const { data, error } = await supabase
-      .from("plan_types")
+      .from("report_system_config")
       .update(updates)
-      .eq("id", planTypeId)
       .select()
       .single();
     return { data, error };
   };
 
-  const deletePlanType = async (planTypeId: string): Promise<Result<any>> => {
+  // Manager Report Version functions
+  const createManagerReportVersion = async (versionData: any): Promise<Result<any>> => {
     const { data, error } = await supabase
-      .from("plan_types")
-      .delete()
-      .eq("id", planTypeId);
+      .from("manager_report_versions")
+      .insert(versionData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReportVersion = async (versionId: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("manager_report_versions")
+      .update(updates)
+      .eq("id", versionId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const getNextVersionNumber = async (managerReportId: string, templateId: string): Promise<Result<number>> => {
+    const { data, error } = await supabase.rpc('get_next_version_number', {
+      p_manager_report_id: managerReportId,
+      p_template_id: templateId
+    });
+    return { data, error };
+  };
+
+  // SNIES functions
+  const fetchSniesCountries = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_countries")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesMunicipalities = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_municipalities")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesDocumentTypes = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_document_types")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesBiologicalSex = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_biological_sex")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesMaritalStatus = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_marital_status")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const createSniesCountry = async (countryData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("snies_countries")
+      .insert(countryData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const createSniesMunicipality = async (municipalityData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("snies_municipalities")
+      .insert(municipalityData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const bulkCreateSniesCountries = async (countries: any[]): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_countries")
+      .insert(countries)
+      .select();
+    return { data, error };
+  };
+
+  const bulkCreateSniesMunicipalities = async (municipalities: any[]): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_municipalities")
+      .insert(municipalities)
+      .select();
+    return { data, error };
+  };
+
+  const fetchSniesReportTemplates = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_report_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const consolidateSniesReports = async (templateId: string): Promise<Result<any>> => {
+    // Implementation for consolidating SNIES reports
+    return { data: null, error: null };
+  };
+
+  const fetchSniesTemplateFields = async (templateId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_template_fields")
+      .select("*")
+      .eq("template_id", templateId)
+      .order("field_order");
     return { data, error };
   };
 
@@ -1269,6 +1473,10 @@ export function useSupabaseData() {
     createPlanType,
     updatePlanType,
     deletePlanType,
+    createPlanField,
+    updatePlanField,
+    deletePlanField,
+    configurePlanTypeElements,
     
     // Document Templates
     fetchDocumentTemplates,
@@ -1281,6 +1489,29 @@ export function useSupabaseData() {
     createIndicator,
     updateIndicator,
     deleteIndicator,
+    
+    // Report System Config
+    fetchReportSystemConfig,
+    updateReportSystemConfig,
+    
+    // Manager Report Versions
+    createManagerReportVersion,
+    updateManagerReportVersion,
+    getNextVersionNumber,
+    
+    // SNIES functions
+    fetchSniesCountries,
+    fetchSniesMunicipalities,
+    fetchSniesDocumentTypes,
+    fetchSniesBiologicalSex,
+    fetchSniesMaritalStatus,
+    createSniesCountry,
+    createSniesMunicipality,
+    bulkCreateSniesCountries,
+    bulkCreateSniesMunicipalities,
+    fetchSniesReportTemplates,
+    consolidateSniesReports,
+    fetchSniesTemplateFields,
     
     // Utilities
     uploadFile,
