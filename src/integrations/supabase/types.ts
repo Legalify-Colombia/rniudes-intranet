@@ -249,6 +249,63 @@ export type Database = {
           },
         ]
       }
+      improvement_plans: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string
+          expected_completion_date: string | null
+          id: string
+          improvement_actions: string[] | null
+          manager_id: string
+          manager_report_id: string
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description: string
+          expected_completion_date?: string | null
+          id?: string
+          improvement_actions?: string[] | null
+          manager_id: string
+          manager_report_id: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string
+          expected_completion_date?: string | null
+          id?: string
+          improvement_actions?: string[] | null
+          manager_id?: string
+          manager_report_id?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "improvement_plans_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "improvement_plans_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
+          },
+        ]
+      }
       manager_report_versions: {
         Row: {
           created_at: string | null
@@ -315,48 +372,60 @@ export type Database = {
       }
       manager_reports: {
         Row: {
+          completion_percentage: number | null
           created_at: string | null
           description: string | null
           general_report_file_name: string | null
           general_report_url: string | null
           id: string
+          is_final_version: boolean | null
           manager_id: string
           report_period_id: string | null
+          requires_improvement_plan: boolean | null
           status: string | null
           submitted_date: string | null
           title: string
           total_progress_percentage: number | null
           updated_at: string | null
+          version_number: number | null
           work_plan_id: string
         }
         Insert: {
+          completion_percentage?: number | null
           created_at?: string | null
           description?: string | null
           general_report_file_name?: string | null
           general_report_url?: string | null
           id?: string
+          is_final_version?: boolean | null
           manager_id: string
           report_period_id?: string | null
+          requires_improvement_plan?: boolean | null
           status?: string | null
           submitted_date?: string | null
           title: string
           total_progress_percentage?: number | null
           updated_at?: string | null
+          version_number?: number | null
           work_plan_id: string
         }
         Update: {
+          completion_percentage?: number | null
           created_at?: string | null
           description?: string | null
           general_report_file_name?: string | null
           general_report_url?: string | null
           id?: string
+          is_final_version?: boolean | null
           manager_id?: string
           report_period_id?: string | null
+          requires_improvement_plan?: boolean | null
           status?: string | null
           submitted_date?: string | null
           title?: string
           total_progress_percentage?: number | null
           updated_at?: string | null
+          version_number?: number | null
           work_plan_id?: string
         }
         Relationships: [
@@ -396,6 +465,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       preliminary_reports: {
         Row: {
@@ -1159,6 +1267,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_report_completion: {
+        Args: { report_id: string }
+        Returns: number
+      }
       calculate_total_progress: {
         Args: { report_id: string }
         Returns: number
@@ -1166,6 +1278,17 @@ export type Database = {
       can_manage_campus: {
         Args: { admin_id: string; target_campus_id: string }
         Returns: boolean
+      }
+      create_notification: {
+        Args: {
+          p_user_id: string
+          p_title: string
+          p_message: string
+          p_type: string
+          p_related_entity_type?: string
+          p_related_entity_id?: string
+        }
+        Returns: string
       }
       get_next_version_number: {
         Args: { p_manager_report_id: string; p_template_id: string }

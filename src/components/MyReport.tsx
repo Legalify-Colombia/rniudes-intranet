@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ReportTemplateForm } from "./ReportTemplateForm";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
+import { ImprovedDetailedReportForm } from "./ImprovedDetailedReportForm";
 
 export function MyReport() {
   const { 
@@ -240,6 +241,7 @@ export function MyReport() {
                 <TableHead>Título del Informe</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Progreso Total</TableHead>
+                <TableHead>Completitud</TableHead>
                 <TableHead>Fecha de Envío</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -275,6 +277,32 @@ export function MyReport() {
                                   />
                                 </div>
                                 <span className="text-sm">{report.total_progress_percentage.toFixed(1)}%</span>
+                              </div>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {report.completion_percentage ? (
+                              <div className="flex items-center gap-2">
+                                <div className={`w-16 h-2 rounded-full ${
+                                  report.completion_percentage >= 70 ? 'bg-green-200' : 
+                                  report.completion_percentage >= 50 ? 'bg-yellow-200' : 'bg-red-200'
+                                }`}>
+                                  <div 
+                                    className={`h-2 rounded-full ${
+                                      report.completion_percentage >= 70 ? 'bg-green-600' : 
+                                      report.completion_percentage >= 50 ? 'bg-yellow-600' : 'bg-red-600'
+                                    }`}
+                                    style={{ width: `${Math.min(100, report.completion_percentage)}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm">{report.completion_percentage.toFixed(1)}%</span>
+                                {report.requires_improvement_plan && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    Plan mejora requerido
+                                  </Badge>
+                                )}
                               </div>
                             ) : (
                               '-'
@@ -360,7 +388,7 @@ export function MyReport() {
           </DialogHeader>
           {selectedReport && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Estado</Label>
                   <div className="mt-1">{getStatusBadge(selectedReport.status)}</div>
@@ -382,30 +410,34 @@ export function MyReport() {
                     )}
                   </div>
                 </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Completitud</Label>
+                  <div className="mt-1">
+                    {selectedReport.completion_percentage ? (
+                      <div className="flex items-center gap-2">
+                        <Progress 
+                          value={selectedReport.completion_percentage} 
+                          className={`flex-1 ${
+                            selectedReport.completion_percentage >= 70 ? '[&_.bg-primary]:bg-green-600' : 
+                            selectedReport.completion_percentage >= 50 ? '[&_.bg-primary]:bg-yellow-600' : '[&_.bg-primary]:bg-red-600'
+                          }`}
+                        />
+                        <span className="text-sm">{selectedReport.completion_percentage.toFixed(1)}%</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">Sin datos</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Plantillas de Informe</h3>
-                {reportTemplates.length > 0 ? (
-                  <div className="space-y-4">
-                    {reportTemplates.map((template) => (
-                      <ReportTemplateForm
-                        key={template.id}
-                        reportId={selectedReport.id}
-                        template={template}
-                        existingVersions={reportVersions}
-                        onVersionCreated={() => loadReportVersions(selectedReport.id)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    No hay plantillas de informe disponibles.
-                    <br />
-                    Contacte al administrador para configurar las plantillas.
-                  </div>
-                )}
-              </div>
+              {/* Usar el nuevo componente mejorado */}
+              <ImprovedDetailedReportForm
+                reportId={selectedReport.id}
+                workPlanId={selectedReport.work_plan_id}
+                reportStatus={selectedReport.status}
+                onSave={handleDetailFormSave}
+              />
             </div>
           )}
         </DialogContent>

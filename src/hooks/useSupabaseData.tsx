@@ -882,14 +882,11 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const updateManagerReport = async (id: string, updates: Partial<ManagerReport>) => {
-    const { data, error } = await supabase
+  const updateManagerReport = async (reportId: string, updates: any) => {
+    return await supabase
       .from('manager_reports')
       .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    return { data, error };
+      .eq('id', reportId);
   };
 
   // Product Responses functions
@@ -1301,6 +1298,53 @@ export function useSupabaseData() {
         p_template_id: templateId
       });
     return { data, error };
+  };
+
+  const fetchNotifications = async (userId: string, unreadOnly: boolean = false) => {
+    let query = supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (unreadOnly) {
+      query = query.eq('is_read', false);
+    }
+
+    return await query;
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    return await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+  };
+
+  const createImprovementPlan = async (planData: any) => {
+    return await supabase
+      .from('improvement_plans')
+      .insert(planData);
+  };
+
+  const fetchImprovementPlans = async (managerId?: string) => {
+    let query = supabase
+      .from('improvement_plans')
+      .select(`
+        *,
+        manager_report:manager_reports(
+          title,
+          completion_percentage,
+          manager:profiles(full_name)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (managerId) {
+      query = query.eq('manager_id', managerId);
+    }
+
+    return await query;
   };
 
   return {
