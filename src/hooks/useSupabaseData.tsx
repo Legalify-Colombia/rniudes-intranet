@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -169,6 +168,27 @@ export interface ManagerReportVersion {
   created_at: string;
   updated_at: string;
   template?: ReportTemplate;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_type: 'pdf' | 'doc';
+  template_content: string;
+  file_url?: string;
+  file_name?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportDocumentTemplate {
+  id: string;
+  report_template_id: string;
+  document_template_id: string;
+  created_at: string;
 }
 
 export function useSupabaseData() {
@@ -919,12 +939,7 @@ export function useSupabaseData() {
   const fetchReportTemplates = async () => {
     const { data, error } = await supabase
       .from('report_templates')
-      .select(`
-        *,
-        strategic_axis:strategic_axis_id(*),
-        action:action_id(*),
-        product:product_id(*)
-      `)
+      .select('*')
       .eq('is_active', true)
       .order('name');
     return { data, error };
@@ -977,6 +992,83 @@ export function useSupabaseData() {
       .eq('id', id)
       .select()
       .single();
+    return { data, error };
+  };
+
+  // Document Templates functions
+  const fetchDocumentTemplates = async () => {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data, error };
+  };
+
+  const createDocumentTemplate = async (templateData: Omit<DocumentTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!profile?.id) return { data: null, error: { message: 'No user profile' } };
+    
+    const { data, error } = await supabase
+      .from('document_templates')
+      .insert([{ ...templateData, created_by: profile.id }])
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateDocumentTemplate = async (id: string, updates: Partial<DocumentTemplate>) => {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteDocumentTemplate = async (id: string) => {
+    const { data, error } = await supabase
+      .from('document_templates')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Report Document Templates functions
+  const fetchReportDocumentTemplates = async (reportTemplateId: string) => {
+    const { data, error } = await supabase
+      .from('report_document_templates')
+      .select(`
+        *,
+        document_template:document_template_id(*)
+      `)
+      .eq('report_template_id', reportTemplateId);
+    return { data, error };
+  };
+
+  const linkDocumentToReportTemplate = async (reportTemplateId: string, documentTemplateId: string) => {
+    const { data, error } = await supabase
+      .from('report_document_templates')
+      .insert([{
+        report_template_id: reportTemplateId,
+        document_template_id: documentTemplateId
+      }])
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const unlinkDocumentFromReportTemplate = async (reportTemplateId: string, documentTemplateId: string) => {
+    const { data, error } = await supabase
+      .from('report_document_templates')
+      .delete()
+      .eq('report_template_id', reportTemplateId)
+      .eq('document_template_id', documentTemplateId);
     return { data, error };
   };
 
@@ -1104,6 +1196,15 @@ export function useSupabaseData() {
     createReportTemplate,
     updateReportTemplate,
     deleteReportTemplate,
+    // Document Templates
+    fetchDocumentTemplates,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
+    // Report Document Templates
+    fetchReportDocumentTemplates,
+    linkDocumentToReportTemplate,
+    unlinkDocumentFromReportTemplate,
     // Manager Report Versions
     fetchManagerReportVersions,
     createManagerReportVersion,

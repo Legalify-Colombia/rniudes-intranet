@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, StrategicAxis, Action, Product } from "@/hooks/useSupabaseData";
 import { ReportTemplatesManagement } from "./ReportTemplatesManagement";
+import { DocumentTemplatesManagement } from "./DocumentTemplatesManagement";
 
 export function StrategicConfiguration() {
   const [strategicAxes, setStrategicAxes] = useState<StrategicAxis[]>([]);
@@ -123,17 +125,18 @@ export function StrategicConfiguration() {
           Configuración Estratégica
         </CardTitle>
         <p className="text-gray-600">
-          Gestión de ejes estratégicos, acciones, productos y plantillas de informe
+          Gestión de ejes estratégicos, acciones, productos, plantillas de informe y plantillas de documentos
         </p>
       </CardHeader>
       
       <CardContent>
         <Tabs defaultValue="axes" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="axes">Ejes Estratégicos</TabsTrigger>
             <TabsTrigger value="actions">Acciones</TabsTrigger>
             <TabsTrigger value="products">Productos</TabsTrigger>
             <TabsTrigger value="templates">Plantillas de Informe</TabsTrigger>
+            <TabsTrigger value="documents">Plantillas PDF/DOC</TabsTrigger>
           </TabsList>
 
           {/* Ejes Estratégicos */}
@@ -397,6 +400,11 @@ export function StrategicConfiguration() {
           {/* Plantillas de Informe */}
           <TabsContent value="templates" className="space-y-4">
             <ReportTemplatesManagement />
+          </TabsContent>
+
+          {/* Plantillas de Documentos PDF/DOC */}
+          <TabsContent value="documents" className="space-y-4">
+            <DocumentTemplatesManagement />
           </TabsContent>
         </Tabs>
       </CardContent>

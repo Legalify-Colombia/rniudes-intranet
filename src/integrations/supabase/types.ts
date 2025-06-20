@@ -136,6 +136,48 @@ export type Database = {
         }
         Relationships: []
       }
+      document_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          template_content: string
+          template_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          template_content: string
+          template_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          template_content?: string
+          template_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       faculties: {
         Row: {
           campus_id: string
@@ -617,6 +659,42 @@ export type Database = {
         }
         Relationships: []
       }
+      report_document_templates: {
+        Row: {
+          created_at: string | null
+          document_template_id: string | null
+          id: string
+          report_template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_template_id?: string | null
+          id?: string
+          report_template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_template_id?: string | null
+          id?: string
+          report_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_document_templates_document_template_id_fkey"
+            columns: ["document_template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_document_templates_report_template_id_fkey"
+            columns: ["report_template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_periods: {
         Row: {
           created_at: string | null
@@ -694,6 +772,7 @@ export type Database = {
       report_templates: {
         Row: {
           action_id: string | null
+          actions_ids: string[] | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -702,12 +781,15 @@ export type Database = {
           max_versions: number | null
           name: string
           product_id: string | null
+          products_ids: string[] | null
           sharepoint_base_url: string | null
+          strategic_axes_ids: string[] | null
           strategic_axis_id: string | null
           updated_at: string | null
         }
         Insert: {
           action_id?: string | null
+          actions_ids?: string[] | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -716,12 +798,15 @@ export type Database = {
           max_versions?: number | null
           name: string
           product_id?: string | null
+          products_ids?: string[] | null
           sharepoint_base_url?: string | null
+          strategic_axes_ids?: string[] | null
           strategic_axis_id?: string | null
           updated_at?: string | null
         }
         Update: {
           action_id?: string | null
+          actions_ids?: string[] | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -730,7 +815,9 @@ export type Database = {
           max_versions?: number | null
           name?: string
           product_id?: string | null
+          products_ids?: string[] | null
           sharepoint_base_url?: string | null
+          strategic_axes_ids?: string[] | null
           strategic_axis_id?: string | null
           updated_at?: string | null
         }
