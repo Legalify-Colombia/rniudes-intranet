@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,12 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/hooks/useAuth";
 import { DocumentTemplate } from "@/types/supabase";
-import { Plus, Edit, Trash2, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function DocumentTemplatesManagement() {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const {
     fetchDocumentTemplates,
     createDocumentTemplate,
@@ -138,7 +141,7 @@ export function DocumentTemplatesManagement() {
     setFormData({
       name: template.name,
       description: template.description || "",
-      template_type: template.template_type,
+      template_type: template.template_type as "pdf" | "doc",
       template_content: template.template_content,
     });
     setIsEditDialogOpen(true);

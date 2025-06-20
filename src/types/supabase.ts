@@ -14,5 +14,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type CustomPlan = Database["public"]["Tables"]["custom_plans"]["Row"];
 export type Indicator = Database["public"]["Tables"]["indicators"]["Row"];
 export type IndicatorReport = Database["public"]["Tables"]["indicator_reports"]["Row"];
+export type ReportTemplate = Database["public"]["Tables"]["report_templates"]["Row"];
+export type ManagerReportVersion = Database["public"]["Tables"]["manager_report_versions"]["Row"];
 
 export type Result<T> = { data: T | null; error: any };

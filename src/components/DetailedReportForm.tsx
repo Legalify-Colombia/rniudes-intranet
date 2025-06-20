@@ -119,7 +119,7 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
         const { data, error } = await uploadFile(file, 'reports', fileName);
         if (error) throw error;
         
-        newFiles.push(data.publicUrl);
+        newFiles.push(data.url);
         newFileNames.push(file.name);
       }
 

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
 export function useFileUpload() {
-  const uploadFile = async (file: File, bucket: string = "evidence", folder: string = ""): Promise<Result<{ url: string; path: string }>> => {
+  const uploadFile = async (file: File, bucket: string = "evidence", folder: string = ""): Promise<Result<{ url: string; path: string; publicUrl: string }>> => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
@@ -24,7 +24,8 @@ export function useFileUpload() {
       return { 
         data: { 
           url: publicUrl, 
-          path: filePath 
+          path: filePath,
+          publicUrl: publicUrl
         }, 
         error: null 
       };
