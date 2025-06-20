@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { StrategicAxis, Action, Product, Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
@@ -63,6 +64,159 @@ export function useSupabaseData() {
 
   const deleteProduct = async (id: string): Promise<Result<any>> => {
     const { data, error } = await supabase.from("products").delete().eq("id", id);
+    return { data, error };
+  };
+
+  // Campus
+  const fetchCampus = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase.from("campus").select("*").order("name");
+    return { data, error };
+  };
+
+  // Faculties
+  const fetchFaculties = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase.from("faculties").select("*").order("name");
+    return { data, error };
+  };
+
+  // Manager Reports
+  const fetchManagerReports = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .select(`
+        *,
+        manager:profiles!manager_reports_manager_id_fkey(*),
+        report_period:report_periods(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const updateManagerReport = async (reportId: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .update(updates)
+      .eq("id", reportId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Report Periods
+  const fetchReportPeriods = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .select("*")
+      .order("start_date", { ascending: false });
+    return { data, error };
+  };
+
+  // Product Progress Reports
+  const fetchProductProgressReports = async (reportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .select(`
+        *,
+        product:products(*),
+        work_plan_assignment:work_plan_assignments(*)
+      `)
+      .eq("manager_report_id", reportId)
+      .order("created_at");
+    return { data, error };
+  };
+
+  const upsertProductProgressReport = async (report: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .upsert(report)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteProductProgressReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  // File Upload
+  const uploadFile = async (file: File, bucket: string): Promise<Result<any>> => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, file);
+    return { data, error };
+  };
+
+  // Indicators
+  const fetchIndicators = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchIndicatorReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .select(`
+        *,
+        responses:indicator_responses(*)
+      `)
+      .eq("id", reportId)
+      .single();
+    return { data, error };
+  };
+
+  // Document Templates
+  const fetchDocumentTemplates = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const createDocumentTemplate = async (template: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .insert(template)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateDocumentTemplate = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteDocumentTemplate = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  // Managers
+  const fetchManagers = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("role", "Gestor")
+      .order("full_name");
     return { data, error };
   };
 
@@ -211,6 +365,31 @@ export function useSupabaseData() {
     createProduct,
     updateProduct,
     deleteProduct,
+    // Campus
+    fetchCampus,
+    // Faculties
+    fetchFaculties,
+    // Manager Reports
+    fetchManagerReports,
+    updateManagerReport,
+    // Report Periods
+    fetchReportPeriods,
+    // Product Progress Reports
+    fetchProductProgressReports,
+    upsertProductProgressReport,
+    deleteProductProgressReport,
+    // File Upload
+    uploadFile,
+    // Indicators
+    fetchIndicators,
+    fetchIndicatorReport,
+    // Document Templates
+    fetchDocumentTemplates,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
+    // Managers
+    fetchManagers,
     fetchWorkPlans,
     fetchWorkPlanAssignments,
     createWorkPlan,
