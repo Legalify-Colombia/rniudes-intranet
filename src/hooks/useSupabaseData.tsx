@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -966,6 +967,16 @@ export function useSupabaseData() {
       .select()
       .single();
 
+    return { data, error };
+  };
+
+  const deleteReportTemplate = async (id: string) => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select()
+      .single();
     return { data, error };
   };
 
