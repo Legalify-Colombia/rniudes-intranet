@@ -144,18 +144,15 @@ export interface ReportTemplate {
   id: string;
   name: string;
   description?: string;
-  strategic_axis_id?: string;
-  action_id?: string;
-  product_id?: string;
+  strategic_axes_ids?: string[];
+  actions_ids?: string[];
+  products_ids?: string[];
   sharepoint_base_url?: string;
   max_versions: number;
   is_active: boolean;
-  created_by: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
-  strategic_axis?: StrategicAxis;
-  action?: Action;
-  product?: Product;
 }
 
 export interface ManagerReportVersion {
@@ -932,32 +929,43 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const createReportTemplate = async (template: Omit<ReportTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+  const createReportTemplate = async (templateData: Omit<ReportTemplate, 'id' | 'created_at' | 'updated_at'>) => {
     const { data, error } = await supabase
       .from('report_templates')
-      .insert([template])
+      .insert([{
+        name: templateData.name,
+        description: templateData.description,
+        strategic_axes_ids: templateData.strategic_axes_ids,
+        actions_ids: templateData.actions_ids,
+        products_ids: templateData.products_ids,
+        sharepoint_base_url: templateData.sharepoint_base_url,
+        max_versions: templateData.max_versions,
+        is_active: templateData.is_active,
+        created_by: templateData.created_by,
+      }])
       .select()
       .single();
+
     return { data, error };
   };
 
-  const updateReportTemplate = async (id: string, updates: Partial<ReportTemplate>) => {
+  const updateReportTemplate = async (id: string, templateData: Partial<ReportTemplate>) => {
     const { data, error } = await supabase
       .from('report_templates')
-      .update(updates)
+      .update({
+        name: templateData.name,
+        description: templateData.description,
+        strategic_axes_ids: templateData.strategic_axes_ids,
+        actions_ids: templateData.actions_ids,
+        products_ids: templateData.products_ids,
+        sharepoint_base_url: templateData.sharepoint_base_url,
+        max_versions: templateData.max_versions,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', id)
       .select()
       .single();
-    return { data, error };
-  };
 
-  const deleteReportTemplate = async (id: string) => {
-    const { data, error } = await supabase
-      .from('report_templates')
-      .update({ is_active: false })
-      .eq('id', id)
-      .select()
-      .single();
     return { data, error };
   };
 

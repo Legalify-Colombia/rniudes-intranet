@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Globe, FileText, Clock, CheckCircle } from "lucide-react";
+import { Plus, Globe, FileText, Clock, CheckCircle, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, ReportTemplate, ManagerReportVersion } from "@/hooks/useSupabaseData";
 
@@ -22,6 +22,7 @@ interface ReportTemplateFormProps {
 export function ReportTemplateForm({ reportId, template, existingVersions, onVersionCreated }: ReportTemplateFormProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingVersionId, setEditingVersionId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const {
@@ -51,6 +52,7 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
       evidence_links: [""],
       observations: "",
     });
+    setEditingVersionId(null);
   };
 
   const addEvidenceLink = () => {
@@ -79,42 +81,70 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
     setLoading(true);
 
     try {
-      const { data: nextVersionData, error: versionError } = await getNextVersionNumber(reportId, template.id);
-      if (versionError) throw versionError;
-
       const filteredEvidenceLinks = versionForm.evidence_links.filter(link => link.trim() !== "");
 
-      const versionData = {
-        manager_report_id: reportId,
-        template_id: template.id,
-        version_number: nextVersionData,
-        progress_percentage: versionForm.progress_percentage,
-        sharepoint_folder_url: versionForm.sharepoint_folder_url,
-        evidence_links: filteredEvidenceLinks,
-        observations: versionForm.observations,
-      };
+      if (editingVersionId) {
+        // Actualizar versión existente
+        const { error } = await updateManagerReportVersion(editingVersionId, {
+          progress_percentage: versionForm.progress_percentage,
+          sharepoint_folder_url: versionForm.sharepoint_folder_url,
+          evidence_links: filteredEvidenceLinks,
+          observations: versionForm.observations,
+        });
+        if (error) throw error;
 
-      const { error } = await createManagerReportVersion(versionData);
-      if (error) throw error;
+        toast({
+          title: "Versión actualizada exitosamente",
+          description: "Los cambios han sido guardados",
+        });
+      } else {
+        // Crear nueva versión
+        const { data: nextVersionData, error: versionError } = await getNextVersionNumber(reportId, template.id);
+        if (versionError) throw versionError;
 
-      toast({
-        title: "Versión creada exitosamente",
-        description: `Se ha creado la versión ${nextVersionData} del informe`,
-      });
+        const versionData = {
+          manager_report_id: reportId,
+          template_id: template.id,
+          version_number: nextVersionData,
+          progress_percentage: versionForm.progress_percentage,
+          sharepoint_folder_url: versionForm.sharepoint_folder_url,
+          evidence_links: filteredEvidenceLinks,
+          observations: versionForm.observations,
+        };
+
+        const { error } = await createManagerReportVersion(versionData);
+        if (error) throw error;
+
+        toast({
+          title: "Versión creada exitosamente",
+          description: `Se ha creado la versión ${nextVersionData} del informe`,
+        });
+      }
 
       setIsDialogOpen(false);
       resetForm();
       onVersionCreated();
     } catch (error) {
-      console.error('Error creating version:', error);
+      console.error('Error saving version:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear la versión del informe",
+        description: "No se pudo guardar la versión del informe",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditVersion = (version: ManagerReportVersion) => {
+    setVersionForm({
+      progress_percentage: version.progress_percentage || 0,
+      sharepoint_folder_url: version.sharepoint_folder_url || "",
+      evidence_links: version.evidence_links?.length ? version.evidence_links : [""],
+      observations: version.observations || "",
+    });
+    setEditingVersionId(version.id);
+    setIsDialogOpen(true);
   };
 
   const openSharePointFolder = () => {
@@ -149,7 +179,7 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>
-                      Nueva Versión - {template.name}
+                      {editingVersionId ? 'Editar Versión' : 'Nueva Versión'} - {template.name}
                     </DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -201,7 +231,7 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
                               size="sm"
                               onClick={() => removeEvidenceLink(index)}
                             >
-                              Eliminar
+                              <X className="w-4 h-4" />
                             </Button>
                           )}
                         </div>
@@ -236,7 +266,7 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
                         Cancelar
                       </Button>
                       <Button type="submit" disabled={loading}>
-                        {loading ? "Guardando..." : "Crear Versión"}
+                        {loading ? "Guardando..." : editingVersionId ? "Actualizar" : "Crear"} Versión
                       </Button>
                     </div>
                   </form>
@@ -253,16 +283,16 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
         )}
 
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            {template.strategic_axis && (
-              <Badge variant="outline">{template.strategic_axis.code}</Badge>
-            )}
-            {template.action && (
-              <Badge variant="secondary">{template.action.code}</Badge>
-            )}
-            {template.product && (
-              <Badge variant="default">{template.product.name}</Badge>
-            )}
+          <div className="flex flex-wrap gap-2">
+            {template.strategic_axes_ids?.map((axisId, index) => (
+              <Badge key={index} variant="outline">Eje {index + 1}</Badge>
+            ))}
+            {template.actions_ids?.map((actionId, index) => (
+              <Badge key={index} variant="secondary">Acción {index + 1}</Badge>
+            ))}
+            {template.products_ids?.map((productId, index) => (
+              <Badge key={index} variant="default">Producto {index + 1}</Badge>
+            ))}
           </div>
 
           <div className="text-sm text-gray-500">
@@ -278,7 +308,7 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
                 .filter(v => v.template_id === template.id)
                 .sort((a, b) => b.version_number - a.version_number)
                 .map((version) => (
-                  <div key={version.id} className="flex items-center justify-between p-2 border rounded">
+                  <div key={version.id} className="flex items-center justify-between p-3 border rounded">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">Versión {version.version_number}</Badge>
                       <span className="text-sm">{version.progress_percentage}% completado</span>
@@ -289,8 +319,19 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
                         </Badge>
                       )}
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(version.created_at).toLocaleDateString()}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">
+                        {new Date(version.created_at).toLocaleDateString()}
+                      </span>
+                      {!version.submitted_at && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleEditVersion(version)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
