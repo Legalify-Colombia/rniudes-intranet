@@ -23,7 +23,7 @@ export function UserManagement() {
   
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchUsersByCampus, fetchCampus } = useSupabaseData();
+  const { fetchUsersByCampus, fetchCampus, updateUserProfile } = useSupabaseData();
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -51,7 +51,7 @@ export function UserManagement() {
     try {
       setIsLoading(true);
       
-      // Load campuses using fetchCampus instead of fetchCampuses
+      // Load campuses
       const campusResult = await fetchCampus();
       if (campusResult.data) {
         setCampuses(campusResult.data);
@@ -205,12 +205,7 @@ export function UserManagement() {
 
       console.log('Updating user with data:', updates);
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', userId)
-        .select()
-        .single();
+      const { data, error } = await updateUserProfile(userId, updates);
 
       if (error) {
         console.error("Error updating user:", error);

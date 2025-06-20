@@ -16,6 +16,16 @@ export function useUsers() {
     return { data, error };
   };
 
+  const updateUserProfile = async (userId: string, updates: any): Promise<Result<Profile>> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", userId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
   const updateUserCampusAccess = async (userId: string, campusId: string): Promise<Result<Profile>> => {
     const { data, error } = await supabase
       .from("profiles")
@@ -28,6 +38,7 @@ export function useUsers() {
 
   return {
     fetchUsersByCampus,
+    updateUserProfile,
     updateUserCampusAccess,
   };
 }
