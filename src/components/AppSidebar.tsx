@@ -1,4 +1,5 @@
-import { Calendar, Users, Building, UserCheck, BarChart3, FileText, CheckSquare } from "lucide-react"
+
+import { Calendar, Users, Building, UserCheck, BarChart3, FileText, CheckSquare, ClipboardList } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -144,6 +145,16 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         bgColor: "bg-indigo-50",
         borderColor: "border-indigo-200",
         hoverColor: "hover:bg-indigo-100"
+      },
+      {
+        title: "Reportes SNIES",
+        url: "snies",
+        icon: ClipboardList,
+        roles: ["Administrador", "Coordinador", "Gestor"],
+        color: "text-orange-600",
+        bgColor: "bg-orange-50",
+        borderColor: "border-orange-200",
+        hoverColor: "hover:bg-orange-100"
       }
     ];
 
@@ -240,7 +251,6 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
       
-      {/* Footer más compacto */}
       <SidebarFooter className="p-3 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 border-t border-gray-200 dark:border-gray-700">
         <div className="space-y-3">
           {/* Información del usuario compacta */}
