@@ -11,7 +11,7 @@ import { Plus, Edit, Trash2, Building, GraduationCap, School } from "lucide-reac
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, Campus, Faculty, AcademicProgram } from "@/hooks/useSupabaseData";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export function CampusManagement() {
   const [campuses, setCampuses] = useState<Campus[]>([]);

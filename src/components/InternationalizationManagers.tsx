@@ -10,7 +10,7 @@ import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
 import { WorkPlanForm } from "./WorkPlanForm";
 import { Edit, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 
 export function InternationalizationManagers() {
   const { 
