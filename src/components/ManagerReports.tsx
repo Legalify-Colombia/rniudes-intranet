@@ -95,7 +95,7 @@ export function ManagerReports() {
         work_plan_id: workPlanId,
         report_period_id: periodId,
         title: `Informe de Progreso - ${new Date().toLocaleDateString()}`,
-        status: 'draft'
+        status: 'draft' as const
       };
 
       const { data, error } = await createManagerReport(reportData);
