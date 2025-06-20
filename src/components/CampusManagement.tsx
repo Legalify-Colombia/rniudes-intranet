@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -211,7 +210,7 @@ export function CampusManagement() {
         faculty_id: programForm.faculty_id,
         director_name: programForm.director_name,
         director_email: programForm.director_email,
-        manager_id: programForm.manager_id || undefined,
+        manager_id: programForm.manager_id === "none" ? undefined : programForm.manager_id || undefined,
       };
 
       if (editingProgram) {
@@ -638,12 +637,12 @@ export function CampusManagement() {
 
                     <div className="space-y-2">
                       <Label htmlFor="managerId">Gestor Asignado (Opcional)</Label>
-                      <Select value={programForm.manager_id} onValueChange={(value) => setProgramForm(prev => ({ ...prev, manager_id: value }))}>
+                      <Select value={programForm.manager_id || "none"} onValueChange={(value) => setProgramForm(prev => ({ ...prev, manager_id: value === "none" ? "" : value }))}>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar gestor" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Sin asignar</SelectItem>
+                          <SelectItem value="none">Sin asignar</SelectItem>
                           {availableManagers.map((manager) => (
                             <SelectItem key={manager.id} value={manager.id}>
                               {manager.full_name}
