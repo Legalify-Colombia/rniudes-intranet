@@ -346,6 +346,70 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Managers Management
+  const fetchManagers = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus(*),
+        academic_programs:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        )
+      `)
+      .eq('role', 'Gestor')
+      .order('full_name');
+    return { data: data || [], error };
+  };
+
+  const fetchManagersByCampus = async (campusIds?: string[]): Promise<Result<any[]>> => {
+    let query = supabase
+      .from('profiles')
+      .select(`
+        *,
+        campus:campus(*),
+        academic_programs:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        )
+      `)
+      .eq('role', 'Gestor');
+
+    if (campusIds && campusIds.length > 0) {
+      query = query.in('campus_id', campusIds);
+    }
+
+    const { data, error } = await query.order('full_name');
+    return { data: data || [], error };
+  };
+
+  const updateManagerHours = async (managerId: string, weeklyHours: number, numberOfWeeks: number): Promise<Result<any>> => {
+    const totalHours = weeklyHours * numberOfWeeks;
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        weekly_hours: weeklyHours,
+        number_of_weeks: numberOfWeeks,
+        total_hours: totalHours
+      })
+      .eq('id', managerId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const getUserManagedCampus = async (userId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('campus_id, managed_campus_ids')
+      .eq('id', userId)
+      .single();
+    return { data, error };
+  };
+
   // Users Management
   const fetchUsers = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
@@ -847,6 +911,10 @@ export function useSupabaseData() {
     createAcademicProgram,
     updateAcademicProgram,
     deleteAcademicProgram,
+    fetchManagers,
+    fetchManagersByCampus,
+    updateManagerHours,
+    getUserManagedCampus,
     fetchUsers,
     fetchUsersByCampus,
     updateUser,
