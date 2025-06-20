@@ -143,3 +143,45 @@ export interface Indicator {
   created_at: string;
   updated_at: string;
 }
+
+export interface IndicatorReport {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  manager_id: string;
+  report_period_id: string;
+  title: string;
+  description: string;
+  status: "draft" | "submitted" | "reviewed";
+  submitted_date: string;
+  reviewed_date: string;
+  reviewed_by: string;
+}
+
+export interface IndicatorResponse {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  indicator_report_id: string;
+  indicator_id: string;
+  numeric_value: number;
+  text_value: string;
+  file_url: string;
+  file_name: string;
+  link_value: string;
+  observations: string;
+}
+
+export interface UnifiedReport {
+  id: string;
+  report_type: "work_plan" | "template" | "indicators";
+  manager_id: string;
+  title: string;
+  description: string;
+  status: "draft" | "submitted" | "reviewed";
+  submitted_date: string;
+  created_at: string;
+  updated_at: string;
+  report_period_id: string | null;
+  type_display_name: string;
+}

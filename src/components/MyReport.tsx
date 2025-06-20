@@ -5,13 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { EditableReportForm } from "./EditableReportForm";
 import { TemplateBasedReportSelector } from "./TemplateBasedReportSelector";
-import { TemplateBasedReportsList } from "./TemplateBasedReportsList";
-import { FileText, Plus, Eye, Calendar, CheckCircle, Clock, AlertTriangle, Grid3x3 } from "lucide-react";
+import { IndicatorReportSelector } from "./IndicatorReportSelector";
+import { IndicatorReportForm } from "./IndicatorReportForm";
+import { FileText, Plus, Eye, Calendar, CheckCircle, Clock, AlertTriangle, Grid3x3, BarChart3, Edit3, Send, Trash2 } from "lucide-react";
+import { UnifiedReport } from "@/types";
 
 export function MyReport() {
   const { profile } = useAuth();
@@ -20,18 +23,21 @@ export function MyReport() {
     fetchManagerReportsByManager,
     fetchWorkPlans,
     createManagerReport,
-    fetchTemplateBasedReports,
-    deleteTemplateBasedReport
+    fetchUnifiedReports,
+    deleteTemplateBasedReport,
+    deleteIndicatorReport,
+    checkPeriodActive,
+    submitIndicatorReport,
+    submitTemplateBasedReport,
   } = useSupabaseData();
 
-  const [reports, setReports] = useState<any[]>([]);
-  const [templateReports, setTemplateReports] = useState<any[]>([]);
+  const [unifiedReports, setUnifiedReports] = useState<UnifiedReport[]>([]);
   const [workPlans, setWorkPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<any>(null);
-  const [selectedTemplateReport, setSelectedTemplateReport] = useState<any>(null);
+  const [selectedReportType, setSelectedReportType] = useState<string>("");
   const [creating, setCreating] = useState(false);
-  const [activeTab, setActiveTab] = useState("work-plan-reports");
+  const [activeTab, setActiveTab] = useState("all-reports");
 
   useEffect(() => {
     if (profile?.id) {
@@ -44,16 +50,14 @@ export function MyReport() {
     
     setLoading(true);
     try {
-      const [reportsResult, workPlansResult, templateReportsResult] = await Promise.all([
-        fetchManagerReportsByManager(profile.id),
-        fetchWorkPlans(),
-        fetchTemplateBasedReports(profile.id)
+      const [unifiedResult, workPlansResult] = await Promise.all([
+        fetchUnifiedReports(profile.id),
+        fetchWorkPlans()
       ]);
 
-      console.log('Data loaded:', { reportsResult, workPlansResult, templateReportsResult });
+      console.log('Unified reports loaded:', unifiedResult);
 
-      setReports(reportsResult.data || []);
-      setTemplateReports(templateReportsResult.data || []);
+      setUnifiedReports(unifiedResult.data || []);
       
       // Filtrar planes de trabajo aprobados para este gestor
       const approvedPlans = (workPlansResult.data || []).filter(
@@ -72,7 +76,7 @@ export function MyReport() {
     }
   };
 
-  const createNewReport = async (workPlanId: string) => {
+  const createNewWorkPlanReport = async (workPlanId: string) => {
     if (!profile?.id) return;
 
     setCreating(true);
@@ -90,15 +94,11 @@ export function MyReport() {
         status: 'draft' as const
       };
 
-      console.log('Creating report with data:', reportData);
-
       const result = await createManagerReport(reportData);
       
       if (result.error) {
         throw result.error;
       }
-
-      console.log('Report created successfully:', result.data);
 
       toast({
         title: "Éxito",
@@ -106,7 +106,6 @@ export function MyReport() {
       });
 
       await loadData();
-      setSelectedReport(result.data);
     } catch (error) {
       console.error('Error creating report:', error);
       toast({
@@ -119,13 +118,30 @@ export function MyReport() {
     }
   };
 
-  const handleDeleteTemplateReport = async (reportId: string) => {
+  const handleEditReport = (report: UnifiedReport) => {
+    setSelectedReport(report);
+    setSelectedReportType(report.report_type);
+  };
+
+  const handleDeleteReport = async (reportId: string, reportType: string) => {
     if (!confirm('¿Estás seguro de que deseas eliminar este informe? Esta acción no se puede deshacer.')) {
       return;
     }
 
     try {
-      const result = await deleteTemplateBasedReport(reportId);
+      let result;
+      if (reportType === 'template') {
+        result = await deleteTemplateBasedReport(reportId);
+      } else if (reportType === 'indicators') {
+        result = await deleteIndicatorReport(reportId);
+      } else {
+        toast({
+          title: "Error",
+          description: "No se puede eliminar este tipo de informe",
+          variant: "destructive",
+        });
+        return;
+      }
       
       if (result.error) {
         throw result.error;
@@ -138,10 +154,50 @@ export function MyReport() {
 
       await loadData();
     } catch (error) {
-      console.error('Error deleting template report:', error);
+      console.error('Error deleting report:', error);
       toast({
         title: "Error",
         description: "No se pudo eliminar el informe",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSubmitReport = async (reportId: string, reportType: string) => {
+    if (!confirm('¿Estás seguro de que deseas enviar este informe? No podrás editarlo después.')) {
+      return;
+    }
+
+    try {
+      let result;
+      if (reportType === 'indicators') {
+        result = await submitIndicatorReport(reportId);
+      } else if (reportType === 'template') {
+        result = await submitTemplateBasedReport(reportId);
+      } else {
+        toast({
+          title: "Error",
+          description: "No se puede enviar este tipo de informe desde aquí",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (result.error) {
+        throw result.error;
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Informe enviado correctamente",
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo enviar el informe",
         variant: "destructive",
       });
     }
@@ -159,7 +215,7 @@ export function MyReport() {
       case 'submitted':
         return (
           <Badge variant="default">
-            <FileText className="w-3 h-3 mr-1" />
+            <Send className="w-3 h-3 mr-1" />
             Enviado
           </Badge>
         );
@@ -175,10 +231,16 @@ export function MyReport() {
     }
   };
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return "text-green-600";
-    if (percentage >= 60) return "text-yellow-600";
-    return "text-red-600";
+  const canEdit = (report: UnifiedReport) => {
+    return report.status === 'draft';
+  };
+
+  const canDelete = (report: UnifiedReport) => {
+    return report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
+  };
+
+  const canSubmit = (report: UnifiedReport) => {
+    return report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
   };
 
   if (loading) {
@@ -193,40 +255,56 @@ export function MyReport() {
   }
 
   if (selectedReport) {
-    return (
-      <EditableReportForm
-        reportId={selectedReport.id}
-        workPlanId={selectedReport.work_plan_id}
-        reportStatus={selectedReport.status}
-        onSave={() => {
-          setSelectedReport(null);
-          loadData();
-        }}
-      />
-    );
-  }
-
-  if (selectedTemplateReport) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setSelectedTemplateReport(null)}
-          >
-            ← Volver a Mis Informes
-          </Button>
+    if (selectedReportType === 'work_plan') {
+      return (
+        <EditableReportForm
+          reportId={selectedReport.id}
+          workPlanId={selectedReport.work_plan_id}
+          reportStatus={selectedReport.status}
+          onSave={() => {
+            setSelectedReport(null);
+            setSelectedReportType("");
+            loadData();
+          }}
+        />
+      );
+    } else if (selectedReportType === 'indicators') {
+      return (
+        <IndicatorReportForm
+          reportId={selectedReport.id}
+          reportPeriodId={selectedReport.report_period_id}
+          onSave={() => {
+            setSelectedReport(null);
+            setSelectedReportType("");
+            loadData();
+          }}
+        />
+      );
+    } else {
+      // Template reports - placeholder for now
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedReport(null);
+                setSelectedReportType("");
+              }}
+            >
+              ← Volver a Mis Informes
+            </Button>
+          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">{selectedReport.title}</h3>
+              <p className="text-gray-600">Editor de informes basados en plantillas en desarrollo...</p>
+            </CardContent>
+          </Card>
         </div>
-        {/* TODO: Implementar componente para editar informes basados en plantillas */}
-        <Card>
-          <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">{selectedTemplateReport.title}</h3>
-            <p className="text-gray-600">Editor de informes basados en plantillas en desarrollo...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+      );
+    }
   }
 
   return (
@@ -235,41 +313,142 @@ export function MyReport() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mis Informes</h1>
           <p className="text-gray-600 mt-1">
-            Gestiona tus informes de progreso y plantillas
+            Gestiona todos tus informes en un solo lugar
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="all-reports" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Todos los Informes
+            {unifiedReports.length > 0 && (
+              <Badge variant="secondary">{unifiedReports.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="work-plan-reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Informes del Plan de Trabajo
-            {reports.length > 0 && (
-              <Badge variant="secondary">{reports.length}</Badge>
-            )}
+            Plan de Trabajo
           </TabsTrigger>
           <TabsTrigger value="template-reports" className="flex items-center gap-2">
             <Grid3x3 className="h-4 w-4" />
-            Informes por Plantillas
-            {templateReports.length > 0 && (
-              <Badge variant="secondary">{templateReports.length}</Badge>
-            )}
+            Plantillas
+          </TabsTrigger>
+          <TabsTrigger value="indicator-reports" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Indicadores
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="all-reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Todos Mis Informes ({unifiedReports.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {unifiedReports.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No tienes informes creados</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tipo de Informe</TableHead>
+                      <TableHead>Título</TableHead>
+                      <TableHead>Fecha de Creación</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Fecha de Envío</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {unifiedReports.map((report) => (
+                      <TableRow key={`${report.report_type}-${report.id}`}>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {report.type_display_name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{report.title}</TableCell>
+                        <TableCell>
+                          {new Date(report.created_at).toLocaleDateString('es-ES')}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(report.status)}</TableCell>
+                        <TableCell>
+                          {report.submitted_date 
+                            ? new Date(report.submitted_date).toLocaleDateString('es-ES')
+                            : '-'
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant={canEdit(report) ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => handleEditReport(report)}
+                            >
+                              {canEdit(report) ? (
+                                <>
+                                  <Edit3 className="h-4 w-4 mr-1" />
+                                  Editar
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Ver
+                                </>
+                              )}
+                            </Button>
+
+                            {canSubmit(report) && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleSubmitReport(report.id, report.report_type)}
+                                className="institutional-gradient text-white"
+                              >
+                                <Send className="h-4 w-4 mr-1" />
+                                Enviar
+                              </Button>
+                            )}
+
+                            {canDelete(report) && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteReport(report.id, report.report_type)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Eliminar
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="work-plan-reports" className="space-y-6">
-          {workPlans.length === 0 && reports.length === 0 && (
+          {workPlans.length === 0 && (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
                 No tienes planes de trabajo aprobados para crear informes de progreso.
-                Contacta con tu coordinador para que apruebe tu plan de trabajo.
               </AlertDescription>
             </Alert>
           )}
 
-          {/* Sección para crear nuevos informes del plan de trabajo */}
           {workPlans.length > 0 && (
             <Card>
               <CardHeader>
@@ -280,101 +459,21 @@ export function MyReport() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Selecciona un plan de trabajo aprobado para crear un nuevo informe de progreso:
-                  </p>
-                  <div className="grid gap-3">
-                    {workPlans.map((workPlan) => (
-                      <div key={workPlan.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                        <div>
-                          <h4 className="font-medium">Plan de Trabajo</h4>
-                          <p className="text-sm text-gray-600">
-                            {workPlan.total_hours_assigned} horas asignadas
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Aprobado: {new Date(workPlan.approved_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Button
-                          onClick={() => createNewReport(workPlan.id)}
-                          disabled={creating}
-                        >
-                          {creating ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                              Creando...
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="h-4 w-4 mr-2" />
-                              Crear Informe
-                            </>
-                          )}
-                        </Button>
+                  {workPlans.map((workPlan) => (
+                    <div key={workPlan.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-medium">Plan de Trabajo</h4>
+                        <p className="text-sm text-gray-600">
+                          {workPlan.total_hours_assigned} horas asignadas
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Lista de informes del plan de trabajo existentes */}
-          {reports.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Informes del Plan de Trabajo ({reports.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {reports.map((report) => (
-                    <div key={report.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-medium">{report.title}</h3>
-                            {getStatusBadge(report.status)}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              <span>Creado: {new Date(report.created_at).toLocaleDateString()}</span>
-                            </div>
-                            
-                            {report.submitted_date && (
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                <span>Enviado: {new Date(report.submitted_date).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center gap-2">
-                              <div className={`font-medium ${getProgressColor(report.total_progress_percentage || 0)}`}>
-                                Progreso: {Math.round(report.total_progress_percentage || 0)}%
-                              </div>
-                            </div>
-                          </div>
-
-                          {report.description && (
-                            <p className="text-sm text-gray-600 mt-2">{report.description}</p>
-                          )}
-                        </div>
-
-                        <div className="flex gap-2 ml-4">
-                          <Button
-                            variant={report.status === 'draft' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setSelectedReport(report)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            {report.status === 'draft' ? 'Editar' : 'Ver'}
-                          </Button>
-                        </div>
-                      </div>
+                      <Button
+                        onClick={() => createNewWorkPlanReport(workPlan.id)}
+                        disabled={creating}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Crear Informe
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -386,25 +485,15 @@ export function MyReport() {
         <TabsContent value="template-reports" className="space-y-6">
           <TemplateBasedReportSelector
             onReportCreated={loadData}
-            existingReports={templateReports}
+            existingReports={unifiedReports.filter(r => r.report_type === 'template')}
           />
+        </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Grid3x3 className="h-5 w-5" />
-                Informes Basados en Plantillas ({templateReports.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TemplateBasedReportsList
-                reports={templateReports}
-                onEditReport={setSelectedTemplateReport}
-                onDeleteReport={handleDeleteTemplateReport}
-                showDeleteButton={false}
-              />
-            </CardContent>
-          </Card>
+        <TabsContent value="indicator-reports" className="space-y-6">
+          <IndicatorReportSelector
+            onReportCreated={loadData}
+            existingReports={unifiedReports.filter(r => r.report_type === 'indicators')}
+          />
         </TabsContent>
       </Tabs>
     </div>

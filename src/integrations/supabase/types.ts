@@ -312,6 +312,127 @@ export type Database = {
           },
         ]
       }
+      indicator_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          manager_id: string
+          report_period_id: string
+          reviewed_by: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id: string
+          report_period_id: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id?: string
+          report_period_id?: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicator_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicator_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicator_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicator_responses: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          indicator_id: string
+          indicator_report_id: string
+          link_value: string | null
+          numeric_value: number | null
+          observations: string | null
+          text_value: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          indicator_id: string
+          indicator_report_id: string
+          link_value?: string | null
+          numeric_value?: number | null
+          observations?: string | null
+          text_value?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          indicator_id?: string
+          indicator_report_id?: string
+          link_value?: string | null
+          numeric_value?: number | null
+          observations?: string | null
+          text_value?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicator_responses_indicator_id_fkey"
+            columns: ["indicator_id"]
+            isOneToOne: false
+            referencedRelation: "indicators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicator_responses_indicator_report_id_fkey"
+            columns: ["indicator_report_id"]
+            isOneToOne: false
+            referencedRelation: "indicator_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       indicators: {
         Row: {
           created_at: string | null
@@ -1718,6 +1839,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unified_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          manager_id: string | null
+          report_period_id: string | null
+          report_type: string | null
+          status: string | null
+          submitted_date: string | null
+          title: string | null
+          type_display_name: string | null
+          updated_at: string | null
+        }
+        Relationships: []
       }
       vw_full_report_data: {
         Row: {

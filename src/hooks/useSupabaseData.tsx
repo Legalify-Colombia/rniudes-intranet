@@ -123,7 +123,7 @@ export interface DocumentTemplate {
   updated_at: string;
 }
 
-export function useSupabaseData() {
+export const useSupabaseData = () => {
   const { profile } = useAuth();
 
   // Strategic Axes
@@ -931,6 +931,163 @@ export function useSupabaseData() {
       .eq('id', id);
   };
 
+  // Indicator Reports functions
+  const fetchUnifiedReports = async (managerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('unified_reports')
+        .select('*')
+        .eq('manager_id', managerId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching unified reports:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchIndicatorReports = async (managerId?: string) => {
+    try {
+      let query = supabase
+        .from('indicator_reports')
+        .select(`
+          *,
+          report_periods:report_period_id(name, start_date, end_date)
+        `);
+
+      if (managerId) {
+        query = query.eq('manager_id', managerId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching indicator reports:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchIndicatorReport = async (reportId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicator_reports')
+        .select(`
+          *,
+          indicator_responses(*)
+        `)
+        .eq('id', reportId)
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching indicator report:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createIndicatorReport = async (reportData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicator_reports')
+        .insert(reportData)
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating indicator report:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateIndicatorReport = async (reportId: string, reportData: any) => {
+    try {
+      const { responses, ...reportFields } = reportData;
+
+      // Update report
+      const { data: reportResult, error: reportError } = await supabase
+        .from('indicator_reports')
+        .update(reportFields)
+        .eq('id', reportId)
+        .select()
+        .single();
+
+      if (reportError) throw reportError;
+
+      // Update responses
+      if (responses && Array.isArray(responses)) {
+        for (const response of responses) {
+          const { error: responseError } = await supabase
+            .from('indicator_responses')
+            .upsert({
+              ...response,
+              indicator_report_id: reportId,
+            });
+
+          if (responseError) throw responseError;
+        }
+      }
+
+      return { data: reportResult, error: null };
+    } catch (error) {
+      console.error('Error updating indicator report:', error);
+      return { data: null, error };
+    }
+  };
+
+  const submitIndicatorReport = async (reportId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('indicator_reports')
+        .update({
+          status: 'submitted',
+          submitted_date: new Date().toISOString(),
+        })
+        .eq('id', reportId)
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error submitting indicator report:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteIndicatorReport = async (reportId: string) => {
+    try {
+      const { error } = await supabase
+        .from('indicator_reports')
+        .delete()
+        .eq('id', reportId);
+
+      return { error };
+    } catch (error) {
+      console.error('Error deleting indicator report:', error);
+      return { error };
+    }
+  };
+
+  const checkPeriodActive = async (periodId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_periods')
+        .select('end_date, is_active')
+        .eq('id', periodId)
+        .single();
+
+      if (error) return false;
+
+      const isActive = data.is_active && new Date(data.end_date) >= new Date();
+      return isActive;
+    } catch (error) {
+      console.error('Error checking period status:', error);
+      return false;
+    }
+  };
+
   return {
     fetchStrategicAxes,
     createStrategicAxis,
@@ -1005,5 +1162,13 @@ export function useSupabaseData() {
     createIndicator,
     updateIndicator,
     deleteIndicator,
+    fetchUnifiedReports,
+    fetchIndicatorReports,
+    fetchIndicatorReport,
+    createIndicatorReport,
+    updateIndicatorReport,
+    submitIndicatorReport,
+    deleteIndicatorReport,
+    checkPeriodActive,
   };
-}
+};
