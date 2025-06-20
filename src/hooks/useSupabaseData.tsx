@@ -1,3 +1,4 @@
+
 import { useUser, useSupabaseClient } from "@supabase/auth-helpers-react";
 import { Session } from "@supabase/supabase-js";
 import { useState, useEffect } from "react";
@@ -53,6 +54,7 @@ export function useSupabaseData() {
     }
   };
 
+  // Campus CRUD
   const fetchCampus = async (): Promise<Result<Database["public"]["Tables"]["campus"]["Row"][]>> => {
     const { data, error } = await supabase.from("campus").select("*").order("name");
     return { data, error };
@@ -73,6 +75,7 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Faculties CRUD
   const fetchFaculties = async (): Promise<Result<Database["public"]["Tables"]["faculties"]["Row"][]>> => {
     const { data, error } = await supabase.from("faculties").select("*").order("name");
     return { data, error };
@@ -93,9 +96,14 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Academic Programs CRUD
   const fetchPrograms = async (): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"][]>> => {
     const { data, error } = await supabase.from("academic_programs").select("*").order("name");
     return { data, error };
+  };
+
+  const fetchAcademicPrograms = async (): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"][]>> => {
+    return fetchPrograms();
   };
 
   const createProgram = async (program: Database["public"]["Tables"]["academic_programs"]["Insert"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
@@ -110,6 +118,149 @@ export function useSupabaseData() {
 
   const deleteProgram = async (id: string): Promise<Result<any>> => {
     const { data, error } = await supabase.from("academic_programs").delete().eq("id", id);
+    return { data, error };
+  };
+
+  // Strategic Axes CRUD
+  const fetchStrategicAxes = async (): Promise<Result<Database["public"]["Tables"]["strategic_axes"]["Row"][]>> => {
+    const { data, error } = await supabase.from("strategic_axes").select("*").order("name");
+    return { data, error };
+  };
+
+  const createStrategicAxis = async (axis: Database["public"]["Tables"]["strategic_axes"]["Insert"]): Promise<Result<Database["public"]["Tables"]["strategic_axes"]["Row"]>> => {
+    const { data, error } = await supabase.from("strategic_axes").insert(axis).select().single();
+    return { data, error };
+  };
+
+  const updateStrategicAxis = async (id: string, updates: Database["public"]["Tables"]["strategic_axes"]["Update"]): Promise<Result<Database["public"]["Tables"]["strategic_axes"]["Row"]>> => {
+    const { data, error } = await supabase.from("strategic_axes").update(updates).eq("id", id).select().single();
+    return { data, error };
+  };
+
+  const deleteStrategicAxis = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase.from("strategic_axes").delete().eq("id", id);
+    return { data, error };
+  };
+
+  // Actions CRUD
+  const fetchActions = async (): Promise<Result<Database["public"]["Tables"]["actions"]["Row"][]>> => {
+    const { data, error } = await supabase.from("actions").select("*").order("name");
+    return { data, error };
+  };
+
+  const createAction = async (action: Database["public"]["Tables"]["actions"]["Insert"]): Promise<Result<Database["public"]["Tables"]["actions"]["Row"]>> => {
+    const { data, error } = await supabase.from("actions").insert(action).select().single();
+    return { data, error };
+  };
+
+  const updateAction = async (id: string, updates: Database["public"]["Tables"]["actions"]["Update"]): Promise<Result<Database["public"]["Tables"]["actions"]["Row"]>> => {
+    const { data, error } = await supabase.from("actions").update(updates).eq("id", id).select().single();
+    return { data, error };
+  };
+
+  const deleteAction = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase.from("actions").delete().eq("id", id);
+    return { data, error };
+  };
+
+  // Products CRUD
+  const fetchProducts = async (): Promise<Result<Database["public"]["Tables"]["products"]["Row"][]>> => {
+    const { data, error } = await supabase.from("products").select("*").order("name");
+    return { data, error };
+  };
+
+  const createProduct = async (product: Database["public"]["Tables"]["products"]["Insert"]): Promise<Result<Database["public"]["Tables"]["products"]["Row"]>> => {
+    const { data, error } = await supabase.from("products").insert(product).select().single();
+    return { data, error };
+  };
+
+  const updateProduct = async (id: string, updates: Database["public"]["Tables"]["products"]["Update"]): Promise<Result<Database["public"]["Tables"]["products"]["Row"]>> => {
+    const { data, error } = await supabase.from("products").update(updates).eq("id", id).select().single();
+    return { data, error };
+  };
+
+  const deleteProduct = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase.from("products").delete().eq("id", id);
+    return { data, error };
+  };
+
+  // Managers CRUD
+  const fetchManagers = async (): Promise<Result<Database["public"]["Tables"]["profiles"]["Row"][]>> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("role", "Gestor")
+      .order("full_name");
+    return { data, error };
+  };
+
+  // Work Plans CRUD
+  const fetchWorkPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        manager:profiles!custom_plans_manager_id_fkey(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  // Manager Reports CRUD
+  const fetchManagerReports = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .select(`
+        *,
+        manager:profiles!manager_reports_manager_id_fkey(*),
+        report_period:report_periods(*),
+        work_plan:custom_plans!manager_reports_work_plan_id_fkey(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const updateManagerReport = async (id: string, updates: Database["public"]["Tables"]["manager_reports"]["Update"]): Promise<Result<Database["public"]["Tables"]["manager_reports"]["Row"]>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Report Periods CRUD
+  const fetchReportPeriods = async (): Promise<Result<Database["public"]["Tables"]["report_periods"]["Row"][]>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .select("*")
+      .order("start_date", { ascending: false });
+    return { data, error };
+  };
+
+  const createReportPeriod = async (period: Database["public"]["Tables"]["report_periods"]["Insert"]): Promise<Result<Database["public"]["Tables"]["report_periods"]["Row"]>> => {
+    const { data, error } = await supabase.from("report_periods").insert(period).select().single();
+    return { data, error };
+  };
+
+  const updateReportPeriod = async (id: string, updates: Database["public"]["Tables"]["report_periods"]["Update"]): Promise<Result<Database["public"]["Tables"]["report_periods"]["Row"]>> => {
+    const { data, error } = await supabase.from("report_periods").update(updates).eq("id", id).select().single();
+    return { data, error };
+  };
+
+  const deleteReportPeriod = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase.from("report_periods").delete().eq("id", id);
+    return { data, error };
+  };
+
+  // Document Templates CRUD
+  const fetchDocumentTemplates = async (): Promise<Result<Database["public"]["Tables"]["document_templates"]["Row"][]>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
     return { data, error };
   };
 
@@ -332,18 +483,62 @@ export function useSupabaseData() {
   return {
     profile,
     updateProfile,
+    
+    // Campus
     fetchCampus,
     createCampus,
     updateCampus,
     deleteCampus,
+    
+    // Faculties
     fetchFaculties,
     createFaculty,
     updateFaculty,
     deleteFaculty,
+    
+    // Academic Programs
     fetchPrograms,
+    fetchAcademicPrograms,
     createProgram,
     updateProgram,
     deleteProgram,
+    
+    // Strategic Axes
+    fetchStrategicAxes,
+    createStrategicAxis,
+    updateStrategicAxis,
+    deleteStrategicAxis,
+    
+    // Actions
+    fetchActions,
+    createAction,
+    updateAction,
+    deleteAction,
+    
+    // Products
+    fetchProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    
+    // Managers
+    fetchManagers,
+    
+    // Work Plans
+    fetchWorkPlans,
+    
+    // Manager Reports
+    fetchManagerReports,
+    updateManagerReport,
+    
+    // Report Periods
+    fetchReportPeriods,
+    createReportPeriod,
+    updateReportPeriod,
+    deleteReportPeriod,
+    
+    // Document Templates
+    fetchDocumentTemplates,
     
     // Funciones SNIES existentes
     fetchSniesCountries,
