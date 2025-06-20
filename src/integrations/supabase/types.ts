@@ -65,6 +65,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "academic_programs_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
+          },
         ]
       }
       actions: {
@@ -102,6 +109,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "actions_strategic_axis_id_fkey"
@@ -256,10 +270,79 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "manager_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_reports_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: true
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["work_plan_id"]
+          },
+          {
             foreignKeyName: "manager_reports_work_plan_id_fkey"
             columns: ["work_plan_id"]
             isOneToOne: true
             referencedRelation: "work_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reports_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: true
+            referencedRelation: "work_plans_with_manager"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preliminary_reports: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          delivery_date: string
+          evidence_files: string[] | null
+          id: string
+          observations: string | null
+          progress_percentage: number
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          delivery_date?: string
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          progress_percentage?: number
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          delivery_date?: string
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          progress_percentage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preliminary_reports_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "preliminary_reports_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "work_plan_assignments"
             referencedColumns: ["id"]
           },
         ]
@@ -302,6 +385,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_responses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "product_responses_report_id_fkey"
@@ -351,6 +441,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
           },
         ]
       }
@@ -429,6 +526,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "strategic_axes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
+          },
         ]
       }
       work_plan_assignments: {
@@ -465,51 +569,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "work_plan_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "work_plan_assignments_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["work_plan_id"]
+          },
+          {
             foreignKeyName: "work_plan_assignments_work_plan_id_fkey"
             columns: ["work_plan_id"]
             isOneToOne: false
             referencedRelation: "work_plans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "work_plan_assignments_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: false
+            referencedRelation: "work_plans_with_manager"
+            referencedColumns: ["id"]
+          },
         ]
       }
       work_plans: {
         Row: {
+          approval_comments: string | null
           approved_by: string | null
+          approved_date: string | null
           comments: string | null
           coordinator_approval_date: string | null
           coordinator_comments: string | null
           created_at: string | null
           id: string
           manager_id: string
+          objectives: string | null
           program_id: string
           status: string
+          submitted_date: string | null
           total_hours_assigned: number
           updated_at: string | null
         }
         Insert: {
+          approval_comments?: string | null
           approved_by?: string | null
+          approved_date?: string | null
           comments?: string | null
           coordinator_approval_date?: string | null
           coordinator_comments?: string | null
           created_at?: string | null
           id?: string
           manager_id: string
+          objectives?: string | null
           program_id: string
           status?: string
+          submitted_date?: string | null
           total_hours_assigned: number
           updated_at?: string | null
         }
         Update: {
+          approval_comments?: string | null
           approved_by?: string | null
+          approved_date?: string | null
           comments?: string | null
           coordinator_approval_date?: string | null
           coordinator_comments?: string | null
           created_at?: string | null
           id?: string
           manager_id?: string
+          objectives?: string | null
           program_id?: string
           status?: string
+          submitted_date?: string | null
           total_hours_assigned?: number
           updated_at?: string | null
         }
@@ -522,11 +659,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "work_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
+          },
+          {
             foreignKeyName: "work_plans_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "work_plans_program_id_fkey"
@@ -535,17 +686,140 @@ export type Database = {
             referencedRelation: "academic_programs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "work_plans_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["program_id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      vw_full_report_data: {
+        Row: {
+          action_name: string | null
+          assignment_id: string | null
+          campus_id: string | null
+          delivery_date: string | null
+          evidence_files: string[] | null
+          faculty_id: string | null
+          manager_email: string | null
+          manager_id: string | null
+          manager_name: string | null
+          observations: string | null
+          plan_total_hours: number | null
+          product_assigned_hours: number | null
+          product_id: string | null
+          product_name: string | null
+          program_id: string | null
+          program_name: string | null
+          progress_percentage: number | null
+          report_created_at: string | null
+          report_id: string | null
+          strategic_axis_name: string | null
+          weekly_hours: number | null
+          work_plan_id: string | null
+          work_plan_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_programs_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_programs_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_plans_with_manager: {
+        Row: {
+          approval_comments: string | null
+          approved_by: string | null
+          approved_date: string | null
+          campus_name: string | null
+          comments: string | null
+          coordinator_approval_date: string | null
+          coordinator_comments: string | null
+          created_at: string | null
+          faculty_name: string | null
+          id: string | null
+          manager_email: string | null
+          manager_id: string | null
+          manager_name: string | null
+          manager_position: string | null
+          objectives: string | null
+          program_id: string | null
+          program_name: string | null
+          status: string | null
+          submitted_date: string | null
+          total_hours_assigned: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "work_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "work_plans_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "academic_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["program_id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      work_plan_status:
+        | "draft"
+        | "submitted"
+        | "pending"
+        | "approved"
+        | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -660,6 +934,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      work_plan_status: [
+        "draft",
+        "submitted",
+        "pending",
+        "approved",
+        "rejected",
+      ],
+    },
   },
 } as const

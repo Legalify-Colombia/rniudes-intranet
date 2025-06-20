@@ -122,7 +122,7 @@ export function WorkPlanApproval() {
 
               <div>
                 <h4 className="font-medium mb-2">Horas totales asignadas:</h4>
-                <p className="text-sm">{plan.total_assigned_hours} horas</p>
+                <p className="text-sm">{plan.total_hours_assigned} horas</p>
               </div>
 
               <div>
