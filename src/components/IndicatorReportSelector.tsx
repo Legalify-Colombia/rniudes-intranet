@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -132,6 +131,13 @@ export function IndicatorReportSelector({ onReportCreated, existingReports }: In
     );
   }
 
+  // Filter periods to ensure only valid ones are used for SelectItems
+  const validPeriods = periods.filter(period => 
+    period.id && 
+    typeof period.id === 'string' && 
+    period.id.trim().length > 0
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -151,18 +157,11 @@ export function IndicatorReportSelector({ onReportCreated, existingReports }: In
                 <SelectValue placeholder="Selecciona un período" />
               </SelectTrigger>
               <SelectContent>
-                {periods.map((period) => {
-                  // Validate period ID before rendering - skip if invalid
-                  if (!period.id || typeof period.id !== 'string' || period.id.trim().length === 0) {
-                    console.warn('IndicatorReportSelector - Skipping invalid period:', period);
-                    return null;
-                  }
-                  return (
-                    <SelectItem key={period.id} value={period.id}>
-                      {period.name} ({new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()})
-                    </SelectItem>
-                  );
-                }).filter(Boolean)}
+                {validPeriods.map((period) => (
+                  <SelectItem key={period.id} value={period.id}>
+                    {period.name} ({new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
