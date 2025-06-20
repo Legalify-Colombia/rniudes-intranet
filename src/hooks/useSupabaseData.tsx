@@ -953,22 +953,19 @@ export function useSupabaseData() {
   };
 
   // Product Progress Reports functions
-  const fetchProductProgressReports = async (managerReportId: string) => {
-    const { data, error } = await supabase
-      .from('product_progress_reports')
-      .select(`
-        *,
-        product:product_id(
-          *,
-          action:action_id(
-            *,
-            strategic_axis:strategic_axis_id(*)
-          )
-        ),
-        work_plan_assignment:work_plan_assignment_id(*)
-      `)
-      .eq('manager_report_id', managerReportId);
-    return { data, error };
+  const fetchProductProgressReports = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('product_progress_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching product progress reports:', error);
+      return { data: null, error };
+    }
   };
 
   const upsertProductProgressReport = async (report: Omit<ProductProgressReport, 'id' | 'created_at' | 'updated_at'>) => {

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationFeed } from "@/components/NotificationFeed";
+import { StrategicAxesProgress } from "@/components/StrategicAxesProgress";
 import { 
   Users, 
   Building2, 
@@ -105,6 +107,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Estadísticas principales */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -159,6 +162,13 @@ export function Dashboard() {
         </Card>
       </div>
 
+      {/* Nuevas secciones principales */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <NotificationFeed />
+        <StrategicAxesProgress />
+      </div>
+
+      {/* Estadísticas detalladas */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
