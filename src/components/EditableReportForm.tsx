@@ -136,58 +136,90 @@ export function EditableReportForm({
     try {
       console.log('Guardando borrador con cambios locales:', localChanges);
       
-      // Guardar cada cambio local en la base de datos
-      const savePromises = Object.keys(localChanges).map(async (productId) => {
-        const assignment = assignments.find(a => a.product.id === productId);
-        if (!assignment) {
-          console.log('No se encontró assignment para producto:', productId);
-          return { data: null, error: null };
+      // Guardar cada cambio local en la base de datos uno por uno para mejor manejo de errores
+      const saveResults = [];
+      const saveErrors = [];
+      
+      for (const productId of Object.keys(localChanges)) {
+        try {
+          const assignment = assignments.find(a => a.product.id === productId);
+          if (!assignment) {
+            console.log('No se encontró assignment para producto:', productId);
+            continue;
+          }
+
+          const reportData = {
+            manager_report_id: reportId,
+            product_id: productId,
+            work_plan_assignment_id: assignment.id,
+            ...localChanges[productId]
+          };
+
+          console.log('Guardando reporte de producto:', reportData);
+          const result = await upsertProductProgressReport(reportData);
+          
+          if (result.error) {
+            console.error('Error guardando producto', productId, ':', result.error);
+            saveErrors.push({ productId, error: result.error });
+          } else {
+            console.log('Producto guardado exitosamente:', productId);
+            saveResults.push({ productId, data: result.data });
+          }
+        } catch (error) {
+          console.error('Error guardando producto', productId, ':', error);
+          saveErrors.push({ productId, error });
         }
+      }
 
-        const reportData = {
-          manager_report_id: reportId,
-          product_id: productId,
-          work_plan_assignment_id: assignment.id,
-          ...localChanges[productId]
-        };
-
-        console.log('Guardando reporte de producto:', reportData);
-        const result = await upsertProductProgressReport(reportData);
-        console.log('Resultado del guardado individual:', result);
-        return result;
-      });
-
-      const results = await Promise.all(savePromises);
-      console.log('Resultados del guardado:', results);
+      console.log('Resultados del guardado:', { saveResults, saveErrors });
       
-      // Verificar si hubo errores
-      const errors = results.filter(result => result && result.error);
-      if (errors.length > 0) {
-        console.error('Errores al guardar:', errors);
-        throw new Error(`Error al guardar ${errors.length} reportes`);
+      // Si hay errores, mostrarlos pero no fallar completamente si al menos algunos se guardaron
+      if (saveErrors.length > 0) {
+        console.error('Errores al guardar:', saveErrors);
+        
+        if (saveResults.length === 0) {
+          // Si todos fallaron, mostrar error
+          throw new Error(`No se pudo guardar ningún reporte. Errores: ${saveErrors.length}`);
+        } else {
+          // Si algunos se guardaron, mostrar advertencia
+          toast({
+            title: "Guardado parcial",
+            description: `Se guardaron ${saveResults.length} reportes, pero ${saveErrors.length} fallaron. Intenta guardar nuevamente.`,
+            variant: "destructive",
+          });
+        }
       }
       
-      // Limpiar cambios locales después de guardar exitosamente
-      setLocalChanges({});
-      
-      // Actualizar el estado del informe principal para asegurar que permanezca como draft
-      const updateResult = await updateManagerReport(reportId, { 
-        status: 'draft',
-        updated_at: new Date().toISOString()
-      });
+      // Si al menos algunos se guardaron, limpiar solo esos cambios locales
+      if (saveResults.length > 0) {
+        setLocalChanges(prev => {
+          const newChanges = { ...prev };
+          saveResults.forEach(({ productId }) => {
+            delete newChanges[productId];
+          });
+          return newChanges;
+        });
+        
+        // Actualizar el estado del informe principal
+        const updateResult = await updateManagerReport(reportId, { 
+          status: 'draft',
+          updated_at: new Date().toISOString()
+        });
 
-      if (updateResult.error) {
-        console.error('Error actualizando informe principal:', updateResult.error);
-        throw updateResult.error;
+        if (updateResult.error) {
+          console.error('Error actualizando informe principal:', updateResult.error);
+        }
+        
+        if (saveErrors.length === 0) {
+          toast({
+            title: "Éxito",
+            description: "Borrador guardado correctamente",
+          });
+        }
+        
+        // Recargar datos para mostrar lo guardado
+        await loadData();
       }
-      
-      toast({
-        title: "Éxito",
-        description: "Borrador guardado correctamente en la base de datos",
-      });
-      
-      // Recargar datos para mostrar lo guardado
-      await loadData();
     } catch (error) {
       console.error('Error saving draft:', error);
       toast({
