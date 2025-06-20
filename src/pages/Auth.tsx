@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,7 +30,13 @@ export default function Auth() {
     'Coordinador de Campus', 
     'Director de Programa',
     'Gestor de Internacionalización'
-  ].filter(position => position && position.trim() !== ''); // Ensure no empty strings
+  ].filter(position => {
+    const isValid = position && typeof position === 'string' && position.trim() !== '';
+    console.log('Auth - Position validation:', position, 'isValid:', isValid);
+    return isValid;
+  });
+
+  console.log('Auth - Final positions array:', positions);
 
   const getRoleFromPosition = (position: string) => {
     switch (position) {
@@ -48,10 +53,20 @@ export default function Auth() {
   };
 
   const handlePositionChange = (position: string) => {
-    console.log('Auth - Position selected:', position);
-    // Only set position if it's not empty and is a valid position
-    if (position && position.trim() !== "" && positions.includes(position)) {
+    console.log('Auth - Position selected (before validation):', position, 'type:', typeof position);
+    
+    // Extra validation to ensure position is not empty
+    if (!position || typeof position !== 'string' || position.trim() === '') {
+      console.error('Auth - Invalid position received:', position);
+      return;
+    }
+    
+    // Only set position if it's a valid position
+    if (positions.includes(position)) {
+      console.log('Auth - Setting valid position:', position);
       setFormData(prev => ({ ...prev, position }));
+    } else {
+      console.error('Auth - Position not in valid list:', position, 'valid positions:', positions);
     }
   };
 
@@ -158,25 +173,34 @@ export default function Auth() {
                 <div>
                   <Label htmlFor="position">Cargo</Label>
                   <Select 
-                    value={formData.position || ""} 
+                    value={formData.position || undefined} 
                     onValueChange={handlePositionChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar cargo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((position) => {
-                        console.log('Auth - Rendering SelectItem with value:', position);
-                        if (!position || position.trim() === '') {
-                          console.error('Auth - Empty position found:', position);
-                          return null;
-                        }
-                        return (
-                          <SelectItem key={position} value={position}>
-                            {position}
-                          </SelectItem>
-                        );
-                      })}
+                      {positions.length > 0 ? (
+                        positions.map((position) => {
+                          console.log('Auth - Rendering SelectItem with value:', `"${position}"`);
+                          
+                          // Triple check the position is valid
+                          if (!position || typeof position !== 'string' || position.trim() === '') {
+                            console.error('Auth - Skipping empty/invalid position:', position);
+                            return null;
+                          }
+                          
+                          return (
+                            <SelectItem key={position} value={position}>
+                              {position}
+                            </SelectItem>
+                          );
+                        })
+                      ) : (
+                        <SelectItem value="no-positions" disabled>
+                          No hay cargos disponibles
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
