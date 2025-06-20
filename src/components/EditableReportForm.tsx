@@ -507,12 +507,13 @@ export function EditableReportForm({
                                       max="100"
                                       value={progressReport.progress_percentage || 0}
                                       onChange={(e) => {
-                                        const newPercentage = parseInt(e.target.value) || 0;
+                                        const newPercentage = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
                                         updateLocalChanges(product.id, assignment.id, {
                                           progress_percentage: newPercentage
                                         });
                                       }}
                                       className="w-20"
+                                      placeholder="0"
                                     />
                                   ) : (
                                     <span className="font-medium">{progressReport.progress_percentage || 0}%</span>
@@ -538,8 +539,8 @@ export function EditableReportForm({
                                           observations: e.target.value
                                         });
                                       }}
-                                      placeholder="Observaciones..."
-                                      className="min-h-[60px]"
+                                      placeholder="Observaciones sobre el progreso..."
+                                      className="min-h-[60px] resize-none"
                                     />
                                   ) : (
                                     <div className="text-sm text-gray-600 max-w-xs">

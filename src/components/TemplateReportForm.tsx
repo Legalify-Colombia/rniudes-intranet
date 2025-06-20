@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,11 +24,17 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
     fetchReportTemplates,
     updateTemplateBasedReport,
     submitTemplateBasedReport,
-    uploadFile
+    uploadFile,
+    fetchStrategicAxes,
+    fetchActions,
+    fetchProducts
   } = useSupabaseData();
 
   const [report, setReport] = useState<any>(null);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
+  const [actions, setActions] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [versions, setVersions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,9 +46,12 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
   const loadData = async () => {
     setLoading(true);
     try {
-      const [reportResult, templatesResult] = await Promise.all([
+      const [reportResult, templatesResult, axesResult, actionsResult, productsResult] = await Promise.all([
         fetchTemplateBasedReportDetails(reportId),
-        fetchReportTemplates()
+        fetchReportTemplates(),
+        fetchStrategicAxes(),
+        fetchActions(),
+        fetchProducts()
       ]);
 
       if (reportResult.data) {
@@ -52,6 +60,9 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
       }
 
       setTemplates(templatesResult.data || []);
+      setStrategicAxes(axesResult.data || []);
+      setActions(actionsResult.data || []);
+      setProducts(productsResult.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -171,6 +182,66 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
     }
   };
 
+  const getElementsForTemplate = (template: any) => {
+    const elements = [];
+    
+    // Agregar ejes estratégicos
+    if (template.strategic_axes_ids && template.strategic_axes_ids.length > 0) {
+      template.strategic_axes_ids.forEach((axisId: string) => {
+        const axis = strategicAxes.find(a => a.id === axisId);
+        if (axis) {
+          elements.push({
+            type: 'axis',
+            id: axis.id,
+            code: axis.code,
+            name: axis.name,
+            fullName: `${axis.code} - ${axis.name}`
+          });
+        }
+      });
+    }
+
+    // Agregar acciones
+    if (template.actions_ids && template.actions_ids.length > 0) {
+      template.actions_ids.forEach((actionId: string) => {
+        const action = actions.find(a => a.id === actionId);
+        if (action) {
+          const axis = strategicAxes.find(ax => ax.id === action.strategic_axis_id);
+          elements.push({
+            type: 'action',
+            id: action.id,
+            code: action.code,
+            name: action.name,
+            fullName: `${action.code} - ${action.name}`,
+            axisName: axis ? `${axis.code} - ${axis.name}` : 'Sin eje'
+          });
+        }
+      });
+    }
+
+    // Agregar productos
+    if (template.products_ids && template.products_ids.length > 0) {
+      template.products_ids.forEach((productId: string) => {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          const action = actions.find(a => a.id === product.action_id);
+          const axis = action ? strategicAxes.find(ax => ax.id === action.strategic_axis_id) : null;
+          
+          elements.push({
+            type: 'product',
+            id: product.id,
+            name: product.name,
+            fullName: product.name,
+            actionName: action ? `${action.code} - ${action.name}` : 'Sin acción',
+            axisName: axis ? `${axis.code} - ${axis.name}` : 'Sin eje'
+          });
+        }
+      });
+    }
+
+    return elements;
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -184,6 +255,7 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
 
   return (
     <div className="space-y-6">
+      {/* Header del informe */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={onSave}>
@@ -215,135 +287,176 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Plantillas del Informe
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-1/4">Título del Indicador</TableHead>
-                  <TableHead className="w-2/5">Campo de Reporte</TableHead>
-                  <TableHead className="w-1/3">Observaciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {templates.map((template) => {
-                  const versionData = getVersionData(template.id);
-                  return (
-                    <TableRow key={template.id}>
-                      <TableCell className="align-top">
-                        <div className="space-y-2">
-                          <p className="font-medium">{template.name}</p>
-                          {template.description && (
-                            <p className="text-sm text-gray-600">{template.description}</p>
-                          )}
-                          <div className="flex flex-wrap gap-1">
-                            {template.strategic_axes_ids?.map((axisId: string, index: number) => (
-                              <Badge key={index} variant="outline">Eje {index + 1}</Badge>
-                            ))}
-                          </div>
-                          {template.sharepoint_base_url && (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => window.open(template.sharepoint_base_url, '_blank')}
+      {/* Plantillas del Informe */}
+      {templates.map((template) => {
+        const versionData = getVersionData(template.id);
+        const elements = getElementsForTemplate(template);
+
+        return (
+          <Card key={template.id}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {template.name}
+              </CardTitle>
+              {template.description && (
+                <p className="text-sm text-gray-600">{template.description}</p>
+              )}
+            </CardHeader>
+            <CardContent>
+              {elements.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Eje Estratégico</TableHead>
+                        <TableHead>Acción</TableHead>
+                        <TableHead>Indicador/Producto</TableHead>
+                        <TableHead>Progreso (%)</TableHead>
+                        <TableHead>URL Evidencia</TableHead>
+                        <TableHead>Evidencia Adjunta</TableHead>
+                        <TableHead>Observaciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {elements.map((element, index) => (
+                        <TableRow key={`${element.type}-${element.id}-${index}`}>
+                          <TableCell>
+                            <Badge 
+                              variant={element.type === 'axis' ? 'default' : element.type === 'action' ? 'secondary' : 'outline'}
                             >
-                              <Globe className="w-4 h-4 mr-1" />
-                              SharePoint
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium mb-1">
-                              Porcentaje de avance (%)
-                            </label>
-                            <div className="space-y-2">
+                              {element.type === 'axis' ? 'Eje' : element.type === 'action' ? 'Acción' : 'Producto'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {element.axisName || (element.type === 'axis' ? element.fullName : '-')}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {element.actionName || (element.type === 'action' ? element.fullName : '-')}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm font-medium">
+                              {element.type === 'product' ? element.name : element.fullName}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
                               <Input
                                 type="number"
                                 min="0"
                                 max="100"
-                                value={versionData.progress_percentage || 0}
-                                onChange={(e) => updateVersionData(template.id, 'progress_percentage', parseInt(e.target.value) || 0)}
-                                className="w-24"
+                                value={versionData[`${element.type}_${element.id}_progress`] || 0}
+                                onChange={(e) => updateVersionData(template.id, `${element.type}_${element.id}_progress`, parseInt(e.target.value) || 0)}
+                                className="w-20"
                               />
-                              <Progress value={versionData.progress_percentage || 0} className="w-full" />
+                              <Progress 
+                                value={versionData[`${element.type}_${element.id}_progress`] || 0} 
+                                className="w-24" 
+                              />
                             </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium mb-1">
-                              URL Carpeta SharePoint
-                            </label>
+                          </TableCell>
+                          <TableCell>
                             <Input
-                              value={versionData.sharepoint_folder_url || ''}
-                              onChange={(e) => updateVersionData(template.id, 'sharepoint_folder_url', e.target.value)}
-                              placeholder="URL específica del proyecto"
+                              value={versionData[`${element.type}_${element.id}_url`] || ''}
+                              onChange={(e) => updateVersionData(template.id, `${element.type}_${element.id}_url`, e.target.value)}
+                              placeholder="URL de evidencia"
+                              className="w-48"
                             />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium mb-1">
-                              Evidencias
-                            </label>
+                          </TableCell>
+                          <TableCell>
                             <Input
                               type="file"
                               multiple
                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                               onChange={(e) => {
                                 if (e.target.files) {
-                                  handleFileUpload(template.id, e.target.files);
+                                  handleFileUpload(`${element.type}_${element.id}`, e.target.files);
                                 }
                               }}
+                              className="w-48"
                             />
-                            {versionData.evidence_links?.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {versionData.evidence_links.map((link: string, index: number) => (
-                                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
-                                    <span>Evidencia {index + 1}</span>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        const newLinks = [...versionData.evidence_links];
-                                        newLinks.splice(index, 1);
-                                        updateVersionData(template.id, 'evidence_links', newLinks);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                ))}
+                            {versionData[`${element.type}_${element.id}_files`]?.length > 0 && (
+                              <div className="mt-1 text-xs text-gray-600">
+                                {versionData[`${element.type}_${element.id}_files`].length} archivo(s)
                               </div>
                             )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Textarea
-                          value={versionData.observations || ''}
-                          onChange={(e) => updateVersionData(template.id, 'observations', e.target.value)}
-                          placeholder="Observaciones sobre el progreso..."
-                          rows={4}
-                          className="w-full"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                          </TableCell>
+                          <TableCell>
+                            <Textarea
+                              value={versionData[`${element.type}_${element.id}_observations`] || ''}
+                              onChange={(e) => updateVersionData(template.id, `${element.type}_${element.id}_observations`, e.target.value)}
+                              placeholder="Observaciones..."
+                              rows={2}
+                              className="w-64"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Esta plantilla no tiene elementos específicos configurados</p>
+                  <p className="text-sm">Configure ejes, acciones o productos en la plantilla</p>
+                </div>
+              )}
+
+              {/* Información general de la plantilla */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Porcentaje General de Avance (%)
+                    </label>
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={versionData.progress_percentage || 0}
+                        onChange={(e) => updateVersionData(template.id, 'progress_percentage', parseInt(e.target.value) || 0)}
+                        className="w-24"
+                      />
+                      <Progress value={versionData.progress_percentage || 0} className="w-full" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      URL Carpeta SharePoint
+                    </label>
+                    <Input
+                      value={versionData.sharepoint_folder_url || ''}
+                      onChange={(e) => updateVersionData(template.id, 'sharepoint_folder_url', e.target.value)}
+                      placeholder="URL específica del proyecto"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">
+                    Observaciones Generales
+                  </label>
+                  <Textarea
+                    value={versionData.observations || ''}
+                    onChange={(e) => updateVersionData(template.id, 'observations', e.target.value)}
+                    placeholder="Observaciones generales sobre el progreso de la plantilla..."
+                    rows={3}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
