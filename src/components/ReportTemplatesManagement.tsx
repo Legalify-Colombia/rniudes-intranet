@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -213,7 +212,6 @@ export function ReportTemplatesManagement() {
                       <SelectValue placeholder="Seleccionar eje estratégico" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos los ejes</SelectItem>
                       {strategicAxes.map((axis) => (
                         <SelectItem key={axis.id} value={axis.id}>
                           {axis.code} - {axis.name}
@@ -237,7 +235,6 @@ export function ReportTemplatesManagement() {
                       <SelectValue placeholder="Seleccionar acción" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas las acciones</SelectItem>
                       {filteredActions.map((action) => (
                         <SelectItem key={action.id} value={action.id}>
                           {action.code} - {action.name}
@@ -257,7 +254,6 @@ export function ReportTemplatesManagement() {
                       <SelectValue placeholder="Seleccionar producto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos los productos</SelectItem>
                       {filteredProducts.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
                           {product.name}
