@@ -4,8 +4,8 @@ export interface StrategicAxis {
   id: string;
   name: string;
   description: string;
-  usage_type: 'gestores' | 'internacionalizacion';
-  is_active: boolean;
+  code: string;
+  usage_type: string[] | 'gestores' | 'internacionalizacion';
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -15,9 +15,9 @@ export interface Action {
   id: string;
   name: string;
   description: string;
+  code: string;
   strategic_axis_id: string;
-  usage_type: 'gestores' | 'internacionalizacion';
-  is_active: boolean;
+  usage_type: string[] | 'gestores' | 'internacionalizacion';
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -28,32 +28,51 @@ export interface Product {
   name: string;
   description: string;
   action_id: string;
-  usage_type: 'gestores' | 'internacionalizacion';
-  is_active: boolean;
+  usage_type: string[] | 'gestores' | 'internacionalizacion';
   created_by: string;
   created_at: string;
   updated_at: string;
 }
 
 // Campus and academic types
+export interface Campus {
+  id: string;
+  name: string;
+  address: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Faculty {
+  id: string;
+  name: string;
+  dean_name: string;
+  campus_id: string;
+  created_at: string;
+  updated_at: string;
+  campus?: Campus;
+  faculty_campus?: Array<{
+    campus: Campus;
+  }>;
+}
+
 export interface AcademicProgram {
   id: string;
   name: string;
-  snies_code: string;
-  level: string;
   campus_id: string;
   faculty_id: string;
+  director_name: string;
+  director_email: string;
+  manager_id?: string;
   created_at: string;
   updated_at: string;
-  campus?: {
+  campus?: Campus;
+  faculty?: Faculty;
+  faculties?: Faculty;
+  manager?: {
     id: string;
-    name: string;
-    address: string;
-  };
-  faculties?: {
-    id: string;
-    name: string;
-    dean_name: string;
+    full_name: string;
+    email: string;
   };
 }
 
@@ -62,26 +81,24 @@ export interface Profile {
   id: string;
   email: string;
   full_name: string;
-  role: 'Administrador' | 'Gestor' | 'Usuario';
+  document_number: string;
+  position: string;
+  role: 'Administrador' | 'Gestor' | 'Usuario' | 'Coordinador';
   campus_id?: string;
   managed_campus_ids?: string[];
   weekly_hours?: number;
   number_of_weeks?: number;
   total_hours?: number;
-  is_active: boolean;
   created_at: string;
   updated_at: string;
-  campus?: {
-    id: string;
-    name: string;
-    address: string;
-  };
+  campus?: Campus;
 }
 
 // Report types
 export interface ReportPeriod {
   id: string;
   name: string;
+  description?: string;
   start_date: string;
   end_date: string;
   is_active: boolean;
@@ -93,8 +110,14 @@ export interface ReportPeriod {
 export interface ManagerReport {
   id: string;
   manager_id: string;
+  work_plan_id: string;
   report_period_id: string;
-  status: 'draft' | 'submitted' | 'approved';
+  title: string;
+  description?: string;
+  status: 'draft' | 'submitted' | 'reviewed';
+  total_progress_percentage?: number;
+  completion_percentage?: number;
+  requires_improvement_plan?: boolean;
   submitted_date?: string;
   approved_date?: string;
   approved_by?: string;
@@ -102,16 +125,56 @@ export interface ManagerReport {
   created_at: string;
   updated_at: string;
   report_periods?: ReportPeriod;
+  report_period?: ReportPeriod;
+  manager?: Profile;
+  work_plan?: any;
 }
 
 export interface ProductProgressReport {
   id: string;
   manager_report_id: string;
   product_id: string;
+  work_plan_assignment_id: string;
   progress_percentage: number;
-  activities_description: string;
-  difficulties?: string;
+  observations?: string;
   evidence_files?: string[];
+  evidence_file_names?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Document template types
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_type: 'pdf' | 'doc';
+  template_content: string;
+  file_url?: string;
+  file_name?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Specific lines and indicators
+export interface SpecificLine {
+  id: string;
+  title: string;
+  description?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Indicator {
+  id: string;
+  name: string;
+  data_type: string;
+  is_active: boolean;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -120,6 +183,8 @@ export interface ProductProgressReport {
 export interface InternationalizationProject {
   id: string;
   project_title: string;
+  project_summary?: string;
+  introduction?: string;
   general_objective: string;
   specific_objectives: string[];
   methodology: string;
@@ -129,6 +194,9 @@ export interface InternationalizationProject {
   justification: string;
   bibliography: string;
   beneficiaries_description: string;
+  impact?: string;
+  indicators_text?: string;
+  results?: string;
   strategic_axis_id: string;
   specific_line_id: string;
   program_id: string;
@@ -138,18 +206,12 @@ export interface InternationalizationProject {
   approved_date?: string;
   approved_by?: string;
   approval_comments?: string;
-  proposal_file_url?: string;
-  proposal_file_name?: string;
   participation_letter_url?: string;
   participation_letter_name?: string;
   created_at: string;
   updated_at: string;
   strategic_axes?: StrategicAxis;
-  specific_lines?: {
-    id: string;
-    title: string;
-    description: string;
-  };
+  specific_lines?: SpecificLine;
   academic_programs?: AcademicProgram;
 }
 
@@ -161,6 +223,9 @@ export interface ProjectPartnerInstitution {
   contact_person: string;
   contact_email: string;
   collaboration_type: string;
+  country: string;
+  contact_professor_name: string;
+  contact_professor_email: string;
   created_at: string;
 }
 
@@ -173,18 +238,18 @@ export interface InternationalizationReport {
   activities_executed: string;
   activities_in_progress: string;
   project_timing: 'ahead' | 'on_time' | 'delayed';
+  project_status?: string;
   abnormal_reason?: string;
   difficulties: string[];
-  evidence_files: string[];
   next_period_activities: string;
   observations?: string;
-  status: 'draft' | 'submitted' | 'approved';
+  status: 'draft' | 'submitted' | 'reviewed';
   submitted_date?: string;
-  approved_date?: string;
-  approved_by?: string;
-  approval_comments?: string;
+  reviewed_date?: string;
+  reviewed_by?: string;
   created_at: string;
   updated_at: string;
   internationalization_projects?: InternationalizationProject;
   report_periods?: ReportPeriod;
 }
+
