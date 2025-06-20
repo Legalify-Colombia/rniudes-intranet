@@ -1,19 +1,7 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Profile {
-  id: string;
-  full_name: string;
-  document_number: string;
-  email: string;
-  position: string;
-  role: string;
-  weekly_hours?: number;
-  number_of_weeks?: number;
-  total_hours?: number;
-}
+import { Profile } from '@/types';
 
 interface AuthContextType {
   user: User | null;
@@ -52,12 +40,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Función para cargar el perfil del usuario
+    // Función para cargar el perfil del usuario con información del campus
     const loadUserProfile = async (userId: string) => {
       try {
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select(`
+            *,
+            campus:campus_id (
+              name
+            )
+          `)
           .eq('id', userId)
           .single();
         
