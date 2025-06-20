@@ -1,16 +1,14 @@
 
-import { useUser, useSupabaseClient } from "@supabase/auth-helpers-react";
-import { Session } from "@supabase/supabase-js";
 import { useState, useEffect } from "react";
-
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
 
 type Result<T> = { data: T | null; error: any };
 
 export function useSupabaseData() {
   const [profile, setProfile] = useState<Database["public"]["Tables"]["profiles"]["Row"] | null>(null);
-  const supabase = useSupabaseClient<Database>();
-  const user = useUser();
+  const { user } = useAuth();
 
   useEffect(() => {
     const getProfile = async () => {
@@ -32,7 +30,7 @@ export function useSupabaseData() {
     };
 
     getProfile();
-  }, [user, supabase]);
+  }, [user]);
 
   const updateProfile = async (updates: Database["public"]["Tables"]["profiles"]["Update"]) => {
     if (!user) {
@@ -81,6 +79,15 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const fetchFacultiesByCampus = async (campusId: string): Promise<Result<Database["public"]["Tables"]["faculties"]["Row"][]>> => {
+    const { data, error } = await supabase
+      .from("faculties")
+      .select("*")
+      .eq("campus_id", campusId)
+      .order("name");
+    return { data, error };
+  };
+
   const createFaculty = async (faculty: Database["public"]["Tables"]["faculties"]["Insert"]): Promise<Result<Database["public"]["Tables"]["faculties"]["Row"]>> => {
     const { data, error } = await supabase.from("faculties").insert(faculty).select().single();
     return { data, error };
@@ -106,9 +113,22 @@ export function useSupabaseData() {
     return fetchPrograms();
   };
 
+  const fetchAcademicProgramsByCampus = async (campusId: string): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"][]>> => {
+    const { data, error } = await supabase
+      .from("academic_programs")
+      .select("*")
+      .eq("campus_id", campusId)
+      .order("name");
+    return { data, error };
+  };
+
   const createProgram = async (program: Database["public"]["Tables"]["academic_programs"]["Insert"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
     const { data, error } = await supabase.from("academic_programs").insert(program).select().single();
     return { data, error };
+  };
+
+  const createAcademicProgram = async (program: Database["public"]["Tables"]["academic_programs"]["Insert"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
+    return createProgram(program);
   };
 
   const updateProgram = async (id: string, updates: Database["public"]["Tables"]["academic_programs"]["Update"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
@@ -116,9 +136,17 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const updateAcademicProgram = async (id: string, updates: Database["public"]["Tables"]["academic_programs"]["Update"]): Promise<Result<Database["public"]["Tables"]["academic_programs"]["Row"]>> => {
+    return updateProgram(id, updates);
+  };
+
   const deleteProgram = async (id: string): Promise<Result<any>> => {
     const { data, error } = await supabase.from("academic_programs").delete().eq("id", id);
     return { data, error };
+  };
+
+  const deleteAcademicProgram = async (id: string): Promise<Result<any>> => {
+    return deleteProgram(id);
   };
 
   // Strategic Axes CRUD
@@ -194,6 +222,50 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const fetchManagersByCampus = async (campusId: string): Promise<Result<Database["public"]["Tables"]["profiles"]["Row"][]>> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("role", "Gestor")
+      .eq("campus_id", campusId)
+      .order("full_name");
+    return { data, error };
+  };
+
+  const updateManagerHours = async (managerId: string, updates: { weekly_hours?: number; total_hours?: number }): Promise<Result<Database["public"]["Tables"]["profiles"]["Row"]>> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", managerId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const getUserManagedCampus = async (userId: string): Promise<Result<Database["public"]["Tables"]["campus"]["Row"][]>> => {
+    const { data: userProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("managed_campus_ids")
+      .eq("id", userId)
+      .single();
+
+    if (profileError) return { data: null, error: profileError };
+
+    if (!userProfile.managed_campus_ids) {
+      // Super admin - fetch all campus
+      const { data, error } = await supabase.from("campus").select("*").order("name");
+      return { data, error };
+    }
+
+    // Fetch only managed campus
+    const { data, error } = await supabase
+      .from("campus")
+      .select("*")
+      .in("id", userProfile.managed_campus_ids)
+      .order("name");
+    return { data, error };
+  };
+
   // Work Plans CRUD
   const fetchWorkPlans = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
@@ -203,6 +275,61 @@ export function useSupabaseData() {
         manager:profiles!custom_plans_manager_id_fkey(*)
       `)
       .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  // Custom Plans
+  const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        plan_type:plan_types(*),
+        responses:custom_plan_responses(*)
+      `)
+      .eq("id", planId)
+      .single();
+    return { data, error };
+  };
+
+  const fetchPlanFields = async (planTypeId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .select("*")
+      .eq("plan_type_id", planTypeId)
+      .order("field_order");
+    return { data, error };
+  };
+
+  const updateCustomPlan = async (planId: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .update(updates)
+      .eq("id", planId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const submitCustomPlan = async (planId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .update({ 
+        status: "submitted",
+        submitted_date: new Date().toISOString()
+      })
+      .eq("id", planId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const upsertCustomPlanResponse = async (response: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_responses")
+      .upsert(response)
+      .select()
+      .single();
     return { data, error };
   };
 
@@ -489,9 +616,11 @@ export function useSupabaseData() {
     createCampus,
     updateCampus,
     deleteCampus,
+    getUserManagedCampus,
     
     // Faculties
     fetchFaculties,
+    fetchFacultiesByCampus,
     createFaculty,
     updateFaculty,
     deleteFaculty,
@@ -499,9 +628,13 @@ export function useSupabaseData() {
     // Academic Programs
     fetchPrograms,
     fetchAcademicPrograms,
+    fetchAcademicProgramsByCampus,
     createProgram,
+    createAcademicProgram,
     updateProgram,
+    updateAcademicProgram,
     deleteProgram,
+    deleteAcademicProgram,
     
     // Strategic Axes
     fetchStrategicAxes,
@@ -523,9 +656,18 @@ export function useSupabaseData() {
     
     // Managers
     fetchManagers,
+    fetchManagersByCampus,
+    updateManagerHours,
     
     // Work Plans
     fetchWorkPlans,
+    
+    // Custom Plans
+    fetchCustomPlanDetails,
+    fetchPlanFields,
+    updateCustomPlan,
+    submitCustomPlan,
+    upsertCustomPlanResponse,
     
     // Manager Reports
     fetchManagerReports,
