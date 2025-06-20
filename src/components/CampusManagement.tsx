@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +105,8 @@ export function CampusManagement() {
         }
         setFaculties(allFaculties);
       } else {
-        const { data: facultiesData } = await fetchFacultiesByCampus();
+        // For super admin, fetch all faculties by passing undefined
+        const { data: facultiesData } = await fetchFacultiesByCampus(undefined);
         setFaculties(facultiesData || []);
       }
     } catch (error) {
