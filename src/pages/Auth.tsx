@@ -47,12 +47,29 @@ export default function Auth() {
     }
   };
 
+  const handlePositionChange = (position: string) => {
+    // Only set position if it's not empty
+    if (position && position.trim() !== "") {
+      setFormData(prev => ({ ...prev, position }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isSignUp) {
+        if (!formData.position || formData.position.trim() === "") {
+          toast({
+            title: 'Error',
+            description: 'El cargo es requerido',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
         const { error } = await signUp({
           email: formData.email,
           password: formData.password,
@@ -139,12 +156,12 @@ export default function Auth() {
                 
                 <div>
                   <Label htmlFor="position">Cargo</Label>
-                  <Select value={formData.position} onValueChange={(value) => setFormData(prev => ({ ...prev, position: value }))}>
+                  <Select value={formData.position} onValueChange={handlePositionChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar cargo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((position) => (
+                      {positions.filter(position => position && position.trim() !== "").map((position) => (
                         <SelectItem key={position} value={position}>
                           {position}
                         </SelectItem>

@@ -92,10 +92,13 @@ export function UserManagement() {
   };
 
   const handlePositionChange = (position: string) => {
-    setFormData(prev => ({
-      ...prev,
-      position,
-    }));
+    // Only set position if it's not empty
+    if (position && position.trim() !== "") {
+      setFormData(prev => ({
+        ...prev,
+        position,
+      }));
+    }
   };
 
   const calculateTotalHours = () => {
@@ -109,6 +112,15 @@ export function UserManagement() {
       toast({
         title: "Error",
         description: "La contraseña es requerida para nuevos usuarios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.position || formData.position.trim() === "") {
+      toast({
+        title: "Error",
+        description: "El cargo es requerido",
         variant: "destructive"
       });
       return;
@@ -326,7 +338,7 @@ export function UserManagement() {
                     <SelectValue placeholder="Seleccionar cargo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {positions.map((position) => (
+                    {positions.filter(position => position && position.trim() !== "").map((position) => (
                       <SelectItem key={position} value={position}>
                         {position}
                       </SelectItem>
@@ -335,7 +347,7 @@ export function UserManagement() {
                 </Select>
               </div>
 
-              {formData.position && (
+              {formData.position && formData.position.trim() !== "" && (
                 <div className="space-y-2">
                   <Label>Rol en el Sistema</Label>
                   <Input
