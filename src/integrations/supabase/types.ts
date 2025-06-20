@@ -65,13 +65,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "academic_programs_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
-          },
         ]
       }
       actions: {
@@ -109,13 +102,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "actions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "actions_strategic_axis_id_fkey"
@@ -270,13 +256,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "manager_reports_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
-          },
-          {
             foreignKeyName: "manager_reports_work_plan_id_fkey"
             columns: ["work_plan_id"]
             isOneToOne: true
@@ -387,18 +366,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "product_responses_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["product_id"]
-          },
-          {
             foreignKeyName: "product_responses_report_id_fkey"
             columns: ["report_id"]
             isOneToOne: false
             referencedRelation: "manager_reports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_responses_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
           },
         ]
       }
@@ -441,13 +420,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
           },
         ]
       }
@@ -526,13 +498,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "strategic_axes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
-          },
         ]
       }
       work_plan_assignments: {
@@ -567,13 +532,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_plan_assignments_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "work_plan_assignments_work_plan_id_fkey"
@@ -611,7 +569,7 @@ export type Database = {
           manager_id: string
           objectives: string | null
           program_id: string
-          status: string
+          status: Database["public"]["Enums"]["work_plan_status"] | null
           submitted_date: string | null
           total_hours_assigned: number
           updated_at: string | null
@@ -628,7 +586,7 @@ export type Database = {
           manager_id: string
           objectives?: string | null
           program_id: string
-          status?: string
+          status?: Database["public"]["Enums"]["work_plan_status"] | null
           submitted_date?: string | null
           total_hours_assigned: number
           updated_at?: string | null
@@ -645,7 +603,7 @@ export type Database = {
           manager_id?: string
           objectives?: string | null
           program_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["work_plan_status"] | null
           submitted_date?: string | null
           total_hours_assigned?: number
           updated_at?: string | null
@@ -659,25 +617,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "work_plans_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
-          },
-          {
             foreignKeyName: "work_plans_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_plans_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "work_plans_program_id_fkey"
@@ -738,6 +682,20 @@ export type Database = {
             referencedRelation: "faculties"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "work_plan_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       work_plans_with_manager: {
@@ -759,7 +717,7 @@ export type Database = {
           objectives: string | null
           program_id: string | null
           program_name: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["work_plan_status"] | null
           submitted_date: string | null
           total_hours_assigned: number | null
           updated_at: string | null
@@ -773,25 +731,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "work_plans_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
-          },
-          {
             foreignKeyName: "work_plans_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_plans_manager_id_fkey"
-            columns: ["manager_id"]
-            isOneToOne: false
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "work_plans_program_id_fkey"

@@ -56,11 +56,15 @@ export interface WorkPlan {
   manager_id: string;
   program_id: string;
   total_hours_assigned: number;
-  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'submitted' | 'approved' | 'rejected';
   comments?: string;
   coordinator_approval_date?: string;
   coordinator_comments?: string;
   approved_by?: string;
+  objectives?: string;
+  approval_comments?: string;
+  approved_date?: string;
+  submitted_date?: string;
 }
 
 export interface WorkPlanAssignment {
