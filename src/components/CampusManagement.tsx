@@ -93,9 +93,20 @@ export function CampusManagement() {
         : campusData || [];
       setCampuses(filteredCampuses);
 
-      // Load faculties with proper filtering
-      const { data: facultiesData } = await fetchFacultiesByCampus(managedCampusIds.length > 0 ? managedCampusIds : undefined);
-      setFaculties(facultiesData || []);
+      // Load faculties with proper filtering - pass each campus ID individually
+      if (managedCampusIds.length > 0) {
+        const allFaculties = [];
+        for (const campusId of managedCampusIds) {
+          const { data: facultiesData } = await fetchFacultiesByCampus(campusId);
+          if (facultiesData) {
+            allFaculties.push(...facultiesData);
+          }
+        }
+        setFaculties(allFaculties);
+      } else {
+        const { data: facultiesData } = await fetchFacultiesByCampus();
+        setFaculties(facultiesData || []);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -114,7 +125,14 @@ export function CampusManagement() {
 
   const onSubmit = async (values: CampusSchemaType) => {
     try {
-      const { error } = await createCampus(values);
+      // Ensure all required fields are present
+      const campusData = {
+        name: values.name,
+        address: values.address,
+        description: values.description || null
+      };
+      
+      const { error } = await createCampus(campusData);
       if (error) {
         toast({
           title: "Error",
@@ -142,7 +160,14 @@ export function CampusManagement() {
   const onEditSubmit = async (values: CampusSchemaType) => {
     if (!selectedCampus) return;
     try {
-      const { error } = await updateCampus(selectedCampus.id, values);
+      // Ensure all required fields are present
+      const campusData = {
+        name: values.name,
+        address: values.address,
+        description: values.description || null
+      };
+      
+      const { error } = await updateCampus(selectedCampus.id, campusData);
       if (error) {
         toast({
           title: "Error",
