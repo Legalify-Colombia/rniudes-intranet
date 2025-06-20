@@ -31,7 +31,6 @@ export function SniesConfigurationManagement() {
     bulkCreateSniesProgramTypes,
     bulkCreateSniesRecognitionTypes,
     bulkCreateSniesDepartments,
-    parseCSV
   } = useSupabaseData();
   
   const { toast } = useToast();
@@ -113,6 +112,67 @@ export function SniesConfigurationManagement() {
     }
   };
 
+  // Función mejorada para parsear CSV con mapeo de columnas
+  const parseCSVWithMapping = (csvText: string, type: string): any[] => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const result = [];
+    
+    // Mapeo de columnas según el tipo
+    const columnMappings: { [key: string]: { [key: string]: string } } = {
+      countries: {
+        'ID_PAIS': 'id',
+        'DESC_PAIS': 'name',
+        'ALFA-3': 'alpha_3',
+        'ALFA-2': 'alpha_2',
+        'id': 'id',
+        'name': 'name',
+        'description': 'description',
+        'alpha_3': 'alpha_3',
+        'alpha_2': 'alpha_2'
+      },
+      municipalities: {
+        'ID_MUNICIPIO': 'id',
+        'DESC_MUNICIPIO': 'name',
+        'ID_PAIS': 'country_id',
+        'COD_DEPARTAMENTO': 'department_code',
+        'id': 'id',
+        'name': 'name',
+        'description': 'description',
+        'country_id': 'country_id'
+      },
+      departments: {
+        'ID_DEPARTAMENTO': 'id',
+        'DESC_DEPARTAMENTO': 'name',
+        'ID_PAIS': 'country_id',
+        'id': 'id',
+        'name': 'name',
+        'description': 'description',
+        'country_id': 'country_id'
+      }
+    };
+
+    const mapping = columnMappings[type] || {};
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      if (values.length === headers.length) {
+        const row: any = {};
+        headers.forEach((header, index) => {
+          const mappedColumn = mapping[header] || header.toLowerCase();
+          row[mappedColumn] = values[index];
+        });
+        // Agregar campos por defecto
+        row.is_active = true;
+        result.push(row);
+      }
+    }
+    
+    return result;
+  };
+
   const handleCreateItem = async (type: string) => {
     if (!newItem.id || !newItem.name) {
       toast({
@@ -186,10 +246,12 @@ export function SniesConfigurationManagement() {
     }
 
     try {
-      const parsedData = parseCSV(csvData);
+      const parsedData = parseCSVWithMapping(csvData, type);
       if (!parsedData.length) {
         throw new Error("No se pudieron parsear los datos CSV");
       }
+
+      console.log('Parsed data for', type, ':', parsedData);
 
       let result;
       switch (type) {
