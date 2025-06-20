@@ -71,6 +71,34 @@ export interface WorkPlanAssignment {
   product?: Product;
 }
 
+export interface ManagerReport {
+  id: string;
+  manager_id: string;
+  work_plan_id: string;
+  title: string;
+  description?: string;
+  general_report_url?: string;
+  general_report_file_name?: string;
+  status: 'draft' | 'submitted' | 'reviewed';
+  submitted_date?: string;
+  created_at: string;
+  updated_at: string;
+  manager?: any;
+  work_plan?: WorkPlan;
+}
+
+export interface ProductResponse {
+  id: string;
+  report_id: string;
+  product_id: string;
+  response_text?: string;
+  file_url?: string;
+  file_name?: string;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+}
+
 export function useSupabaseData() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -220,7 +248,14 @@ export function useSupabaseData() {
         *,
         campus:campus_id(*),
         faculty:faculty_id(*),
-        manager:manager_id(*)
+        manager:manager_id(
+          *,
+          academic_programs(
+            *,
+            campus:campus_id(*),
+            faculty:faculty_id(*)
+          )
+        )
       `)
       .order('name');
     return { data, error };
@@ -253,11 +288,18 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  // Manager functions - filtrar solo gestores disponibles
+  // Manager functions - Mejorada para incluir relaciones completas
   const fetchManagers = async () => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`
+        *,
+        academic_programs(
+          *,
+          campus:campus_id(*),
+          faculty:faculty_id(*)
+        )
+      `)
       .eq('role', 'Gestor')
       .order('full_name');
     return { data, error };
@@ -412,7 +454,11 @@ export function useSupabaseData() {
       .select(`
         *,
         manager:manager_id(*),
-        program:program_id(*)
+        program:program_id(
+          *,
+          campus:campus_id(*),
+          faculty:faculty_id(*)
+        )
       `)
       .order('created_at', { ascending: false });
     return { data, error };
@@ -473,6 +519,105 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Manager Reports functions
+  const fetchManagerReports = async () => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        manager:manager_id(*),
+        work_plan:work_plan_id(
+          *,
+          program:program_id(*)
+        )
+      `)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  };
+
+  const fetchManagerReportsByManager = async (managerId: string) => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        work_plan:work_plan_id(*)
+      `)
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  };
+
+  const createManagerReport = async (report: Omit<ManagerReport, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .insert([report])
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReport = async (id: string, updates: Partial<ManagerReport>) => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Product Responses functions
+  const fetchProductResponses = async (reportId: string) => {
+    const { data, error } = await supabase
+      .from('product_responses')
+      .select(`
+        *,
+        product:product_id(
+          *,
+          action:action_id(
+            *,
+            strategic_axis:strategic_axis_id(*)
+          )
+        )
+      `)
+      .eq('report_id', reportId);
+    return { data, error };
+  };
+
+  const upsertProductResponse = async (response: Omit<ProductResponse, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('product_responses')
+      .upsert([response], { onConflict: 'report_id,product_id' })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // File upload function
+  const uploadFile = async (file: File, bucket: string, path: string) => {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+    
+    if (error) return { data: null, error };
+    
+    const { data: urlData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(path);
+    
+    return { data: { ...data, publicUrl: urlData.publicUrl }, error: null };
+  };
+
+  const deleteFile = async (bucket: string, path: string) => {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .remove([path]);
+    return { data, error };
+  };
+
   return {
     loading,
     setLoading,
@@ -517,5 +662,16 @@ export function useSupabaseData() {
     fetchWorkPlanAssignments,
     upsertWorkPlanAssignment,
     deleteWorkPlanAssignment,
+    // Manager Reports
+    fetchManagerReports,
+    fetchManagerReportsByManager,
+    createManagerReport,
+    updateManagerReport,
+    // Product Responses
+    fetchProductResponses,
+    upsertProductResponse,
+    // File Management
+    uploadFile,
+    deleteFile,
   };
 }

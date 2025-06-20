@@ -1,188 +1,197 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, CheckCircle, XCircle, Filter } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { WorkPlanForm } from "./WorkPlanForm";
+import { Edit, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 export function InternationalizationManagers() {
-  const { fetchManagers, fetchWorkPlans, updateWorkPlan, fetchCampus } = useSupabaseData();
-  const { profile } = useAuth();
+  const { 
+    fetchManagers, 
+    updateManagerHours,
+    fetchCampus
+  } = useSupabaseData();
   const { toast } = useToast();
-
+  
   const [managers, setManagers] = useState<any[]>([]);
-  const [workPlans, setWorkPlans] = useState<any[]>([]);
-  const [campus, setCampus] = useState<any[]>([]);
-  const [selectedManager, setSelectedManager] = useState<any>(null);
-  const [workPlanDialog, setWorkPlanDialog] = useState(false);
-  const [approvalDialog, setApprovalDialog] = useState(false);
-  const [approvalComments, setApprovalComments] = useState('');
+  const [campuses, setCampuses] = useState<any[]>([]);
+  const [filteredManagers, setFilteredManagers] = useState<any[]>([]);
+  const [selectedCampus, setSelectedCampus] = useState<string>("todos");
   const [loading, setLoading] = useState(true);
-  const [selectedCampus, setSelectedCampus] = useState<string>("all");
+  const [selectedManager, setSelectedManager] = useState<any>(null);
+  const [showWorkPlanForm, setShowWorkPlanForm] = useState(false);
+  const [editingHours, setEditingHours] = useState<{[key: string]: {weekly: string, weeks: string}}>({});
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    filterManagers();
+  }, [managers, selectedCampus]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: managersData } = await fetchManagers();
-      const { data: workPlansData } = await fetchWorkPlans();
+      // Cargar campus
       const { data: campusData } = await fetchCampus();
-      
+      setCampuses(campusData || []);
+
+      // Cargar gestores con sus relaciones
+      const { data: managersData } = await fetchManagers();
+      console.log('Managers data:', managersData);
       setManagers(managersData || []);
-      setWorkPlans(workPlansData || []);
-      setCampus(campusData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los datos",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const getManagerWorkPlan = (managerId: string) => {
-    return workPlans.find(plan => plan.manager_id === managerId);
-  };
-
-  const getStatusText = (status?: string) => {
-    switch (status) {
-      case 'draft': return 'Borrador';
-      case 'submitted': return 'En revisión';
-      case 'approved': return 'Aprobado';
-      case 'rejected': return 'Rechazado';
-      default: return 'Sin plan';
+  const filterManagers = () => {
+    if (selectedCampus === "todos") {
+      setFilteredManagers(managers);
+    } else {
+      const filtered = managers.filter(manager => 
+        manager.academic_programs?.some((program: any) => 
+          program.campus_id === selectedCampus
+        )
+      );
+      setFilteredManagers(filtered);
     }
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'draft': return 'bg-yellow-100 text-yellow-800';
-      case 'submitted': return 'bg-blue-100 text-blue-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const getManagerProgram = (manager: any) => {
+    return manager.academic_programs?.[0] || null;
+  };
+
+  const getManagerCampus = (manager: any) => {
+    const program = getManagerProgram(manager);
+    return program?.campus?.name || "Sin asignar";
+  };
+
+  const getManagerFaculty = (manager: any) => {
+    const program = getManagerProgram(manager);
+    return program?.faculty?.name || "Sin asignar";
+  };
+
+  const getManagerProgramName = (manager: any) => {
+    const program = getManagerProgram(manager);
+    return program?.name || "Sin asignar";
+  };
+
+  const handleEditHours = (managerId: string) => {
+    const manager = managers.find(m => m.id === managerId);
+    if (manager) {
+      setEditingHours(prev => ({
+        ...prev,
+        [managerId]: {
+          weekly: (manager.weekly_hours || 0).toString(),
+          weeks: (manager.number_of_weeks || 16).toString()
+        }
+      }));
     }
   };
 
-  const openWorkPlan = (manager: any) => {
-    setSelectedManager(manager);
-    setWorkPlanDialog(true);
-  };
+  const handleSaveHours = async (managerId: string) => {
+    const values = editingHours[managerId];
+    if (!values) return;
 
-  const handleApproval = async (approved: boolean) => {
-    if (!selectedManager) return;
+    const weeklyHours = parseInt(values.weekly) || 0;
+    const numberOfWeeks = parseInt(values.weeks) || 16;
 
-    const workPlan = getManagerWorkPlan(selectedManager.id);
-    if (!workPlan) return;
-
-    try {
-      const updates = {
-        status: (approved ? 'approved' : 'rejected') as 'approved' | 'rejected',
-        coordinator_approval_date: new Date().toISOString(),
-        coordinator_comments: approvalComments,
-        approved_by: profile?.id
-      };
-
-      const { error } = await updateWorkPlan(workPlan.id, updates);
-      
-      if (error) {
-        toast({
-          title: "Error",
-          description: "No se pudo actualizar el estado del plan",
-          variant: "destructive"
-        });
-        return;
-      }
-
+    const { error } = await updateManagerHours(managerId, weeklyHours, numberOfWeeks);
+    
+    if (error) {
       toast({
-        title: approved ? "Plan aprobado" : "Plan rechazado",
-        description: approvalComments || (approved ? "Plan aprobado exitosamente" : "Plan rechazado")
+        title: "Error",
+        description: "No se pudieron actualizar las horas",
+        variant: "destructive",
       });
+      return;
+    }
 
-      setApprovalDialog(false);
-      setApprovalComments('');
-      loadData(); // Recargar datos
-    } catch (error) {
-      console.error('Error updating work plan:', error);
+    toast({
+      title: "Éxito",
+      description: "Horas actualizadas correctamente",
+    });
+
+    setEditingHours(prev => {
+      const newState = { ...prev };
+      delete newState[managerId];
+      return newState;
+    });
+
+    loadData();
+  };
+
+  const handleCancelEdit = (managerId: string) => {
+    setEditingHours(prev => {
+      const newState = { ...prev };
+      delete newState[managerId];
+      return newState;
+    });
+  };
+
+  const handleWorkPlanClick = (manager: any) => {
+    setSelectedManager(manager);
+    setShowWorkPlanForm(true);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return <Badge variant="secondary"><Edit className="w-3 h-3 mr-1" />Borrador</Badge>;
+      case 'submitted':
+        return <Badge variant="default"><Clock className="w-3 h-3 mr-1" />Enviado</Badge>;
+      case 'approved':
+        return <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Aprobado</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rechazado</Badge>;
+      default:
+        return <Badge variant="outline"><AlertCircle className="w-3 h-3 mr-1" />Sin plan</Badge>;
     }
   };
-
-  const canReviewPlans = () => {
-    return profile?.role === 'Administrador' || profile?.role === 'Coordinador';
-  };
-
-  // Filtrar gestores por campus
-  const filteredManagers = managers.filter(manager => {
-    if (selectedCampus === "all") return true;
-    return manager.academic_programs?.[0]?.campus?.id === selectedCampus;
-  });
 
   if (loading) {
-    return (
-      <Card className="w-full">
-        <CardContent className="p-8">
-          <div className="flex justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-              <p className="mt-4 text-gray-600">Cargando gestores...</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <div className="flex justify-center p-8">Cargando gestores...</div>;
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-primary">
-          Gestores de Internacionalización
-        </CardTitle>
-        
-        {/* Filtro por Campus */}
-        <div className="flex items-center space-x-4 mt-4">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Filtrar por Campus:</span>
-          <Select value={selectedCampus} onValueChange={setSelectedCampus}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Seleccionar campus" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los Campus</SelectItem>
-              {campus.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {filteredManagers.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            {selectedCampus === "all" 
-              ? "No hay gestores asignados a programas académicos." 
-              : "No hay gestores asignados en el campus seleccionado."
-            }
-            <br />
-            Los gestores aparecerán aquí una vez que se les asigne un programa en el módulo de Campus y Programas.
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Gestores de Internacionalización</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 mb-6">
+            <Select value={selectedCampus} onValueChange={setSelectedCampus}>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Filtrar por campus" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los campus</SelectItem>
+                {campuses.map((campus) => (
+                  <SelectItem key={campus.id} value={campus.id}>
+                    {campus.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ) : (
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -190,138 +199,126 @@ export function InternationalizationManagers() {
                 <TableHead>Campus</TableHead>
                 <TableHead>Facultad</TableHead>
                 <TableHead>Programa</TableHead>
-                <TableHead>Horas Semanales</TableHead>
+                <TableHead>Horas/Semana</TableHead>
+                <TableHead>Semanas</TableHead>
                 <TableHead>Total Horas</TableHead>
-                <TableHead>Estado del Plan</TableHead>
+                <TableHead>Estado Plan</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredManagers.map((manager) => {
-                const workPlan = getManagerWorkPlan(manager.id);
-                const program = manager.academic_programs?.[0];
-                
-                return (
-                  <TableRow key={manager.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-semibold">{manager.full_name}</div>
-                        <div className="text-sm text-gray-500">{manager.email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {program?.campus?.name || 'Sin asignar'}
-                    </TableCell>
-                    <TableCell>
-                      {program?.faculty?.name || 'Sin asignar'}
-                    </TableCell>
-                    <TableCell>{program?.name || 'Sin asignar'}</TableCell>
-                    <TableCell>{manager.weekly_hours || 0}</TableCell>
-                    <TableCell>{manager.total_hours || 0}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(workPlan?.status)}`}>
-                        {getStatusText(workPlan?.status)}
+              {filteredManagers.map((manager) => (
+                <TableRow key={manager.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{manager.full_name}</div>
+                      <div className="text-sm text-gray-500">{manager.email}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{getManagerCampus(manager)}</TableCell>
+                  <TableCell>{getManagerFaculty(manager)}</TableCell>
+                  <TableCell>{getManagerProgramName(manager)}</TableCell>
+                  <TableCell>
+                    {editingHours[manager.id] ? (
+                      <Input
+                        type="number"
+                        value={editingHours[manager.id].weekly}
+                        onChange={(e) => setEditingHours(prev => ({
+                          ...prev,
+                          [manager.id]: {
+                            ...prev[manager.id],
+                            weekly: e.target.value
+                          }
+                        }))}
+                        className="w-20"
+                      />
+                    ) : (
+                      <span onClick={() => handleEditHours(manager.id)} className="cursor-pointer hover:bg-gray-100 p-1 rounded">
+                        {manager.weekly_hours || 0}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => openWorkPlan(manager)}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          {workPlan ? 'Ver Plan' : 'Crear Plan'}
-                        </Button>
-                        {workPlan?.status === 'submitted' && canReviewPlans() && (
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingHours[manager.id] ? (
+                      <Input
+                        type="number"
+                        value={editingHours[manager.id].weeks}
+                        onChange={(e) => setEditingHours(prev => ({
+                          ...prev,
+                          [manager.id]: {
+                            ...prev[manager.id],
+                            weeks: e.target.value
+                          }
+                        }))}
+                        className="w-20"
+                      />
+                    ) : (
+                      <span onClick={() => handleEditHours(manager.id)} className="cursor-pointer hover:bg-gray-100 p-1 rounded">
+                        {manager.number_of_weeks || 16}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {manager.total_hours || 0}
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge('draft')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      {editingHours[manager.id] ? (
+                        <>
+                          <Button size="sm" onClick={() => handleSaveHours(manager.id)}>
+                            Guardar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleCancelEdit(manager.id)}>
+                            Cancelar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
                           <Button 
                             size="sm" 
+                            onClick={() => handleEditHours(manager.id)}
                             variant="outline"
-                            onClick={() => {
-                              setSelectedManager(manager);
-                              setApprovalDialog(true);
-                            }}
                           >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Revisar
+                            Editar Horas
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleWorkPlanClick(manager)}
+                            disabled={!manager.total_hours || manager.total_hours === 0}
+                          >
+                            Plan de Trabajo
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        )}
+        </CardContent>
+      </Card>
 
-        {/* Work Plan Dialog */}
-        <Dialog open={workPlanDialog} onOpenChange={setWorkPlanDialog}>
-          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto p-0">
-            <DialogHeader className="sr-only">
-              <DialogTitle>Plan de Trabajo</DialogTitle>
-            </DialogHeader>
-            {selectedManager && (
-              <WorkPlanForm
-                manager={selectedManager}
-                onClose={() => setWorkPlanDialog(false)}
-                onSave={() => {
-                  setWorkPlanDialog(false);
-                  loadData();
-                }}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Approval Dialog */}
-        <Dialog open={approvalDialog} onOpenChange={setApprovalDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Revisión del Plan de Trabajo</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <p><strong>Gestor:</strong> {selectedManager?.full_name}</p>
-                <p><strong>Campus:</strong> {selectedManager?.academic_programs?.[0]?.campus?.name}</p>
-                <p><strong>Programa:</strong> {selectedManager?.academic_programs?.[0]?.name}</p>
-                <p><strong>Horas asignadas:</strong> {getManagerWorkPlan(selectedManager?.id)?.total_hours_assigned || 0}</p>
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="approvalComments" className="text-sm font-medium">
-                  Comentarios y Observaciones
-                </label>
-                <Textarea
-                  id="approvalComments"
-                  value={approvalComments}
-                  onChange={(e) => setApprovalComments(e.target.value)}
-                  placeholder="Escriba sus comentarios sobre el plan de trabajo..."
-                  className="min-h-20"
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleApproval(false)}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Rechazar
-                </Button>
-                <Button 
-                  onClick={() => handleApproval(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Aprobar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+      <Dialog open={showWorkPlanForm} onOpenChange={setShowWorkPlanForm}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Plan de Trabajo</DialogTitle>
+          </DialogHeader>
+          {selectedManager && (
+            <WorkPlanForm
+              manager={selectedManager}
+              onClose={() => setShowWorkPlanForm(false)}
+              onSave={() => {
+                setShowWorkPlanForm(false);
+                loadData();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

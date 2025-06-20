@@ -1,250 +1,254 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Users, Building, GraduationCap, FileText, Clock, CheckCircle } from "lucide-react";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/hooks/useAuth";
+import { 
+  Users, 
+  Building2, 
+  GraduationCap, 
+  Target,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  FileText
+} from "lucide-react";
 
 export function Dashboard() {
-  // Mock data for demonstration
-  const stats = {
-    totalUsers: 12,
-    totalCampuses: 4,
-    totalPrograms: 15,
-    totalManagers: 8,
-    pendingApprovals: 3,
-    approvedPlans: 5
+  const { profile } = useAuth();
+  const { 
+    fetchManagers, 
+    fetchAcademicPrograms, 
+    fetchCampus, 
+    fetchWorkPlans,
+    fetchManagerReports
+  } = useSupabaseData();
+  
+  const [stats, setStats] = useState({
+    totalManagers: 0,
+    totalPrograms: 0,
+    totalCampuses: 0,
+    workPlansStats: {
+      draft: 0,
+      submitted: 0,
+      approved: 0,
+      rejected: 0
+    },
+    reportsStats: {
+      pending: 0,
+      submitted: 0,
+      reviewed: 0
+    }
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      const [
+        managersResult,
+        programsResult,
+        campusResult,
+        workPlansResult,
+        reportsResult
+      ] = await Promise.all([
+        fetchManagers(),
+        fetchAcademicPrograms(),
+        fetchCampus(),
+        fetchWorkPlans(),
+        fetchManagerReports()
+      ]);
+
+      const managers = managersResult.data || [];
+      const programs = programsResult.data || [];
+      const campuses = campusResult.data || [];
+      const workPlans = workPlansResult.data || [];
+      const reports = reportsResult.data || [];
+
+      // Calcular estadísticas de planes de trabajo
+      const workPlansStats = {
+        draft: workPlans.filter(wp => wp.status === 'draft').length,
+        submitted: workPlans.filter(wp => wp.status === 'submitted').length,
+        approved: workPlans.filter(wp => wp.status === 'approved').length,
+        rejected: workPlans.filter(wp => wp.status === 'rejected').length
+      };
+
+      // Calcular estadísticas de informes
+      const approvedPlans = workPlans.filter(wp => wp.status === 'approved');
+      const reportsStats = {
+        pending: approvedPlans.length - reports.length,
+        submitted: reports.filter(r => r.status === 'submitted').length,
+        reviewed: reports.filter(r => r.status === 'reviewed').length
+      };
+
+      setStats({
+        totalManagers: managers.length,
+        totalPrograms: programs.length,
+        totalCampuses: campuses.length,
+        workPlansStats,
+        reportsStats
+      });
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const recentActivities = [
-    {
-      id: 1,
-      type: "user_created",
-      message: "Nuevo usuario creado: Dr. María González",
-      time: "Hace 2 horas",
-      status: "success"
-    },
-    {
-      id: 2,
-      type: "plan_submitted",
-      message: "Plan de trabajo enviado para aprobación - Ingeniería de Sistemas",
-      time: "Hace 4 horas",
-      status: "pending"
-    },
-    {
-      id: 3,
-      type: "plan_approved",
-      message: "Plan de trabajo aprobado - Administración de Empresas",
-      time: "Hace 6 horas",
-      status: "approved"
-    },
-    {
-      id: 4,
-      type: "campus_created",
-      message: "Nuevo campus registrado: Sede Valledupar",
-      time: "Ayer",
-      status: "success"
-    }
-  ];
-
-  const campusProgress = [
-    { name: "Bucaramanga", programs: 8, completion: 85 },
-    { name: "Bogotá", programs: 4, completion: 70 },
-    { name: "Valledupar", programs: 2, completion: 50 },
-    { name: "Cúcuta", programs: 1, completion: 25 }
-  ];
+  if (loading) {
+    return <div className="flex justify-center p-8">Cargando dashboard...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-primary">Dashboard DRNI</h1>
-          <p className="text-gray-600">Oficina de Relaciones Internacionales</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Último acceso</p>
-          <p className="font-medium">{new Date().toLocaleDateString()}</p>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="institutional-card">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Usuarios</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Total Gestores</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.totalUsers}</div>
+            <div className="text-2xl font-bold">{stats.totalManagers}</div>
             <p className="text-xs text-muted-foreground">
-              +2 desde el mes pasado
+              Gestores registrados en el sistema
             </p>
           </CardContent>
         </Card>
 
-        <Card className="institutional-card">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Campus Activos</CardTitle>
-            <Building className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Campus</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.totalCampuses}</div>
+            <div className="text-2xl font-bold">{stats.totalCampuses}</div>
             <p className="text-xs text-muted-foreground">
-              Bucaramanga, Bogotá, Valledupar, Cúcuta
+              Campus disponibles
             </p>
           </CardContent>
         </Card>
 
-        <Card className="institutional-card">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Programas Académicos</CardTitle>
-            <GraduationCap className="h-4 w-4 text-purple-600" />
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.totalPrograms}</div>
+            <div className="text-2xl font-bold">{stats.totalPrograms}</div>
             <p className="text-xs text-muted-foreground">
-              Distribuidos en todas las sedes
+              Programas registrados
             </p>
           </CardContent>
         </Card>
 
-        <Card className="institutional-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gestores Activos</CardTitle>
-            <Users className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.totalManagers}</div>
-            <p className="text-xs text-muted-foreground">
-              Con planes de trabajo asignados
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="institutional-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Planes Pendientes</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingApprovals}</div>
-            <p className="text-xs text-muted-foreground">
-              Esperando aprobación
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="institutional-card">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Planes Aprobados</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approvedPlans}</div>
+            <div className="text-2xl font-bold">{stats.workPlansStats.approved}</div>
             <p className="text-xs text-muted-foreground">
-              Este semestre académico
+              Planes de trabajo aprobados
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activities */}
-        <Card className="institutional-card">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Estado de Planes de Trabajo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-gray-500" />
+                <span className="text-sm">Borradores</span>
+              </div>
+              <Badge variant="secondary">{stats.workPlansStats.draft}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-500" />
+                <span className="text-sm">Enviados</span>
+              </div>
+              <Badge variant="default">{stats.workPlansStats.submitted}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-sm">Aprobados</span>
+              </div>
+              <Badge variant="default" className="bg-green-600">
+                {stats.workPlansStats.approved}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <span className="text-sm">Rechazados</span>
+              </div>
+              <Badge variant="destructive">{stats.workPlansStats.rejected}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Actividades Recientes
+              Estado de Informes
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.status === 'success' ? 'bg-green-500' :
-                    activity.status === 'pending' ? 'bg-yellow-500' :
-                    activity.status === 'approved' ? 'bg-blue-500' :
-                    'bg-gray-500'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {activity.message}
-                    </p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-                  <Badge variant={
-                    activity.status === 'success' ? 'default' :
-                    activity.status === 'pending' ? 'secondary' :
-                    activity.status === 'approved' ? 'default' :
-                    'outline'
-                  }>
-                    {activity.status === 'success' ? 'Completado' :
-                     activity.status === 'pending' ? 'Pendiente' :
-                     activity.status === 'approved' ? 'Aprobado' :
-                     'En proceso'}
-                  </Badge>
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-orange-500" />
+                <span className="text-sm">Pendientes</span>
+              </div>
+              <Badge variant="outline">{stats.reportsStats.pending}</Badge>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Campus Progress */}
-        <Card className="institutional-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
-              Progreso por Campus
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {campusProgress.map((campus) => (
-                <div key={campus.name} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">{campus.name}</span>
-                    <div className="text-xs text-gray-500">
-                      {campus.programs} programas
-                    </div>
-                  </div>
-                  <Progress value={campus.completion} className="w-full" />
-                  <div className="text-xs text-gray-500 text-right">
-                    {campus.completion}% completado
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-500" />
+                <span className="text-sm">Enviados</span>
+              </div>
+              <Badge variant="default">{stats.reportsStats.submitted}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-sm">Revisados</span>
+              </div>
+              <Badge variant="default" className="bg-green-600">
+                {stats.reportsStats.reviewed}
+              </Badge>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="institutional-card">
-        <CardHeader>
-          <CardTitle>Acciones Rápidas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Crear Usuario</p>
-            </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Building className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Nuevo Campus</p>
-            </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <GraduationCap className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Nuevo Programa</p>
-            </button>
-            <button className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <FileText className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Ver Reportes</p>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+      {profile?.role === 'Gestor' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Acciones Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-gray-600">
+              <p>• Revisa tu plan de trabajo en la sección "Mi Plan de Trabajo"</p>
+              <p>• Una vez aprobado tu plan, podrás crear informes de gestión</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

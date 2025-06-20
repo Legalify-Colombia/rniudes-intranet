@@ -207,6 +207,111 @@ export type Database = {
           },
         ]
       }
+      manager_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          general_report_file_name: string | null
+          general_report_url: string | null
+          id: string
+          manager_id: string
+          status: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+          work_plan_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          general_report_file_name?: string | null
+          general_report_url?: string | null
+          id?: string
+          manager_id: string
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          updated_at?: string | null
+          work_plan_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          general_report_file_name?: string | null
+          general_report_url?: string | null
+          id?: string
+          manager_id?: string
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          updated_at?: string | null
+          work_plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reports_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: true
+            referencedRelation: "work_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_responses: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          product_id: string
+          report_id: string
+          response_text: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          product_id: string
+          report_id: string
+          response_text?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          product_id?: string
+          report_id?: string
+          response_text?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_responses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_responses_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           action_id: string

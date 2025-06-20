@@ -32,7 +32,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const [workPlan, setWorkPlan] = useState<any>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inputValues, setInputValues] = useState<{[key: string]: string}>({});
+  const [inputValues, setInputValues] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
     loadData();
@@ -66,9 +66,9 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         setAssignments(assignmentsData || []);
         
         // Inicializar valores de input
-        const initialValues: {[key: string]: string} = {};
+        const initialValues: {[key: string]: number} = {};
         assignmentsData?.forEach((assignment: any) => {
-          initialValues[assignment.product_id] = assignment.assigned_hours.toString();
+          initialValues[assignment.product_id] = assignment.assigned_hours;
         });
         setInputValues(initialValues);
       }
@@ -80,7 +80,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   };
 
   const handleInputChange = (productId: string, value: string) => {
-    setInputValues(prev => ({ ...prev, [productId]: value }));
+    const numericValue = parseInt(value) || 0;
+    setInputValues(prev => ({ ...prev, [productId]: numericValue }));
   };
 
   const handleInputBlur = async (productId: string, value: string) => {
@@ -89,7 +90,9 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   };
 
   const updateAssignment = async (productId: string, hours: number) => {
-    if (!workPlan) {
+    let currentWorkPlan = workPlan;
+
+    if (!currentWorkPlan) {
       // Crear plan de trabajo si no existe
       const newPlan = {
         manager_id: manager.id,
@@ -103,14 +106,12 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         toast({ title: "Error", description: "No se pudo crear el plan de trabajo", variant: "destructive" });
         return;
       }
+      currentWorkPlan = createdPlan;
       setWorkPlan(createdPlan);
     }
 
-    const planId = workPlan?.id;
-    if (!planId) return;
-
     const assignment = {
-      work_plan_id: planId,
+      work_plan_id: currentWorkPlan.id,
       product_id: productId,
       assigned_hours: hours
     };
@@ -121,7 +122,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       return;
     }
 
-    // Actualizar estado local
+    // Actualizar estado local de asignaciones
     setAssignments(prev => {
       const existing = prev.find(a => a.product_id === productId);
       if (existing) {
@@ -131,27 +132,32 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
             : a
         );
       } else {
-        return [...prev, assignment];
+        return [...prev, { ...assignment, id: Date.now().toString() }];
       }
     });
 
-    // Actualizar total de horas del plan
-    const totalHours = assignments.reduce((sum, a) => 
-      a.product_id === productId ? sum + hours : sum + a.assigned_hours, 0
+    // Calcular y actualizar total de horas del plan
+    const updatedAssignments = assignments.map(a => 
+      a.product_id === productId ? { ...a, assigned_hours: hours } : a
     );
+    if (!assignments.find(a => a.product_id === productId) && hours > 0) {
+      updatedAssignments.push({ product_id: productId, assigned_hours: hours });
+    }
 
-    if (workPlan) {
-      await updateWorkPlan(workPlan.id, { total_hours_assigned: totalHours });
+    const totalHours = updatedAssignments.reduce((sum, a) => sum + a.assigned_hours, 0);
+
+    if (currentWorkPlan) {
+      await updateWorkPlan(currentWorkPlan.id, { total_hours_assigned: totalHours });
       setWorkPlan(prev => ({ ...prev, total_hours_assigned: totalHours }));
     }
   };
 
   const getAssignedHours = (productId: string) => {
-    return inputValues[productId] || '0';
+    return inputValues[productId] || 0;
   };
 
   const getTotalAssignedHours = () => {
-    return assignments.reduce((sum, a) => sum + a.assigned_hours, 0);
+    return Object.values(inputValues).reduce((sum, hours) => sum + hours, 0);
   };
 
   const getAvailableHours = () => {
@@ -159,7 +165,10 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   };
 
   const submitForApproval = async () => {
-    if (!workPlan) return;
+    if (!workPlan) {
+      toast({ title: "Error", description: "No hay plan de trabajo para enviar", variant: "destructive" });
+      return;
+    }
 
     const { error } = await updateWorkPlan(workPlan.id, { status: 'submitted' });
     if (error) {
@@ -291,7 +300,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
             {workPlan?.status !== 'submitted' && workPlan?.status !== 'approved' && (
               <Button 
                 onClick={submitForApproval}
-                disabled={getAvailableHours() < 0}
+                disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Enviar para Aprobación

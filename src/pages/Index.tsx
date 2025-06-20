@@ -7,6 +7,8 @@ import { UserManagement } from "@/components/UserManagement";
 import { CampusManagement } from "@/components/CampusManagement";
 import { InternationalizationManagers } from "@/components/InternationalizationManagers";
 import { StrategicConfiguration } from "@/components/StrategicConfiguration";
+import { ManagerReports } from "@/components/ManagerReports";
+import { ManagerWorkPlan } from "@/components/ManagerWorkPlan";
 import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,6 +40,10 @@ const Index = () => {
         return <InternationalizationManagers />;
       case "strategic":
         return <StrategicConfiguration />;
+      case "manager-reports":
+        return <ManagerReports />;
+      case "manager-work-plan":
+        return <ManagerWorkPlan />;
       default:
         return <Dashboard />;
     }
@@ -52,7 +58,10 @@ const Index = () => {
       case "strategic":
         return profile.role === "Administrador";
       case "managers":
+      case "manager-reports":
         return ["Administrador", "Coordinador"].includes(profile.role);
+      case "manager-work-plan":
+        return profile.role === "Gestor";
       default:
         return true;
     }
@@ -129,6 +138,32 @@ const Index = () => {
                     }`}
                   >
                     Configuración Estratégica
+                  </button>
+                )}
+
+                {canAccessSection("manager-reports") && (
+                  <button
+                    onClick={() => setActiveView("manager-reports")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === "manager-reports"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    Informes de Gestores
+                  </button>
+                )}
+
+                {canAccessSection("manager-work-plan") && (
+                  <button
+                    onClick={() => setActiveView("manager-work-plan")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeView === "manager-work-plan"
+                        ? "bg-blue-100 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                    }`}
+                  >
+                    Mi Plan de Trabajo
                   </button>
                 )}
               </nav>
