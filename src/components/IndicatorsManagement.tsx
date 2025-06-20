@@ -50,10 +50,17 @@ export function IndicatorsManagement() {
         variant: "destructive",
       });
     } else {
-      const typedIndicators = (data || []).map(indicator => ({
-        ...indicator,
-        data_type: indicator.data_type as "numeric" | "short_text" | "long_text" | "file" | "link"
-      }));
+      // Filter indicators with valid IDs and cast data_type
+      const typedIndicators = (data || [])
+        .filter(indicator => 
+          indicator.id && 
+          typeof indicator.id === 'string' && 
+          indicator.id.trim().length > 0
+        )
+        .map(indicator => ({
+          ...indicator,
+          data_type: indicator.data_type as "numeric" | "short_text" | "long_text" | "file" | "link"
+        }));
       setIndicators(typedIndicators);
     }
   };

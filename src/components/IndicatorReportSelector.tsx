@@ -152,7 +152,7 @@ export function IndicatorReportSelector({ onReportCreated, existingReports }: In
               </SelectTrigger>
               <SelectContent>
                 {periods.map((period) => {
-                  // Validate period ID before rendering
+                  // Validate period ID before rendering - skip if invalid
                   if (!period.id || typeof period.id !== 'string' || period.id.trim().length === 0) {
                     console.warn('IndicatorReportSelector - Skipping invalid period:', period);
                     return null;

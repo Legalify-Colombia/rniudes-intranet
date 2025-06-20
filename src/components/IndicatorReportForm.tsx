@@ -43,11 +43,17 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
       ]);
 
       if (indicatorsResult.data) {
-        // Cast data_type to the expected union type
-        const typedIndicators = indicatorsResult.data.map(indicator => ({
-          ...indicator,
-          data_type: indicator.data_type as "numeric" | "short_text" | "long_text" | "file" | "link"
-        }));
+        // Cast data_type to the expected union type and filter valid indicators
+        const typedIndicators = indicatorsResult.data
+          .filter(indicator => 
+            indicator.id && 
+            typeof indicator.id === 'string' && 
+            indicator.id.trim().length > 0
+          )
+          .map(indicator => ({
+            ...indicator,
+            data_type: indicator.data_type as "numeric" | "short_text" | "long_text" | "file" | "link"
+          }));
         setIndicators(typedIndicators);
       }
 
