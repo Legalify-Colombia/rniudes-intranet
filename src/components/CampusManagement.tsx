@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Building, GraduationCap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { useCampus } from "@/hooks/useCampus";
 import { useFaculties } from "@/hooks/useFaculties";
 import { useAcademicPrograms } from "@/hooks/useAcademicPrograms";
 import { useManagers } from "@/hooks/useManagers";
+import { FacultyForm } from "@/components/FacultyForm";
 import type { Campus, Faculty, AcademicProgram } from "@/types/supabase";
 
 interface Manager {
@@ -27,13 +27,13 @@ interface Manager {
   campus_id: string;
 }
 
-type EditType = 'campus' | 'faculty' | 'program';
+type EditType = 'campus' | 'program';
 
 const CampusManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { fetchCampus, createCampus, updateCampus, deleteCampus, getUserManagedCampus } = useCampus();
-  const { fetchFaculties, createFaculty, updateFaculty, deleteFaculty } = useFaculties();
+  const { fetchFaculties, fetchFacultiesByCampus, deleteFaculty, getFacultyCampuses } = useFaculties();
   const { 
     fetchAcademicPrograms, 
     createAcademicProgram, 
@@ -50,18 +50,19 @@ const CampusManagement = () => {
   const [selectedCampus, setSelectedCampus] = useState<string>("all");
   const [userManagedCampus, setUserManagedCampus] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [facultyCampusMap, setFacultyCampusMap] = useState<Record<string, string[]>>({});
  
   // Dialog states
   const [isCampusDialogOpen, setIsCampusDialogOpen] = useState<boolean>(false);
-  const [isFacultyDialogOpen, setIsFacultyDialogOpen] = useState<boolean>(false);
+  const [isFacultyFormOpen, setIsFacultyFormOpen] = useState<boolean>(false);
   const [isProgramDialogOpen, setIsProgramDialogOpen] = useState<boolean>(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [editType, setEditType] = useState<EditType>('campus');
+  const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
 
   // Form states
   const [campusForm, setCampusForm] = useState({ name: "", description: "", address: "" });
-  const [facultyForm, setFacultyForm] = useState({ name: "", description: "", dean_name: "", campus_id: "" });
   const [programForm, setProgramForm] = useState<Omit<AcademicProgram, 'id' | 'created_at' | 'updated_at'>>({ 
     name: "", 
     description: "", 
@@ -103,7 +104,17 @@ const CampusManagement = () => {
         : items;
 
       if (campusResult.data) setCampuses(filterByManaged(campusResult.data, 'id'));
-      if (facultiesResult.data) setFaculties(filterByManaged(facultiesResult.data));
+      if (facultiesResult.data) {
+        setFaculties(facultiesResult.data);
+        
+        // Cargar las relaciones faculty-campus
+        const facultyCampusData: Record<string, string[]> = {};
+        for (const faculty of facultiesResult.data) {
+          const { data: campusIds } = await getFacultyCampuses(faculty.id);
+          facultyCampusData[faculty.id] = campusIds || [];
+        }
+        setFacultyCampusMap(facultyCampusData);
+      }
       if (programsResult.data) setPrograms(filterByManaged(programsResult.data));
       if (managersResult.data) setManagers(managersResult.data);
 
@@ -133,19 +144,6 @@ const CampusManagement = () => {
     }
   };
 
-  const handleCreateFaculty = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { error } = await createFaculty(facultyForm);
-    if (error) {
-      toast({ title: "Error", description: "No se pudo crear la facultad", variant: "destructive" });
-    } else {
-      toast({ title: "Éxito", description: "Facultad creada correctamente" });
-      setIsFacultyDialogOpen(false);
-      setFacultyForm({ name: "", description: "", dean_name: "", campus_id: "" });
-      loadData();
-    }
-  };
-
   const handleCreateProgram = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await createAcademicProgram(programForm);
@@ -171,12 +169,10 @@ const CampusManagement = () => {
     e.preventDefault();
     if (!editingItem) return;
     let error;
-    const typeName = editType === 'campus' ? 'el campus' : editType === 'faculty' ? 'la facultad' : 'el programa';
+    const typeName = editType === 'campus' ? 'el campus' : 'el programa';
 
     if (editType === 'campus') {
       ({ error } = await updateCampus(editingItem.id, editingItem));
-    } else if (editType === 'faculty') {
-      ({ error } = await updateFaculty(editingItem.id, editingItem));
     } else if (editType === 'program') {
       ({ error } = await updateAcademicProgram(editingItem.id, editingItem));
     }
@@ -191,7 +187,7 @@ const CampusManagement = () => {
     }
   };
 
-  const handleDelete = async (id: string, type: EditType) => {
+  const handleDelete = async (id: string, type: EditType | 'faculty') => {
     const typeName = type === 'campus' ? 'el campus' : type === 'faculty' ? 'la facultad' : 'el programa';
     if (!window.confirm(`¿Estás seguro de que deseas eliminar ${typeName}?`)) return;
     
@@ -217,11 +213,28 @@ const CampusManagement = () => {
     setEditType(type);
     setIsEditDialogOpen(true);
   };
+
+  const handleEditFaculty = (faculty: Faculty) => {
+    setEditingFaculty(faculty);
+    setIsFacultyFormOpen(true);
+  };
   
   const getCampusName = (campusId: string) => campuses.find(c => c.id === campusId)?.name || 'N/A';
   const getFacultyName = (facultyId: string) => faculties.find(f => f.id === facultyId)?.name || 'N/A';
   const getManagerName = (managerId: string | null) => managerId ? managers.find(m => m.id === managerId)?.full_name : 'Sin asignar';
   const getAvailableManagers = (campusId?: string) => managers.filter(m => m.role === 'Gestor' && (!campusId || m.campus_id === campusId));
+
+  const getFilteredFaculties = () => {
+    if (selectedCampus === 'all') return faculties;
+    return faculties.filter(faculty => 
+      facultyCampusMap[faculty.id]?.includes(selectedCampus)
+    );
+  };
+
+  const getFacultyCampusNames = (facultyId: string) => {
+    const campusIds = facultyCampusMap[facultyId] || [];
+    return campusIds.map(id => getCampusName(id)).join(', ') || 'Sin campus asignados';
+  };
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Cargando datos...</div>;
@@ -301,7 +314,9 @@ const CampusManagement = () => {
                   {campuses.map((campus) => (
                     <TableRow key={campus.id}>
                       <TableCell className="font-medium">{campus.name}</TableCell>
-                      <TableCell>{faculties.filter(f => f.campus_id === campus.id).length}</TableCell>
+                      <TableCell>
+                        {faculties.filter(f => facultyCampusMap[f.id]?.includes(campus.id)).length}
+                      </TableCell>
                       <TableCell>{programs.filter(p => p.campus_id === campus.id).length}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
@@ -342,72 +357,15 @@ const CampusManagement = () => {
                       <SelectValue placeholder="Filtrar por campus"/>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Todos los Campus</SelectItem>
+                      <SelectItem value="all">Todas las Facultades</SelectItem>
                       {campuses.map(campus => (
                         <SelectItem key={campus.id} value={campus.id}>{campus.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Dialog open={isFacultyDialogOpen} onOpenChange={setIsFacultyDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button onClick={() => setIsFacultyDialogOpen(true)}>
-                        <Plus className="h-4 w-4 mr-2" />Agregar Facultad
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader><DialogTitle>Crear Nueva Facultad</DialogTitle></DialogHeader>
-                      <form onSubmit={handleCreateFaculty} className="space-y-4">
-                        <div>
-                          <Label htmlFor="campus">Campus</Label>
-                          <Select 
-                            onValueChange={(value) => setFacultyForm(prev => ({...prev, campus_id: value}))} 
-                            value={facultyForm.campus_id}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar campus"/>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {campuses.map(campus => (
-                                <SelectItem key={campus.id} value={campus.id}>{campus.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="name">Nombre de la Facultad</Label>
-                          <Input 
-                            id="name" 
-                            value={facultyForm.name} 
-                            onChange={(e) => setFacultyForm(prev => ({ ...prev, name: e.target.value }))} 
-                            required 
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="dean_name">Nombre del Decano</Label>
-                          <Input 
-                            id="dean_name" 
-                            value={facultyForm.dean_name} 
-                            onChange={(e) => setFacultyForm(prev => ({ ...prev, dean_name: e.target.value }))} 
-                            required 
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="description">Descripción</Label>
-                          <Textarea 
-                            id="description" 
-                            value={facultyForm.description} 
-                            onChange={(e) => setFacultyForm(prev => ({ ...prev, description: e.target.value }))} 
-                          />
-                        </div>
-                        <div className="flex justify-end space-x-2">
-                          <Button type="button" variant="outline" onClick={() => setIsFacultyDialogOpen(false)}>
-                            Cancelar
-                          </Button>
-                          <Button type="submit">Crear Facultad</Button>
-                        </div>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  <Button onClick={() => setIsFacultyFormOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />Agregar Facultad
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -423,10 +381,21 @@ const CampusManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {faculties.filter(f => selectedCampus === 'all' || f.campus_id === selectedCampus).map(faculty => (
+                  {getFilteredFaculties().map(faculty => (
                     <TableRow key={faculty.id}>
                       <TableCell className="font-medium">{faculty.name}</TableCell>
-                      <TableCell>{getCampusName(faculty.campus_id)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {facultyCampusMap[faculty.id]?.map(campusId => (
+                            <Badge key={campusId} variant="secondary" className="text-xs">
+                              {getCampusName(campusId)}
+                            </Badge>
+                          ))}
+                          {(!facultyCampusMap[faculty.id] || facultyCampusMap[faculty.id].length === 0) && (
+                            <Badge variant="outline">Sin campus asignados</Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{faculty.dean_name}</TableCell>
                       <TableCell>{programs.filter(p => p.faculty_id === faculty.id).length}</TableCell>
                       <TableCell>
@@ -434,16 +403,14 @@ const CampusManagement = () => {
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            onClick={() => handleEdit(faculty, 'faculty')} 
-                            disabled={!canManageCampus(faculty.campus_id)}
+                            onClick={() => handleEditFaculty(faculty)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button 
                             size="sm" 
                             variant="destructive" 
-                            onClick={() => handleDelete(faculty.id, 'faculty')} 
-                            disabled={!canManageCampus(faculty.campus_id)}
+                            onClick={() => handleDelete(faculty.id, 'faculty')}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -510,13 +477,18 @@ const CampusManagement = () => {
                                 <SelectValue placeholder="Seleccionar facultad"/>
                               </SelectTrigger>
                               <SelectContent>
-                                {faculties.filter(f => f.campus_id === programForm.campus_id).map(f => (
+                                {faculties.filter(f => 
+                                  !programForm.campus_id || 
+                                  facultyCampusMap[f.id]?.includes(programForm.campus_id)
+                                ).map(f => (
                                   <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
+                        
+                        
                         <div>
                           <Label>Nombre del Programa</Label>
                           <Input 
@@ -631,6 +603,17 @@ const CampusManagement = () => {
         </TabsContent>
       </Tabs>
       
+      <FacultyForm
+        isOpen={isFacultyFormOpen}
+        onClose={() => {
+          setIsFacultyFormOpen(false);
+          setEditingFaculty(null);
+        }}
+        onSuccess={loadData}
+        campuses={campuses}
+        editingFaculty={editingFaculty}
+      />
+      
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar {editType}</DialogTitle></DialogHeader>
@@ -651,33 +634,6 @@ const CampusManagement = () => {
                     <Input 
                       value={editingItem.address} 
                       onChange={e => setEditingItem({...editingItem, address: e.target.value})} 
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Descripción</Label>
-                    <Textarea 
-                      value={editingItem.description || ''} 
-                      onChange={e => setEditingItem({...editingItem, description: e.target.value})}
-                    />
-                  </div>
-                </>
-              )}
-              {editType === 'faculty' && (
-                <>
-                  <div>
-                    <Label>Nombre</Label>
-                    <Input 
-                      value={editingItem.name} 
-                      onChange={e => setEditingItem({...editingItem, name: e.target.value})} 
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Decano</Label>
-                    <Input 
-                      value={editingItem.dean_name} 
-                      onChange={e => setEditingItem({...editingItem, dean_name: e.target.value})} 
                       required
                     />
                   </div>

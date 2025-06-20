@@ -360,7 +360,7 @@ export type Database = {
       }
       faculties: {
         Row: {
-          campus_id: string
+          campus_id: string | null
           created_at: string | null
           dean_name: string
           description: string | null
@@ -369,7 +369,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          campus_id: string
+          campus_id?: string | null
           created_at?: string | null
           dean_name: string
           description?: string | null
@@ -378,7 +378,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          campus_id?: string
+          campus_id?: string | null
           created_at?: string | null
           dean_name?: string
           description?: string | null
