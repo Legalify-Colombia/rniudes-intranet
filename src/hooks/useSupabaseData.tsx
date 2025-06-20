@@ -442,8 +442,7 @@ export function useSupabaseData() {
           manager:manager_id (
             id,
             full_name,
-            email,
-            position
+            email
           ),
           program:program_id (
             id,
@@ -474,7 +473,6 @@ export function useSupabaseData() {
       approval_comments: item.work_plan.approval_comments,
       manager_name: item.work_plan.manager?.full_name,
       manager_email: item.work_plan.manager?.email,
-      manager_position: item.work_plan.manager?.position,
       program_name: item.work_plan.program?.name,
       campus_name: item.work_plan.program?.campus?.name,
       faculty_name: item.work_plan.program?.faculty?.name,
@@ -566,12 +564,9 @@ export function useSupabaseData() {
   };
 
   const upsertWorkPlanAssignment = async (assignment: any): Promise<Result<any>> => {
-    // Remove 'status' property as it doesn't exist in the work_plan_assignments table
-    const { status, ...assignmentWithoutStatus } = assignment;
-    
     const { data, error } = await supabase
       .from("work_plan_assignments")
-      .upsert(assignmentWithoutStatus)
+      .upsert(assignment)
       .select()
       .single();
     return { data, error };
