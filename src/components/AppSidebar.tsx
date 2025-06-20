@@ -122,7 +122,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
             alt="UDES Logo" 
             className="h-12 w-auto"
           />
-         
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
