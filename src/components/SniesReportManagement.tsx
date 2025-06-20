@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Send, FileText, Eye } from "lucide-react";
+import { Plus, Edit, Send, FileText, Eye, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSniesReports } from "@/hooks/useSniesReports";
 import { SniesReportForm } from "./SniesReportForm";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function SniesReportManagement() {
   const [reports, setReports] = useState<any[]>([]);
@@ -21,6 +22,7 @@ export function SniesReportManagement() {
   const [isReportFormOpen, setIsReportFormOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -81,15 +83,32 @@ export function SniesReportManagement() {
     }
   };
 
+  const validateForm = () => {
+    if (!reportForm.title.trim()) {
+      toast({
+        title: "Error de validación",
+        description: "El título del reporte es obligatorio",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!reportForm.template_id) {
+      toast({
+        title: "Error de validación",
+        description: "Debe seleccionar una plantilla",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   const handleCreateReport = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!reportForm.title.trim() || !reportForm.template_id) {
-      toast({
-        title: "Error",
-        description: "Por favor completa todos los campos requeridos",
-        variant: "destructive",
-      });
+    if (!validateForm()) {
       return;
     }
 
@@ -103,7 +122,7 @@ export function SniesReportManagement() {
     }
 
     try {
-      setIsLoading(true);
+      setIsCreating(true);
       console.log('Creating report with form data:', reportForm);
       
       const result = await createSniesReport({
@@ -113,9 +132,10 @@ export function SniesReportManagement() {
       
       if (result.error) {
         console.error('Error creating report:', result.error);
+        const errorMessage = result.error.message || 'Error desconocido';
         toast({
           title: "Error",
-          description: `Error al crear el reporte: ${result.error.message || 'Error desconocido'}`,
+          description: `Error al crear el reporte: ${errorMessage}`,
           variant: "destructive",
         });
         return;
@@ -129,7 +149,7 @@ export function SniesReportManagement() {
       
       setReportForm({ title: '', template_id: '' });
       setIsCreateDialogOpen(false);
-      await loadData(); // Recargar datos
+      await loadData();
     } catch (error) {
       console.error('Unexpected error creating report:', error);
       toast({
@@ -138,7 +158,7 @@ export function SniesReportManagement() {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsCreating(false);
     }
   };
 
@@ -221,7 +241,7 @@ export function SniesReportManagement() {
                 <DialogTrigger asChild>
                   <Button 
                     className="institutional-gradient text-white"
-                    disabled={isLoading}
+                    disabled={isLoading || templates.length === 0}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Nuevo Reporte
@@ -231,6 +251,16 @@ export function SniesReportManagement() {
                   <DialogHeader>
                     <DialogTitle>Crear Nuevo Reporte SNIES</DialogTitle>
                   </DialogHeader>
+                  
+                  {templates.length === 0 && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        No hay plantillas disponibles. Contacte al administrador para crear plantillas.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <form onSubmit={handleCreateReport} className="space-y-4">
                     <div>
                       <Label htmlFor="reportTitle">
@@ -242,7 +272,8 @@ export function SniesReportManagement() {
                         onChange={(e) => setReportForm(prev => ({ ...prev, title: e.target.value }))}
                         placeholder="Ingresa el título del reporte"
                         required
-                        disabled={isLoading}
+                        disabled={isCreating}
+                        maxLength={255}
                       />
                     </div>
                     <div>
@@ -252,7 +283,7 @@ export function SniesReportManagement() {
                       <Select 
                         value={reportForm.template_id} 
                         onValueChange={(value) => setReportForm(prev => ({ ...prev, template_id: value }))}
-                        disabled={isLoading}
+                        disabled={isCreating || templates.length === 0}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar plantilla" />
@@ -271,16 +302,16 @@ export function SniesReportManagement() {
                         type="button" 
                         variant="outline" 
                         onClick={() => setIsCreateDialogOpen(false)}
-                        disabled={isLoading}
+                        disabled={isCreating}
                       >
                         Cancelar
                       </Button>
                       <Button 
                         type="submit" 
                         className="institutional-gradient text-white"
-                        disabled={isLoading}
+                        disabled={isCreating || templates.length === 0}
                       >
-                        {isLoading ? 'Creando...' : 'Crear Reporte'}
+                        {isCreating ? 'Creando...' : 'Crear Reporte'}
                       </Button>
                     </div>
                   </form>

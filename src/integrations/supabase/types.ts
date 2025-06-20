@@ -2306,6 +2306,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "snies_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "snies_reports_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false

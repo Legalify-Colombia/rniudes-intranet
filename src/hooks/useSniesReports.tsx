@@ -74,8 +74,13 @@ export function useSniesReports() {
         return { data: null, error: userError || new Error('No user found') };
       }
 
+      // Validate required fields
+      if (!report.title || !report.template_id) {
+        return { data: null, error: new Error('Title and template are required') };
+      }
+
       const reportData = {
-        title: report.title,
+        title: report.title.trim(),
         template_id: report.template_id,
         manager_id: userData.user.id,
         status: 'draft'
@@ -83,23 +88,37 @@ export function useSniesReports() {
 
       console.log('Creating SNIES report with data:', reportData);
 
-      const { data, error } = await supabase
+      // First, create the basic report without the join
+      const { data: createdReport, error: createError } = await supabase
         .from("snies_reports")
         .insert(reportData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating SNIES report:', createError);
+        return { data: null, error: createError };
+      }
+
+      // Then fetch the report with the related data
+      const { data: fullReport, error: fetchError } = await supabase
+        .from("snies_reports")
         .select(`
           *,
           template:snies_report_templates(name),
           manager:profiles(full_name)
         `)
+        .eq("id", createdReport.id)
         .single();
 
-      if (error) {
-        console.error('Error creating SNIES report:', error);
-        return { data: null, error };
+      if (fetchError) {
+        console.error('Error fetching created report:', fetchError);
+        // Return the basic report if we can't fetch with joins
+        return { data: createdReport, error: null };
       }
 
-      console.log('SNIES report created successfully:', data);
-      return { data, error: null };
+      console.log('SNIES report created successfully:', fullReport);
+      return { data: fullReport, error: null };
     } catch (error) {
       console.error('Unexpected error creating SNIES report:', error);
       return { data: null, error };
