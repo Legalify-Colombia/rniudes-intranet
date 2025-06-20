@@ -1,4 +1,5 @@
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+
+import { supabase } from "@/integrations/supabase/client";
 import {
   AcademicProgram,
   Action,
@@ -19,12 +20,13 @@ import {
   ReportSystemConfig,
   ManagerReportVersion,
   ProjectPartnerInstitution,
-  InternationalizationReport
+  InternationalizationReport,
+  StrategicAxis,
+  DocumentTemplate,
+  ProductProgressReport
 } from "@/types";
 
 export const useSupabaseData = () => {
-  const supabase = useSupabaseClient();
-
   const fetchAcademicPrograms = async () => {
     return await supabase.from('academic_programs_with_details').select('*');
   };
@@ -67,6 +69,75 @@ export const useSupabaseData = () => {
 
   const fetchReportTemplates = async () => {
     return await supabase.from('report_templates').select('*');
+  };
+
+  // Missing functions that components are expecting
+  const fetchManagers = async () => {
+    return await supabase.from('profiles').select('*').eq('role', 'Gestor');
+  };
+
+  const fetchWorkPlans = async () => {
+    return await supabase.from('work_plans').select('*');
+  };
+
+  const fetchManagerReports = async () => {
+    return await supabase.from('manager_reports').select('*');
+  };
+
+  const updateManagerReport = async (id: string, data: Partial<ManagerReport>) => {
+    return await supabase.from('manager_reports').update(data).eq('id', id).select().single();
+  };
+
+  const fetchFacultiesByCampus = async (campusId: string) => {
+    return await supabase.from('faculties').select('*').eq('campus_id', campusId);
+  };
+
+  const fetchAcademicProgramsByCampus = async (campusId: string) => {
+    return await supabase.from('academic_programs').select('*').eq('campus_id', campusId);
+  };
+
+  const fetchManagersByCampus = async (campusId: string) => {
+    return await supabase.from('profiles').select('*').eq('campus_id', campusId).eq('role', 'Gestor');
+  };
+
+  const updateManagerHours = async (managerId: string, hours: number) => {
+    return await supabase.from('profiles').update({ weekly_hours: hours }).eq('id', managerId).select().single();
+  };
+
+  const getUserManagedCampus = async (userId: string) => {
+    return await supabase.from('profiles').select('managed_campus_ids').eq('id', userId).single();
+  };
+
+  const fetchWorkPlanAssignments = async (workPlanId: string) => {
+    return await supabase.from('work_plan_assignments').select('*').eq('work_plan_id', workPlanId);
+  };
+
+  const fetchProductProgressReports = async (managerReportId: string) => {
+    return await supabase.from('product_progress_reports').select('*').eq('manager_report_id', managerReportId);
+  };
+
+  const upsertProductProgressReport = async (data: Omit<ProductProgressReport, 'id' | 'created_at' | 'updated_at'>) => {
+    return await supabase.from('product_progress_reports').upsert(data).select().single();
+  };
+
+  const deleteProductProgressReport = async (id: string) => {
+    return await supabase.from('product_progress_reports').delete().eq('id', id);
+  };
+
+  const fetchDocumentTemplates = async () => {
+    return await supabase.from('document_templates').select('*');
+  };
+
+  const createDocumentTemplate = async (data: Omit<DocumentTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    return await supabase.from('document_templates').insert(data).select().single();
+  };
+
+  const updateDocumentTemplate = async (id: string, data: Partial<DocumentTemplate>) => {
+    return await supabase.from('document_templates').update(data).eq('id', id).select().single();
+  };
+
+  const deleteDocumentTemplate = async (id: string) => {
+    return await supabase.from('document_templates').delete().eq('id', id);
   };
 
   const createCampus = async (data: Omit<Campus, 'id' | 'created_at' | 'updated_at'>) => {
@@ -143,6 +214,10 @@ export const useSupabaseData = () => {
 
   const createProfile = async (data: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) => {
     return await supabase.from('profiles').insert(data).select().single();
+  };
+
+  const deleteProfile = async (id: string) => {
+    return await supabase.from('profiles').delete().eq('id', id);
   };
 
   const createStrategicAxis = async (data: Omit<StrategicAxis, 'id' | 'created_at' | 'updated_at'>) => {
@@ -354,7 +429,7 @@ export const useSupabaseData = () => {
       .single();
   };
 
-  const updateProfile = async (id: string, data: Partial<Omit<Profile, 'campus'>>) => {
+  const updateProfile = async (id: string, data: Partial<Profile>) => {
     return await supabase.from('profiles').update(data).eq('id', id).select().single();
   };
 
@@ -395,6 +470,23 @@ export const useSupabaseData = () => {
     fetchIndicators,
     fetchProfiles,
     fetchReportTemplates,
+    fetchManagers,
+    fetchWorkPlans,
+    fetchManagerReports,
+    updateManagerReport,
+    fetchFacultiesByCampus,
+    fetchAcademicProgramsByCampus,
+    fetchManagersByCampus,
+    updateManagerHours,
+    getUserManagedCampus,
+    fetchWorkPlanAssignments,
+    fetchProductProgressReports,
+    upsertProductProgressReport,
+    deleteProductProgressReport,
+    fetchDocumentTemplates,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
     createStrategicAxis,
     updateStrategicAxis,
     deleteStrategicAxis,
@@ -454,4 +546,31 @@ export const useSupabaseData = () => {
     createReportTemplate,
     updateReportTemplate
   };
+};
+
+// Re-export types for convenience
+export type {
+  AcademicProgram,
+  Action,
+  Campus,
+  Faculty,
+  Indicator,
+  InternationalizationProject,
+  ManagerReport,
+  Product,
+  Profile,
+  ReportPeriod,
+  ReportTemplate,
+  SpecificLine,
+  TemplateBasedReport,
+  TemplateReportResponse,
+  WorkPlan,
+  WorkPlanAssignment,
+  ReportSystemConfig,
+  ManagerReportVersion,
+  ProjectPartnerInstitution,
+  InternationalizationReport,
+  StrategicAxis,
+  DocumentTemplate,
+  ProductProgressReport
 };

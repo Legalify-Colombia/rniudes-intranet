@@ -1,3 +1,4 @@
+
 // Strategic configuration types
 export interface StrategicAxis {
   id: string;
@@ -21,6 +22,7 @@ export interface Action {
   created_at: string;
   updated_at: string;
   strategic_axes?: StrategicAxis;
+  strategic_axis?: StrategicAxis;
 }
 
 export interface Product {
@@ -33,6 +35,7 @@ export interface Product {
   created_at: string;
   updated_at: string;
   actions?: Action;
+  action?: Action;
 }
 
 // Campus and academic types
@@ -227,9 +230,9 @@ export interface InternationalizationProject {
   activities_schedule: string;
   duration_months: number;
   schedule_description: string;
-  justification: string;
+  justification?: string;
   bibliography: string;
-  beneficiaries_description: string;
+  beneficiaries_description?: string;
   impact?: string;
   indicators_text?: string;
   results?: string;
@@ -277,7 +280,7 @@ export interface InternationalizationReport {
   project_status?: string;
   abnormal_reason?: string;
   difficulties: string[];
-  next_period_activities: string;
+  next_period_activities?: string;
   observations?: string;
   status: 'draft' | 'submitted' | 'reviewed';
   submitted_date?: string;
