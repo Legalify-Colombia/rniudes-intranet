@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,7 +125,26 @@ export function UserManagement() {
         return;
       }
 
-      setUsers(data || []);
+      // Transform data to match User interface
+      const transformedUsers: User[] = (data || []).map(user => ({
+        id: user.id,
+        full_name: user.full_name,
+        document_number: user.document_number,
+        email: user.email,
+        position: user.position,
+        role: user.role,
+        weekly_hours: user.weekly_hours,
+        number_of_weeks: user.number_of_weeks,
+        total_hours: user.total_hours,
+        campus_id: user.campus_id,
+        managed_campus_ids: user.managed_campus_ids,
+        campus: user.campus_id ? { 
+          id: user.campus_id, 
+          name: campuses.find(c => c.id === user.campus_id)?.name || 'Sin asignar' 
+        } : undefined
+      }));
+
+      setUsers(transformedUsers);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -347,7 +365,8 @@ export function UserManagement() {
     if (!profile?.id) return;
 
     try {
-      const { error } = await updateUserCampusAccess(profile.id, selectedFilterCampus);
+      const campusIdToUpdate = selectedFilterCampus[0] || '';
+      const { error } = await updateUserCampusAccess(profile.id, campusIdToUpdate);
       if (error) {
         toast({
           title: "Error",

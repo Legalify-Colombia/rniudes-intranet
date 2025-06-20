@@ -1,5 +1,4 @@
 
-
 import type { Database } from "@/integrations/supabase/types";
 
 export type Campus = Database["public"]["Tables"]["campus"]["Row"];
@@ -44,13 +43,16 @@ export type SniesTemplateField = {
   id: string;
   template_id: string;
   field_name: string;
-  field_type: string;
+  field_label: string;
+  field_type: 'text' | 'numeric' | 'relation';
   field_order: number;
   is_required: boolean;
+  relation_table?: string;
+  relation_id_field?: string;
+  relation_display_field?: string;
   field_options?: any;
   created_at: string;
   updated_at: string;
 };
 
 export type Result<T> = { data: T | null; error: any };
-

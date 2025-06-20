@@ -20,6 +20,9 @@ const campusSchema = z.object({
     message: "El nombre del campus debe tener al menos 2 caracteres.",
   }),
   description: z.string().optional(),
+  address: z.string().min(5, {
+    message: "La dirección debe tener al menos 5 caracteres.",
+  }),
 });
 
 type CampusSchemaType = z.infer<typeof campusSchema>;
@@ -49,6 +52,7 @@ export function CampusManagement() {
     defaultValues: {
       name: "",
       description: "",
+      address: "",
     },
   });
 
@@ -57,6 +61,7 @@ export function CampusManagement() {
     defaultValues: {
       name: "",
       description: "",
+      address: "",
     },
   });
 
@@ -194,6 +199,7 @@ export function CampusManagement() {
     setSelectedCampus(campus);
     editForm.setValue("name", campus.name);
     editForm.setValue("description", campus.description || "");
+    editForm.setValue("address", campus.address || "");
     setEditOpen(true);
   };
 
@@ -220,6 +226,7 @@ export function CampusManagement() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Descripción</TableHead>
+                <TableHead>Dirección</TableHead>
                 <TableHead>Facultades</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -229,6 +236,7 @@ export function CampusManagement() {
                 <TableRow key={campus.id}>
                   <TableCell className="font-medium">{campus.name}</TableCell>
                   <TableCell>{campus.description}</TableCell>
+                  <TableCell>{campus.address}</TableCell>
                   <TableCell>
                     {faculties.filter((faculty) => faculty.campus_id === campus.id).length}
                   </TableCell>
@@ -281,6 +289,13 @@ export function CampusManagement() {
               )}
             </div>
             <div>
+              <Label htmlFor="address">Dirección</Label>
+              <Input id="address" placeholder="Dirección" {...form.register("address")} />
+              {form.formState.errors.address && (
+                <p className="text-red-500 text-sm">{form.formState.errors.address.message}</p>
+              )}
+            </div>
+            <div>
               <Label htmlFor="description">Descripción</Label>
               <Textarea id="description" placeholder="Descripción" {...form.register("description")} />
             </div>
@@ -301,6 +316,13 @@ export function CampusManagement() {
                 <Input id="name" placeholder="Nombre" {...editForm.register("name")} />
                 {editForm.formState.errors.name && (
                   <p className="text-red-500 text-sm">{editForm.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="address">Dirección</Label>
+                <Input id="address" placeholder="Dirección" {...editForm.register("address")} />
+                {editForm.formState.errors.address && (
+                  <p className="text-red-500 text-sm">{editForm.formState.errors.address.message}</p>
                 )}
               </div>
               <div>
