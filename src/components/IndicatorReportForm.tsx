@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,6 +170,7 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
             value={response.numeric_value || ''}
             onChange={(e) => handleResponseChange(indicator.id, 'numeric_value', parseFloat(e.target.value) || 0)}
             placeholder="Ingrese valor numérico"
+            className="w-full"
           />
         );
       case "short_text":
@@ -178,6 +180,7 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
             onChange={(e) => handleResponseChange(indicator.id, 'text_value', e.target.value)}
             placeholder="Ingrese texto corto"
             maxLength={255}
+            className="w-full"
           />
         );
       case "long_text":
@@ -186,7 +189,8 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
             value={response.text_value || ''}
             onChange={(e) => handleResponseChange(indicator.id, 'text_value', e.target.value)}
             placeholder="Ingrese texto largo"
-            rows={4}
+            rows={3}
+            className="w-full"
           />
         );
       case "link":
@@ -196,6 +200,7 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
             value={response.link_value || ''}
             onChange={(e) => handleResponseChange(indicator.id, 'link_value', e.target.value)}
             placeholder="https://ejemplo.com"
+            className="w-full"
           />
         );
       case "file":
@@ -210,6 +215,7 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
                   handleResponseChange(indicator.id, 'file_name', file.name);
                 }
               }}
+              className="w-full"
             />
             {response.file_name && (
               <p className="text-sm text-gray-600">Archivo: {response.file_name}</p>
@@ -252,7 +258,7 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
             disabled={saving || report?.status !== 'draft'}
           >
             <Save className="h-4 w-4 mr-2" />
-            Guardar
+            Guardar Borrador
           </Button>
           <Button
             onClick={handleSubmit}
@@ -272,39 +278,50 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
             Indicadores a Reportar
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {indicators.map((indicator) => {
-            const response = getResponse(indicator.id);
-            return (
-              <div key={indicator.id} className="space-y-3 p-4 border rounded-lg">
-                <div>
-                  <Label className="text-base font-medium">{indicator.name}</Label>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Tipo: {indicator.data_type === 'numeric' ? 'Numérico' : 
-                           indicator.data_type === 'short_text' ? 'Texto Corto' :
-                           indicator.data_type === 'long_text' ? 'Texto Largo' :
-                           indicator.data_type === 'file' ? 'Adjunto' : 'Link'}
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor={`indicator-${indicator.id}`}>Respuesta</Label>
-                  {renderIndicatorInput(indicator)}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor={`observations-${indicator.id}`}>Observaciones (Opcional)</Label>
-                  <Textarea
-                    id={`observations-${indicator.id}`}
-                    value={response.observations || ''}
-                    onChange={(e) => handleResponseChange(indicator.id, 'observations', e.target.value)}
-                    placeholder="Observaciones adicionales sobre este indicador"
-                    rows={2}
-                  />
-                </div>
-              </div>
-            );
-          })}
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-1/4">Título del Indicador</TableHead>
+                  <TableHead className="w-2/5">Campo de Reporte</TableHead>
+                  <TableHead className="w-1/3">Observaciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {indicators.map((indicator) => {
+                  const response = getResponse(indicator.id);
+                  return (
+                    <TableRow key={indicator.id}>
+                      <TableCell className="align-top">
+                        <div className="space-y-1">
+                          <p className="font-medium">{indicator.name}</p>
+                          <p className="text-sm text-gray-600">
+                            Tipo: {indicator.data_type === 'numeric' ? 'Numérico' : 
+                                   indicator.data_type === 'short_text' ? 'Texto Corto' :
+                                   indicator.data_type === 'long_text' ? 'Texto Largo' :
+                                   indicator.data_type === 'file' ? 'Adjunto' : 'Link'}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        {renderIndicatorInput(indicator)}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Textarea
+                          value={response.observations || ''}
+                          onChange={(e) => handleResponseChange(indicator.id, 'observations', e.target.value)}
+                          placeholder="Observaciones adicionales..."
+                          rows={3}
+                          className="w-full"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

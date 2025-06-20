@@ -13,6 +13,7 @@ import { EditableReportForm } from "./EditableReportForm";
 import { TemplateBasedReportSelector } from "./TemplateBasedReportSelector";
 import { IndicatorReportSelector } from "./IndicatorReportSelector";
 import { IndicatorReportForm } from "./IndicatorReportForm";
+import { TemplateReportForm } from "./TemplateReportForm";
 import { FileText, Plus, Eye, Calendar, CheckCircle, Clock, AlertTriangle, Grid3x3, BarChart3, Edit3, Send, Trash2 } from "lucide-react";
 import { UnifiedReport } from "@/types";
 
@@ -280,8 +281,19 @@ export function MyReport() {
           }}
         />
       );
+    } else if (selectedReportType === 'template') {
+      return (
+        <TemplateReportForm
+          reportId={selectedReport.id}
+          onSave={() => {
+            setSelectedReport(null);
+            setSelectedReportType("");
+            loadData();
+          }}
+        />
+      );
     } else {
-      // Template reports - placeholder for now
+      // Fallback for other report types
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -299,7 +311,7 @@ export function MyReport() {
             <CardContent className="p-8 text-center">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">{selectedReport.title}</h3>
-              <p className="text-gray-600">Editor de informes basados en plantillas en desarrollo...</p>
+              <p className="text-gray-600">Editor de este tipo de informe en desarrollo...</p>
             </CardContent>
           </Card>
         </div>
