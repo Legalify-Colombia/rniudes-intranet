@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -724,15 +723,20 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const approveWorkPlan = async (id: string, comments?: string): Promise<Result<any>> => {
+  const approveWorkPlan = async (id: string, status: 'approved' | 'rejected', comments?: string): Promise<Result<any>> => {
+    const updateData: any = {
+      status,
+      approved_by: profile?.id,
+      approved_date: new Date().toISOString()
+    };
+    
+    if (comments) {
+      updateData.approval_comments = comments;
+    }
+    
     const { data, error } = await supabase
       .from('work_plans')
-      .update({
-        status: 'approved',
-        approved_by: profile?.id,
-        approved_date: new Date().toISOString(),
-        approval_comments: comments || ''
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -825,11 +829,16 @@ export function useSupabaseData() {
   };
 
   // Template Based Reports
-  const fetchTemplateBasedReports = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
+  const fetchTemplateBasedReports = async (managerId?: string): Promise<Result<any[]>> => {
+    let query = supabase
       .from('template_based_reports_with_details')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
+    
+    if (managerId) {
+      query = query.eq('manager_id', managerId);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
     return { data: data || [], error };
   };
 
