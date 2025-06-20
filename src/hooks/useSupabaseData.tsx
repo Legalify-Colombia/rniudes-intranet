@@ -578,13 +578,52 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  // Función para obtener planes pendientes de aprobación
+  // Función para obtener planes pendientes de aprobación - CORREGIDA
   const fetchPendingWorkPlans = async () => {
+    console.log('Ejecutando fetchPendingWorkPlans...');
+    
     const { data, error } = await supabase
-      .from('work_plans_with_manager')
-      .select('*')
-      .eq('status', 'pending')
+      .from('work_plans')
+      .select(`
+        *,
+        manager:profiles!work_plans_manager_id_fkey(
+          id,
+          full_name,
+          email,
+          position
+        ),
+        program:academic_programs!work_plans_program_id_fkey(
+          id,
+          name,
+          campus:campus_id(
+            id,
+            name
+          ),
+          faculty:faculty_id(
+            id,
+            name
+          )
+        )
+      `)
+      .in('status', ['pending', 'submitted'])
       .order('submitted_date', { ascending: true });
+
+    console.log('Resultado de fetchPendingWorkPlans:', { data, error });
+    
+    // Transformar los datos para que coincidan con la estructura esperada
+    if (data) {
+      const transformedData = data.map(plan => ({
+        ...plan,
+        manager_name: plan.manager?.full_name,
+        manager_email: plan.manager?.email,
+        manager_position: plan.manager?.position,
+        program_name: plan.program?.name,
+        campus_name: plan.program?.campus?.name,
+        faculty_name: plan.program?.faculty?.name
+      }));
+      
+      return { data: transformedData, error };
+    }
 
     return { data, error };
   };

@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { CheckCircle, XCircle, Clock, AlertCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { WorkPlanPreview } from "./WorkPlanPreview";
+import { useAuth } from "@/hooks/useAuth";
 
 export function WorkPlanApproval() {
   const { fetchPendingWorkPlans, approveWorkPlan } = useSupabaseData();
+  const { profile } = useAuth();
   const [workPlans, setWorkPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -21,13 +23,32 @@ export function WorkPlanApproval() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Verificar que el usuario tenga permisos de coordinador o administrador
+    if (!profile) {
+      console.log('No hay perfil de usuario');
+      setLoading(false);
+      return;
+    }
+
+    if (!['Coordinador', 'Administrador'].includes(profile.role)) {
+      console.log('Usuario sin permisos para aprobar planes:', profile.role);
+      setLoading(false);
+      return;
+    }
+
     loadPendingWorkPlans();
-  }, []);
+  }, [profile]);
 
   const loadPendingWorkPlans = async () => {
     try {
+      console.log('Cargando planes pendientes...');
       const { data, error } = await fetchPendingWorkPlans();
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error al cargar planes pendientes:', error);
+        throw error;
+      }
+      
       console.log('Planes pendientes cargados:', data);
       setWorkPlans(data || []);
     } catch (error) {
@@ -43,15 +64,33 @@ export function WorkPlanApproval() {
   };
 
   const handleApproval = async (workPlanId: string, status: 'approved' | 'rejected') => {
+    if (!profile) {
+      toast({
+        title: "Error",
+        description: "No se encontró el perfil del usuario",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setActionLoading(workPlanId);
     try {
-      console.log('Iniciando aprobación:', { workPlanId, status, comments: comments[workPlanId] });
+      console.log('Iniciando aprobación:', { 
+        workPlanId, 
+        status, 
+        comments: comments[workPlanId],
+        userProfile: profile.id,
+        userRole: profile.role
+      });
       
-      const { error } = await approveWorkPlan(workPlanId, status, comments[workPlanId]);
+      const { data, error } = await approveWorkPlan(workPlanId, status, comments[workPlanId]);
+      
       if (error) {
         console.error('Error en aprobación:', error);
         throw error;
       }
+
+      console.log('Aprobación exitosa:', data);
 
       toast({
         title: "Éxito",
@@ -71,13 +110,36 @@ export function WorkPlanApproval() {
       console.error('Error approving work plan:', error);
       toast({
         title: "Error",
-        description: "No se pudo procesar la aprobación",
+        description: `No se pudo ${status === 'approved' ? 'aprobar' : 'rechazar'} el plan de trabajo. Verifique los permisos.`,
         variant: "destructive",
       });
     } finally {
       setActionLoading(null);
     }
   };
+
+  // Verificar permisos del usuario
+  if (!profile) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Cargando información del usuario...
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!['Coordinador', 'Administrador'].includes(profile.role)) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          No tienes permisos para aprobar planes de trabajo. Solo coordinadores y administradores pueden realizar esta acción.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   if (loading) {
     return <div className="flex justify-center p-8">Cargando planes pendientes...</div>;
@@ -128,7 +190,7 @@ export function WorkPlanApproval() {
                   </Dialog>
                   <Badge variant="secondary">
                     <Clock className="h-3 w-3 mr-1" />
-                    Pendiente
+                    {plan.status === 'pending' ? 'Pendiente' : plan.status === 'submitted' ? 'Enviado' : 'Pendiente'}
                   </Badge>
                 </div>
               </div>
@@ -137,6 +199,8 @@ export function WorkPlanApproval() {
                 <p><strong>Email:</strong> {plan.manager_email}</p>
                 <p><strong>Cargo:</strong> {plan.manager_position}</p>
                 <p><strong>Programa:</strong> {plan.program_name}</p>
+                <p><strong>Campus:</strong> {plan.campus_name}</p>
+                <p><strong>Facultad:</strong> {plan.faculty_name}</p>
                 <p><strong>Fecha de envío:</strong> {plan.submitted_date ? new Date(plan.submitted_date).toLocaleDateString() : 'No disponible'}</p>
               </div>
             </CardHeader>
