@@ -1781,6 +1781,77 @@ export const useSupabaseData = () => {
     return { data: typedData, error };
   };
 
+  const fetchSniesReportData = async (reportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('snies_report_data')
+      .select('*')
+      .eq('report_id', reportId)
+      .order('row_index');
+    return { data: data || [], error };
+  };
+
+  const saveSniesReportData = async (reportId: string, reportData: any[]): Promise<Result<any[]>> => {
+    // First delete existing data
+    await supabase
+      .from('snies_report_data')
+      .delete()
+      .eq('report_id', reportId);
+
+    // Then insert new data
+    const dataToInsert = reportData.map((row, index) => ({
+      report_id: reportId,
+      row_index: index,
+      field_data: row
+    }));
+
+    const { data, error } = await supabase
+      .from('snies_report_data')
+      .insert(dataToInsert)
+      .select();
+
+    return { data: data || [], error };
+  };
+
+  const consolidateSniesReports = async (templateId: string, title: string): Promise<Result<any>> => {
+    // Get all submitted reports for this template
+    const { data: reports, error: reportsError } = await supabase
+      .from('snies_reports')
+      .select(`
+        id,
+        manager_id,
+        snies_report_data(*)
+      `)
+      .eq('template_id', templateId)
+      .eq('status', 'submitted');
+
+    if (reportsError) return { data: null, error: reportsError };
+
+    // Consolidate all data
+    let consolidatedData: any[] = [];
+    reports?.forEach(report => {
+      if (report.snies_report_data) {
+        report.snies_report_data.forEach((dataRow: any) => {
+          consolidatedData.push(dataRow.field_data);
+        });
+      }
+    });
+
+    // Create consolidated report record
+    const { data, error } = await supabase
+      .from('snies_consolidated_reports')
+      .insert({
+        template_id: templateId,
+        title,
+        total_records: consolidatedData.length,
+        participating_managers: reports?.length || 0,
+        created_by: profile?.id || ''
+      })
+      .select()
+      .single();
+
+    return { data: { ...data, consolidated_data: consolidatedData }, error };
+  };
+
   return {
     fetchStrategicAxes,
     createStrategicAxis,
