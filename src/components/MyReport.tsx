@@ -10,6 +10,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { FileText, Eye, Edit, Plus, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { DetailedReportForm } from "./DetailedReportForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ReportTemplateForm } from "./ReportTemplateForm";
+import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
 
 export function MyReport() {
   const { 
@@ -17,6 +20,8 @@ export function MyReport() {
     fetchWorkPlans,
     fetchReportPeriods,
     fetchReportSystemConfig,
+    fetchReportTemplates,
+    fetchManagerReportVersions,
     createManagerReport
   } = useSupabaseData();
   const { profile } = useAuth();
@@ -26,6 +31,8 @@ export function MyReport() {
   const [workPlans, setWorkPlans] = useState<any[]>([]);
   const [reportPeriods, setReportPeriods] = useState<any[]>([]);
   const [systemConfig, setSystemConfig] = useState<any>(null);
+  const [reportTemplates, setReportTemplates] = useState<any[]>([]);
+  const [reportVersions, setReportVersions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailFormOpen, setDetailFormOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
@@ -41,11 +48,12 @@ export function MyReport() {
     
     setLoading(true);
     try {
-      const [reportsResult, workPlansResult, periodsResult, configResult] = await Promise.all([
+      const [reportsResult, workPlansResult, periodsResult, configResult, templatesResult] = await Promise.all([
         fetchManagerReportsByManagerWithPeriods(profile.id),
         fetchWorkPlans(),
         fetchReportPeriods(),
-        fetchReportSystemConfig()
+        fetchReportSystemConfig(),
+        fetchReportTemplates()
       ]);
 
       setReports(reportsResult.data || []);
@@ -61,6 +69,13 @@ export function MyReport() {
       setReportPeriods(activePeriods);
       
       setSystemConfig(configResult.data);
+      setReportTemplates(templatesResult.data || []);
+
+      // Cargar versiones si hay un reporte seleccionado
+      if (selectedReport) {
+        const versionsResult = await fetchManagerReportVersions(selectedReport.id);
+        setReportVersions(versionsResult.data || []);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -70,6 +85,15 @@ export function MyReport() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadReportVersions = async (reportId: string) => {
+    try {
+      const versionsResult = await fetchManagerReportVersions(reportId);
+      setReportVersions(versionsResult.data || []);
+    } catch (error) {
+      console.error('Error loading versions:', error);
     }
   };
 
@@ -119,9 +143,10 @@ export function MyReport() {
     }
   };
 
-  const openDetailForm = (report: any) => {
+  const openDetailForm = async (report: any) => {
     setSelectedReport(report);
     setDetailFormOpen(true);
+    await loadReportVersions(report.id);
   };
 
   const handleDetailFormSave = async () => {
@@ -334,11 +359,54 @@ export function MyReport() {
             </DialogTitle>
           </DialogHeader>
           {selectedReport && (
-            <DetailedReportForm
-              reportId={selectedReport.id}
-              workPlanId={selectedReport.work_plan_id}
-              onSave={handleDetailFormSave}
-            />
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Estado</Label>
+                  <div className="mt-1">{getStatusBadge(selectedReport.status)}</div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Período</Label>
+                  <div className="mt-1 text-sm">{selectedReport.report_period?.name}</div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Progreso Total</Label>
+                  <div className="mt-1">
+                    {selectedReport.total_progress_percentage ? (
+                      <div className="flex items-center gap-2">
+                        <Progress value={selectedReport.total_progress_percentage} className="flex-1" />
+                        <span className="text-sm">{selectedReport.total_progress_percentage.toFixed(1)}%</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">Sin progreso registrado</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Plantillas de Informe</h3>
+                {reportTemplates.length > 0 ? (
+                  <div className="space-y-4">
+                    {reportTemplates.map((template) => (
+                      <ReportTemplateForm
+                        key={template.id}
+                        reportId={selectedReport.id}
+                        template={template}
+                        existingVersions={reportVersions}
+                        onVersionCreated={() => loadReportVersions(selectedReport.id)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No hay plantillas de informe disponibles.
+                    <br />
+                    Contacte al administrador para configurar las plantillas.
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

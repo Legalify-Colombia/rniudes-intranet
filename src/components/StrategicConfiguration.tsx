@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, StrategicAxis, Action, Product } from "@/hooks/useSupabaseData";
+import { ReportTemplatesManagement } from "./ReportTemplatesManagement";
 
 export function StrategicConfiguration() {
   const [strategicAxes, setStrategicAxes] = useState<StrategicAxis[]>([]);
@@ -123,16 +123,17 @@ export function StrategicConfiguration() {
           Configuración Estratégica
         </CardTitle>
         <p className="text-gray-600">
-          Gestión de ejes estratégicos, acciones y productos para los planes de trabajo
+          Gestión de ejes estratégicos, acciones, productos y plantillas de informe
         </p>
       </CardHeader>
       
       <CardContent>
         <Tabs defaultValue="axes" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="axes">Ejes Estratégicos</TabsTrigger>
             <TabsTrigger value="actions">Acciones</TabsTrigger>
             <TabsTrigger value="products">Productos</TabsTrigger>
+            <TabsTrigger value="templates">Plantillas de Informe</TabsTrigger>
           </TabsList>
 
           {/* Ejes Estratégicos */}
@@ -391,6 +392,11 @@ export function StrategicConfiguration() {
                 ))}
               </TableBody>
             </Table>
+          </TabsContent>
+
+          {/* Plantillas de Informe */}
+          <TabsContent value="templates" className="space-y-4">
+            <ReportTemplatesManagement />
           </TabsContent>
         </Tabs>
       </CardContent>

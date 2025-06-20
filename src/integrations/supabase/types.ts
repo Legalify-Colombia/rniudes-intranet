@@ -207,6 +207,70 @@ export type Database = {
           },
         ]
       }
+      manager_report_versions: {
+        Row: {
+          created_at: string | null
+          evidence_links: string[] | null
+          id: string
+          manager_report_id: string | null
+          observations: string | null
+          progress_percentage: number | null
+          sharepoint_folder_url: string | null
+          submitted_at: string | null
+          template_id: string | null
+          updated_at: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          evidence_links?: string[] | null
+          id?: string
+          manager_report_id?: string | null
+          observations?: string | null
+          progress_percentage?: number | null
+          sharepoint_folder_url?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          version_number?: number
+        }
+        Update: {
+          created_at?: string | null
+          evidence_links?: string[] | null
+          id?: string
+          manager_report_id?: string | null
+          observations?: string | null
+          progress_percentage?: number | null
+          sharepoint_folder_url?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_report_versions_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_report_versions_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "manager_report_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manager_reports: {
         Row: {
           created_at: string | null
@@ -627,6 +691,80 @@ export type Database = {
         }
         Relationships: []
       }
+      report_templates: {
+        Row: {
+          action_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_versions: number | null
+          name: string
+          product_id: string | null
+          sharepoint_base_url: string | null
+          strategic_axis_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_versions?: number | null
+          name: string
+          product_id?: string | null
+          sharepoint_base_url?: string | null
+          strategic_axis_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_versions?: number | null
+          name?: string
+          product_id?: string | null
+          sharepoint_base_url?: string | null
+          strategic_axis_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_templates_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_templates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_templates_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       strategic_axes: {
         Row: {
           code: string
@@ -919,6 +1057,10 @@ export type Database = {
     Functions: {
       calculate_total_progress: {
         Args: { report_id: string }
+        Returns: number
+      }
+      get_next_version_number: {
+        Args: { p_manager_report_id: string; p_template_id: string }
         Returns: number
       }
     }

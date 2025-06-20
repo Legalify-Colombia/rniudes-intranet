@@ -140,6 +140,39 @@ export interface ReportSystemConfig {
   updated_at: string;
 }
 
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  strategic_axis_id?: string;
+  action_id?: string;
+  product_id?: string;
+  sharepoint_base_url?: string;
+  max_versions: number;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  strategic_axis?: StrategicAxis;
+  action?: Action;
+  product?: Product;
+}
+
+export interface ManagerReportVersion {
+  id: string;
+  manager_report_id: string;
+  template_id: string;
+  version_number: number;
+  progress_percentage: number;
+  sharepoint_folder_url?: string;
+  evidence_links?: string[];
+  observations?: string;
+  submitted_at?: string;
+  created_at: string;
+  updated_at: string;
+  template?: ReportTemplate;
+}
+
 export function useSupabaseData() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -884,6 +917,96 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Report Templates functions
+  const fetchReportTemplates = async () => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .select(`
+        *,
+        strategic_axis:strategic_axis_id(*),
+        action:action_id(*),
+        product:product_id(*)
+      `)
+      .eq('is_active', true)
+      .order('name');
+    return { data, error };
+  };
+
+  const createReportTemplate = async (template: Omit<ReportTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .insert([template])
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateReportTemplate = async (id: string, updates: Partial<ReportTemplate>) => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteReportTemplate = async (id: string) => {
+    const { data, error } = await supabase
+      .from('report_templates')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Manager Report Versions functions
+  const fetchManagerReportVersions = async (managerReportId: string) => {
+    const { data, error } = await supabase
+      .from('manager_report_versions')
+      .select(`
+        *,
+        template:template_id(
+          *,
+          strategic_axis:strategic_axis_id(*),
+          action:action_id(*),
+          product:product_id(*)
+        )
+      `)
+      .eq('manager_report_id', managerReportId)
+      .order('template_id, version_number');
+    return { data, error };
+  };
+
+  const createManagerReportVersion = async (version: Omit<ManagerReportVersion, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('manager_report_versions')
+      .insert([version])
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReportVersion = async (id: string, updates: Partial<ManagerReportVersion>) => {
+    const { data, error } = await supabase
+      .from('manager_report_versions')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const getNextVersionNumber = async (managerReportId: string, templateId: string) => {
+    const { data, error } = await supabase
+      .rpc('get_next_version_number', {
+        p_manager_report_id: managerReportId,
+        p_template_id: templateId
+      });
+    return { data, error };
+  };
+
   return {
     loading,
     setLoading,
@@ -957,5 +1080,15 @@ export function useSupabaseData() {
     // Enhanced Manager Reports
     fetchManagerReportsWithPeriods,
     fetchManagerReportsByManagerWithPeriods,
+    // Report Templates
+    fetchReportTemplates,
+    createReportTemplate,
+    updateReportTemplate,
+    deleteReportTemplate,
+    // Manager Report Versions
+    fetchManagerReportVersions,
+    createManagerReportVersion,
+    updateManagerReportVersion,
+    getNextVersionNumber,
   };
 }
