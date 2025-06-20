@@ -132,6 +132,9 @@ export function EditableReportForm({
     
     setSaving(true);
     try {
+      console.log('Guardando borrador con cambios locales:', localChanges);
+      
+      // Guardar cada cambio local en la base de datos
       const savePromises = Object.keys(localChanges).map(async (productId) => {
         const assignment = assignments.find(a => a.product.id === productId);
         if (!assignment) return;
@@ -143,20 +146,36 @@ export function EditableReportForm({
           ...localChanges[productId]
         };
 
+        console.log('Guardando reporte de producto:', reportData);
         return upsertProductProgressReport(reportData);
       });
 
-      await Promise.all(savePromises);
+      const results = await Promise.all(savePromises);
+      console.log('Resultados del guardado:', results);
       
-      // Limpiar cambios locales después de guardar
+      // Verificar si hubo errores
+      const errors = results.filter(result => result.error);
+      if (errors.length > 0) {
+        console.error('Errores al guardar:', errors);
+        throw new Error('Error al guardar algunos reportes');
+      }
+      
+      // Limpiar cambios locales después de guardar exitosamente
       setLocalChanges({});
+      
+      // Actualizar el estado del informe principal para asegurar que permanezca como draft
+      await updateManagerReport(reportId, { 
+        status: 'draft',
+        updated_at: new Date().toISOString()
+      });
       
       toast({
         title: "Éxito",
-        description: "Borrador guardado correctamente",
+        description: "Borrador guardado correctamente en la base de datos",
       });
       
-      loadData();
+      // Recargar datos para mostrar lo guardado
+      await loadData();
     } catch (error) {
       console.error('Error saving draft:', error);
       toast({
@@ -174,11 +193,26 @@ export function EditableReportForm({
     
     setSubmitting(true);
     try {
-      // Primero guardar los cambios locales
-      await saveDraft();
+      console.log('Enviando informe...');
       
-      // Luego enviar el informe
-      await updateManagerReport(reportId, { status: 'submitted' });
+      // Primero guardar cualquier cambio local pendiente
+      if (Object.keys(localChanges).length > 0) {
+        console.log('Guardando cambios pendientes antes de enviar...');
+        await saveDraft();
+      }
+      
+      // Luego cambiar el estado del informe a 'submitted'
+      const updateResult = await updateManagerReport(reportId, { 
+        status: 'submitted',
+        submitted_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      if (updateResult.error) {
+        throw updateResult.error;
+      }
+
+      console.log('Informe enviado exitosamente');
 
       toast({
         title: "Éxito",
@@ -285,7 +319,7 @@ export function EditableReportForm({
               <Button 
                 onClick={saveDraft} 
                 variant="outline" 
-                disabled={saving || !hasUnsavedChanges}
+                disabled={saving}
               >
                 {saving ? (
                   <>
@@ -301,7 +335,7 @@ export function EditableReportForm({
               </Button>
               <Button 
                 onClick={submitReport} 
-                disabled={submitting || hasUnsavedChanges}
+                disabled={submitting}
                 className={requiresImprovementPlan ? "bg-yellow-600 hover:bg-yellow-700" : ""}
               >
                 {submitting ? (
@@ -359,7 +393,7 @@ export function EditableReportForm({
             <Alert className="mt-4 border-blue-400 bg-blue-50">
               <Edit3 className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                Tienes cambios sin guardar. Haz clic en "Guardar Borrador" para guardar tus cambios.
+                Tienes cambios sin guardar. Haz clic en "Guardar Borrador" para guardar tus cambios en la base de datos.
               </AlertDescription>
             </Alert>
           )}
