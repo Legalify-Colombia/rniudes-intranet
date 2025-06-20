@@ -166,18 +166,14 @@ export default function Auth() {
                       <SelectValue placeholder="Seleccionar cargo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((position) => {
-                        // Triple validation to prevent empty values
-                        if (!validatePosition(position)) {
-                          console.warn('Auth - Skipping invalid position in render:', position);
-                          return null;
-                        }
-                        return (
+                      {positions
+                        .filter(position => validatePosition(position))
+                        .map((position) => (
                           <SelectItem key={position} value={position}>
                             {position}
                           </SelectItem>
-                        );
-                      }).filter(Boolean)}
+                        ))
+                      }
                     </SelectContent>
                   </Select>
                 </div>

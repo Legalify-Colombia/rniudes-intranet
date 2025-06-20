@@ -120,18 +120,18 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
               <SelectValue placeholder="Selecciona un tipo de plan" />
             </SelectTrigger>
             <SelectContent>
-              {planTypes.map((planType) => {
-                // Validate plan type ID before rendering
-                if (!planType.id || typeof planType.id !== 'string' || planType.id.trim().length === 0) {
-                  console.warn('CustomPlanSelector - Skipping invalid plan type:', planType);
-                  return null;
-                }
-                return (
+              {planTypes
+                .filter(planType => 
+                  planType.id && 
+                  typeof planType.id === 'string' && 
+                  planType.id.trim().length > 0
+                )
+                .map((planType) => (
                   <SelectItem key={planType.id} value={planType.id}>
                     {planType.name}
                   </SelectItem>
-                );
-              }).filter(Boolean)}
+                ))
+              }
             </SelectContent>
           </Select>
           {selectedPlanType && (
