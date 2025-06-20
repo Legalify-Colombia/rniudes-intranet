@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { Product, Action, StrategicAxis } from "@/types";
+import { useAuth } from "@/hooks/useAuth";
 
 export function ProductsManagement() {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const { 
     fetchProducts, 
     createProduct, 
@@ -63,10 +64,13 @@ export function ProductsManagement() {
   };
 
   const handleCreate = async () => {
-    if (!formData.name.trim() || !formData.action_id) return;
+    if (!formData.name.trim() || !formData.action_id || !profile?.id) return;
 
     try {
-      const result = await createProduct(formData);
+      const result = await createProduct({
+        ...formData,
+        created_by: profile.id
+      });
       if (result.data) {
         setProducts([...products, result.data]);
         setFormData({ name: "", description: "", action_id: "" });

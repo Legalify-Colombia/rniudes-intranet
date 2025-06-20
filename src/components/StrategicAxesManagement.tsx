@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { StrategicAxis } from "@/types";
+import { useAuth } from "@/hooks/useAuth";
 
 export function StrategicAxesManagement() {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const { fetchStrategicAxes, createStrategicAxis, updateStrategicAxis, deleteStrategicAxis } = useSupabaseData();
 
   const [axes, setAxes] = useState<StrategicAxis[]>([]);
@@ -44,10 +45,13 @@ export function StrategicAxesManagement() {
   };
 
   const handleCreate = async () => {
-    if (!formData.name.trim() || !formData.code.trim()) return;
+    if (!formData.name.trim() || !formData.code.trim() || !profile?.id) return;
 
     try {
-      const result = await createStrategicAxis(formData);
+      const result = await createStrategicAxis({
+        ...formData,
+        created_by: profile.id
+      });
       if (result.data) {
         setAxes([...axes, result.data]);
         setFormData({ name: "", code: "", description: "" });

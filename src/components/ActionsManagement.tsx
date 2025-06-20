@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { Action, StrategicAxis } from "@/types";
+import { useAuth } from "@/hooks/useAuth";
 
 export function ActionsManagement() {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const { 
     fetchActions, 
     createAction, 
@@ -60,10 +61,13 @@ export function ActionsManagement() {
   };
 
   const handleCreate = async () => {
-    if (!formData.name.trim() || !formData.code.trim() || !formData.strategic_axis_id) return;
+    if (!formData.name.trim() || !formData.code.trim() || !formData.strategic_axis_id || !profile?.id) return;
 
     try {
-      const result = await createAction(formData);
+      const result = await createAction({
+        ...formData,
+        created_by: profile.id
+      });
       if (result.data) {
         setActions([...actions, result.data]);
         setFormData({ name: "", code: "", description: "", strategic_axis_id: "" });
