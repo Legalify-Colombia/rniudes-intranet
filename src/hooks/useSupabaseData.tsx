@@ -103,6 +103,43 @@ export interface ProductResponse {
   product?: Product;
 }
 
+export interface ReportPeriod {
+  id: string;
+  name: string;
+  description?: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductProgressReport {
+  id: string;
+  manager_report_id: string;
+  product_id: string;
+  work_plan_assignment_id: string;
+  progress_percentage: number;
+  observations?: string;
+  evidence_files?: string[];
+  evidence_file_names?: string[];
+  created_at: string;
+  updated_at: string;
+  product?: Product;
+  work_plan_assignment?: WorkPlanAssignment;
+}
+
+export interface ReportSystemConfig {
+  id: string;
+  max_reports_per_period: number;
+  reports_enabled: boolean;
+  auto_calculate_progress: boolean;
+  require_evidence: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useSupabaseData() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -662,6 +699,127 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Report Periods functions
+  const fetchReportPeriods = async () => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .select('*')
+      .order('start_date', { ascending: false });
+    return { data, error };
+  };
+
+  const createReportPeriod = async (period: Omit<ReportPeriod, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .insert([period])
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateReportPeriod = async (id: string, updates: Partial<ReportPeriod>) => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteReportPeriod = async (id: string) => {
+    const { data, error } = await supabase
+      .from('report_periods')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Product Progress Reports functions
+  const fetchProductProgressReports = async (managerReportId: string) => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .select(`
+        *,
+        product:product_id(
+          *,
+          action:action_id(
+            *,
+            strategic_axis:strategic_axis_id(*)
+          )
+        ),
+        work_plan_assignment:work_plan_assignment_id(*)
+      `)
+      .eq('manager_report_id', managerReportId);
+    return { data, error };
+  };
+
+  const upsertProductProgressReport = async (report: Omit<ProductProgressReport, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .upsert([report], { onConflict: 'manager_report_id,product_id' })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteProductProgressReport = async (id: string) => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Report System Config functions
+  const fetchReportSystemConfig = async () => {
+    const { data, error } = await supabase
+      .from('report_system_config')
+      .select('*')
+      .single();
+    return { data, error };
+  };
+
+  const updateReportSystemConfig = async (updates: Partial<ReportSystemConfig>) => {
+    const { data, error } = await supabase
+      .from('report_system_config')
+      .update(updates)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Función para obtener reportes con información completa incluyendo períodos
+  const fetchManagerReportsWithPeriods = async () => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        manager:manager_id(*),
+        work_plan:work_plan_id(
+          *,
+          program:program_id(*)
+        ),
+        report_period:report_period_id(*)
+      `)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  };
+
+  // Función para obtener reportes de un gestor específico con períodos
+  const fetchManagerReportsByManagerWithPeriods = async (managerId: string) => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        work_plan:work_plan_id(*),
+        report_period:report_period_id(*)
+      `)
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  };
+
   // File upload function
   const uploadFile = async (file: File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage
@@ -745,5 +903,20 @@ export function useSupabaseData() {
     // File Management
     uploadFile,
     deleteFile,
+    // Report Periods
+    fetchReportPeriods,
+    createReportPeriod,
+    updateReportPeriod,
+    deleteReportPeriod,
+    // Product Progress Reports
+    fetchProductProgressReports,
+    upsertProductProgressReport,
+    deleteProductProgressReport,
+    // Report System Config
+    fetchReportSystemConfig,
+    updateReportSystemConfig,
+    // Enhanced Manager Reports
+    fetchManagerReportsWithPeriods,
+    fetchManagerReportsByManagerWithPeriods,
   };
 }

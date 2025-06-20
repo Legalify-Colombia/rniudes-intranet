@@ -215,9 +215,11 @@ export type Database = {
           general_report_url: string | null
           id: string
           manager_id: string
+          report_period_id: string | null
           status: string | null
           submitted_date: string | null
           title: string
+          total_progress_percentage: number | null
           updated_at: string | null
           work_plan_id: string
         }
@@ -228,9 +230,11 @@ export type Database = {
           general_report_url?: string | null
           id?: string
           manager_id: string
+          report_period_id?: string | null
           status?: string | null
           submitted_date?: string | null
           title: string
+          total_progress_percentage?: number | null
           updated_at?: string | null
           work_plan_id: string
         }
@@ -241,9 +245,11 @@ export type Database = {
           general_report_url?: string | null
           id?: string
           manager_id?: string
+          report_period_id?: string | null
           status?: string | null
           submitted_date?: string | null
           title?: string
+          total_progress_percentage?: number | null
           updated_at?: string | null
           work_plan_id?: string
         }
@@ -253,6 +259,13 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
             referencedColumns: ["id"]
           },
           {
@@ -320,6 +333,81 @@ export type Database = {
           {
             foreignKeyName: "preliminary_reports_assignment_id_fkey"
             columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "work_plan_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_progress_reports: {
+        Row: {
+          created_at: string | null
+          evidence_file_names: string[] | null
+          evidence_files: string[] | null
+          id: string
+          manager_report_id: string
+          observations: string | null
+          product_id: string
+          progress_percentage: number
+          updated_at: string | null
+          work_plan_assignment_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          manager_report_id: string
+          observations?: string | null
+          product_id: string
+          progress_percentage?: number
+          updated_at?: string | null
+          work_plan_assignment_id: string
+        }
+        Update: {
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          manager_report_id?: string
+          observations?: string | null
+          product_id?: string
+          progress_percentage?: number
+          updated_at?: string | null
+          work_plan_assignment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_progress_reports_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_work_plan_assignment_id_fkey"
+            columns: ["work_plan_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_work_plan_assignment_id_fkey"
+            columns: ["work_plan_assignment_id"]
             isOneToOne: false
             referencedRelation: "work_plan_assignments"
             referencedColumns: ["id"]
@@ -462,6 +550,80 @@ export type Database = {
           total_hours?: number | null
           updated_at?: string | null
           weekly_hours?: number | null
+        }
+        Relationships: []
+      }
+      report_periods: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          name: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_periods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_system_config: {
+        Row: {
+          auto_calculate_progress: boolean | null
+          created_at: string | null
+          id: string
+          max_reports_per_period: number
+          reports_enabled: boolean | null
+          require_evidence: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_calculate_progress?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_reports_per_period?: number
+          reports_enabled?: boolean | null
+          require_evidence?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_calculate_progress?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_reports_per_period?: number
+          reports_enabled?: boolean | null
+          require_evidence?: boolean | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -755,7 +917,10 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      calculate_total_progress: {
+        Args: { report_id: string }
+        Returns: number
+      }
     }
     Enums: {
       work_plan_status:
