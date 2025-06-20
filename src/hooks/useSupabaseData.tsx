@@ -123,6 +123,67 @@ export interface DocumentTemplate {
   updated_at: string;
 }
 
+export interface SniesDocumentType {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface SniesCountry {
+  id: string;
+  name: string;
+  alpha_3?: string;
+  alpha_2?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface SniesMunicipality {
+  id: string;
+  name: string;
+  country_id?: string;
+  department_code?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface SniesReportTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SniesTemplateField {
+  id: string;
+  template_id: string;
+  field_name: string;
+  field_label: string;
+  field_type: 'text' | 'numeric' | 'relation';
+  relation_table?: string;
+  relation_id_field?: string;
+  relation_display_field?: string;
+  is_required: boolean;
+  field_order: number;
+  created_at: string;
+}
+
+export interface SniesReport {
+  id: string;
+  template_id: string;
+  manager_id: string;
+  title: string;
+  status: 'draft' | 'submitted' | 'reviewed';
+  submitted_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const useSupabaseData = () => {
   const { profile } = useAuth();
 
@@ -1467,6 +1528,270 @@ export const useSupabaseData = () => {
     return { data, error };
   };
 
+  // SNIES Configuration Management
+  const fetchSniesDocumentTypes = async (): Promise<Result<SniesDocumentType[]>> => {
+    const { data, error } = await supabase
+      .from('snies_document_types')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const fetchSniesCountries = async (): Promise<Result<SniesCountry[]>> => {
+    const { data, error } = await supabase
+      .from('snies_countries')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const fetchSniesMunicipalities = async (): Promise<Result<SniesMunicipality[]>> => {
+    const { data, error } = await supabase
+      .from('snies_municipalities')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const fetchSniesBiologicalSex = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('snies_biological_sex')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const fetchSniesMaritalStatus = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('snies_marital_status')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const createSniesCountry = async (countryData: Partial<SniesCountry>): Promise<Result<SniesCountry>> => {
+    const { data, error } = await supabase
+      .from('snies_countries')
+      .insert(countryData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const bulkCreateSniesCountries = async (countries: Partial<SniesCountry>[]): Promise<Result<SniesCountry[]>> => {
+    const { data, error } = await supabase
+      .from('snies_countries')
+      .insert(countries)
+      .select();
+    return { data: data || [], error };
+  };
+
+  const createSniesMunicipality = async (municipalityData: Partial<SniesMunicipality>): Promise<Result<SniesMunicipality>> => {
+    const { data, error } = await supabase
+      .from('snies_municipalities')
+      .insert(municipalityData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const bulkCreateSniesMunicipalities = async (municipalities: Partial<SniesMunicipality>[]): Promise<Result<SniesMunicipality[]>> => {
+    const { data, error } = await supabase
+      .from('snies_municipalities')
+      .insert(municipalities)
+      .select();
+    return { data: data || [], error };
+  };
+
+  // SNIES Report Templates Management
+  const fetchSniesReportTemplates = async (): Promise<Result<SniesReportTemplate[]>> => {
+    const { data, error } = await supabase
+      .from('snies_report_templates')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const createSniesReportTemplate = async (templateData: Partial<SniesReportTemplate>): Promise<Result<SniesReportTemplate>> => {
+    const { data, error } = await supabase
+      .from('snies_report_templates')
+      .insert({
+        ...templateData,
+        created_by: profile?.id
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateSniesReportTemplate = async (id: string, templateData: Partial<SniesReportTemplate>): Promise<Result<SniesReportTemplate>> => {
+    const { data, error } = await supabase
+      .from('snies_report_templates')
+      .update(templateData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteSniesReportTemplate = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('snies_report_templates')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // SNIES Template Fields Management
+  const fetchSniesTemplateFields = async (templateId: string): Promise<Result<SniesTemplateField[]>> => {
+    const { data, error } = await supabase
+      .from('snies_template_fields')
+      .select('*')
+      .eq('template_id', templateId)
+      .order('field_order');
+    return { data: data || [], error };
+  };
+
+  const createSniesTemplateField = async (fieldData: Partial<SniesTemplateField>): Promise<Result<SniesTemplateField>> => {
+    const { data, error } = await supabase
+      .from('snies_template_fields')
+      .insert(fieldData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateSniesTemplateField = async (id: string, fieldData: Partial<SniesTemplateField>): Promise<Result<SniesTemplateField>> => {
+    const { data, error } = await supabase
+      .from('snies_template_fields')
+      .update(fieldData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteSniesTemplateField = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('snies_template_fields')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // SNIES Reports Management
+  const fetchSniesReports = async (): Promise<Result<SniesReport[]>> => {
+    const { data, error } = await supabase
+      .from('snies_reports')
+      .select(`
+        *,
+        template:snies_report_templates(name),
+        manager:profiles(full_name, email)
+      `)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const createSniesReport = async (reportData: Partial<SniesReport>): Promise<Result<SniesReport>> => {
+    const { data, error } = await supabase
+      .from('snies_reports')
+      .insert({
+        ...reportData,
+        manager_id: profile?.id
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateSniesReport = async (id: string, reportData: Partial<SniesReport>): Promise<Result<SniesReport>> => {
+    const { data, error } = await supabase
+      .from('snies_reports')
+      .update(reportData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // SNIES Report Data Management
+  const fetchSniesReportData = async (reportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('snies_report_data')
+      .select('*')
+      .eq('report_id', reportId)
+      .order('row_index');
+    return { data: data || [], error };
+  };
+
+  const saveSniesReportData = async (reportId: string, reportData: any[]): Promise<Result<any[]>> => {
+    // First delete existing data
+    await supabase
+      .from('snies_report_data')
+      .delete()
+      .eq('report_id', reportId);
+
+    // Then insert new data
+    const dataToInsert = reportData.map((row, index) => ({
+      report_id: reportId,
+      row_index: index,
+      field_data: row
+    }));
+
+    const { data, error } = await supabase
+      .from('snies_report_data')
+      .insert(dataToInsert)
+      .select();
+
+    return { data: data || [], error };
+  };
+
+  const consolidateSniesReports = async (templateId: string, title: string): Promise<Result<any>> => {
+    // Get all submitted reports for this template
+    const { data: reports, error: reportsError } = await supabase
+      .from('snies_reports')
+      .select(`
+        id,
+        manager_id,
+        snies_report_data(*)
+      `)
+      .eq('template_id', templateId)
+      .eq('status', 'submitted');
+
+    if (reportsError) return { data: null, error: reportsError };
+
+    // Consolidate all data
+    let consolidatedData: any[] = [];
+    reports?.forEach(report => {
+      if (report.snies_report_data) {
+        report.snies_report_data.forEach((dataRow: any) => {
+          consolidatedData.push(dataRow.field_data);
+        });
+      }
+    });
+
+    // Create consolidated report record
+    const { data, error } = await supabase
+      .from('snies_consolidated_reports')
+      .insert({
+        template_id: templateId,
+        title,
+        total_records: consolidatedData.length,
+        participating_managers: reports?.length || 0,
+        created_by: profile?.id
+      })
+      .select()
+      .single();
+
+    return { data: { ...data, consolidated_data: consolidatedData }, error };
+  };
+
   return {
     fetchStrategicAxes,
     createStrategicAxis,
@@ -1585,5 +1910,30 @@ export const useSupabaseData = () => {
     
     // Custom plan details
     fetchCustomPlanDetails,
+    
+    // SNIES functions
+    fetchSniesDocumentTypes,
+    fetchSniesCountries,
+    fetchSniesMunicipalities,
+    fetchSniesBiologicalSex,
+    fetchSniesMaritalStatus,
+    createSniesCountry,
+    bulkCreateSniesCountries,
+    createSniesMunicipality,
+    bulkCreateSniesMunicipalities,
+    fetchSniesReportTemplates,
+    createSniesReportTemplate,
+    updateSniesReportTemplate,
+    deleteSniesReportTemplate,
+    fetchSniesTemplateFields,
+    createSniesTemplateField,
+    updateSniesTemplateField,
+    deleteSniesTemplateField,
+    fetchSniesReports,
+    createSniesReport,
+    updateSniesReport,
+    fetchSniesReportData,
+    saveSniesReportData,
+    consolidateSniesReports,
   };
 };

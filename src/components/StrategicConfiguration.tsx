@@ -6,6 +6,7 @@ import { ActionsManagement } from "./ActionsManagement";
 import { ProductsManagement } from "./ProductsManagement";
 import { ReportTemplatesManagement } from "./ReportTemplatesManagement";
 import { PlanTypesManagement } from "./PlanTypesManagement";
+import { SniesManagement } from "./SniesManagement";
 
 export function StrategicConfiguration() {
   const [activeTab, setActiveTab] = useState("axes");
@@ -18,12 +19,13 @@ export function StrategicConfiguration() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-5 w-full">
+        <TabsList className="grid grid-cols-6 w-full">
           <TabsTrigger value="axes">Ejes Estratégicos</TabsTrigger>
           <TabsTrigger value="actions">Acciones</TabsTrigger>
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="plans">Tipos de Plan</TabsTrigger>
           <TabsTrigger value="templates">Plantillas</TabsTrigger>
+          <TabsTrigger value="snies">SNIES</TabsTrigger>
         </TabsList>
 
         <TabsContent value="axes">
@@ -44,6 +46,10 @@ export function StrategicConfiguration() {
 
         <TabsContent value="templates">
           <ReportTemplatesManagement />
+        </TabsContent>
+
+        <TabsContent value="snies">
+          <SniesManagement />
         </TabsContent>
       </Tabs>
     </div>

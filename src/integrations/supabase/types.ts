@@ -1787,6 +1787,334 @@ export type Database = {
           },
         ]
       }
+      snies_biological_sex: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_consolidated_reports: {
+        Row: {
+          consolidation_date: string | null
+          created_at: string | null
+          created_by: string
+          file_url: string | null
+          id: string
+          participating_managers: number | null
+          template_id: string | null
+          title: string
+          total_records: number | null
+        }
+        Insert: {
+          consolidation_date?: string | null
+          created_at?: string | null
+          created_by: string
+          file_url?: string | null
+          id?: string
+          participating_managers?: number | null
+          template_id?: string | null
+          title: string
+          total_records?: number | null
+        }
+        Update: {
+          consolidation_date?: string | null
+          created_at?: string | null
+          created_by?: string
+          file_url?: string | null
+          id?: string
+          participating_managers?: number | null
+          template_id?: string | null
+          title?: string
+          total_records?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_consolidated_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "snies_report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_countries: {
+        Row: {
+          alpha_2: string | null
+          alpha_3: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          alpha_2?: string | null
+          alpha_3?: string | null
+          created_at?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          alpha_2?: string | null
+          alpha_3?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_document_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_marital_status: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_municipalities: {
+        Row: {
+          country_id: string | null
+          created_at: string | null
+          department_code: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          country_id?: string | null
+          created_at?: string | null
+          department_code?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          country_id?: string | null
+          created_at?: string | null
+          department_code?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_municipalities_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "snies_countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_report_data: {
+        Row: {
+          created_at: string | null
+          field_data: Json
+          id: string
+          report_id: string | null
+          row_index: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_data: Json
+          id?: string
+          report_id?: string | null
+          row_index: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_data?: Json
+          id?: string
+          report_id?: string | null
+          row_index?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_report_data_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "snies_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_report_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      snies_reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          manager_id: string
+          status: string | null
+          submitted_date: string | null
+          template_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          status?: string | null
+          submitted_date?: string | null
+          template_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          status?: string | null
+          submitted_date?: string | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "snies_report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_template_fields: {
+        Row: {
+          created_at: string | null
+          field_label: string
+          field_name: string
+          field_order: number | null
+          field_type: string
+          id: string
+          is_required: boolean | null
+          relation_display_field: string | null
+          relation_id_field: string | null
+          relation_table: string | null
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_label: string
+          field_name: string
+          field_order?: number | null
+          field_type: string
+          id?: string
+          is_required?: boolean | null
+          relation_display_field?: string | null
+          relation_id_field?: string | null
+          relation_table?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_label?: string
+          field_name?: string
+          field_order?: number | null
+          field_type?: string
+          id?: string
+          is_required?: boolean | null
+          relation_display_field?: string | null
+          relation_id_field?: string | null
+          relation_table?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_template_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "snies_report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       specific_lines: {
         Row: {
           created_at: string | null
