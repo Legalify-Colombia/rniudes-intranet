@@ -883,10 +883,19 @@ export function useSupabaseData() {
   };
 
   const updateManagerReport = async (reportId: string, updates: any) => {
-    return await supabase
-      .from('manager_reports')
-      .update(updates)
-      .eq('id', reportId);
+    try {
+      const { data, error } = await supabase
+        .from('manager_reports')
+        .update(updates)
+        .eq('id', reportId)
+        .select();
+      
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating manager report:', error);
+      return { data: null, error };
+    }
   };
 
   // Product Responses functions

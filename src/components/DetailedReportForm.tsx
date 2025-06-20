@@ -23,7 +23,8 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
     fetchProductProgressReports,
     upsertProductProgressReport,
     deleteProductProgressReport,
-    uploadFile
+    uploadFile,
+    updateManagerReport
   } = useSupabaseData();
   const { toast } = useToast();
 
