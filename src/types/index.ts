@@ -1,11 +1,10 @@
-
 // Strategic configuration types
 export interface StrategicAxis {
   id: string;
   name: string;
   description?: string;
   code: string;
-  usage_type: string[];
+  usage_type?: string[];
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -17,7 +16,7 @@ export interface Action {
   description?: string;
   code: string;
   strategic_axis_id: string;
-  usage_type: string[];
+  usage_type?: string[];
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -29,7 +28,7 @@ export interface Product {
   name: string;
   description?: string;
   action_id: string;
-  usage_type: string[];
+  usage_type?: string[];
   created_by: string;
   created_at: string;
   updated_at: string;
