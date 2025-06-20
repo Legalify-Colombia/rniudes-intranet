@@ -88,16 +88,25 @@ export const useSupabaseData = () => {
     return await supabase.from('manager_reports').update(data).eq('id', id).select().single();
   };
 
-  const fetchFacultiesByCampus = async (campusId: string) => {
-    return await supabase.from('faculties').select('*').eq('campus_id', campusId);
+  const fetchFacultiesByCampus = async (campusIds?: string[]) => {
+    if (!campusIds || campusIds.length === 0) {
+      return await supabase.from('faculties').select('*');
+    }
+    return await supabase.from('faculties').select('*').in('campus_id', campusIds);
   };
 
-  const fetchAcademicProgramsByCampus = async (campusId: string) => {
-    return await supabase.from('academic_programs').select('*').eq('campus_id', campusId);
+  const fetchAcademicProgramsByCampus = async (campusIds?: string[]) => {
+    if (!campusIds || campusIds.length === 0) {
+      return await supabase.from('academic_programs').select('*');
+    }
+    return await supabase.from('academic_programs').select('*').in('campus_id', campusIds);
   };
 
-  const fetchManagersByCampus = async (campusId: string) => {
-    return await supabase.from('profiles').select('*').eq('campus_id', campusId).eq('role', 'Gestor');
+  const fetchManagersByCampus = async (campusIds?: string[]) => {
+    if (!campusIds || campusIds.length === 0) {
+      return await supabase.from('profiles').select('*').eq('role', 'Gestor');
+    }
+    return await supabase.from('profiles').select('*').eq('role', 'Gestor').in('campus_id', campusIds);
   };
 
   const updateManagerHours = async (managerId: string, hours: number) => {
@@ -236,6 +245,10 @@ export const useSupabaseData = () => {
     return await supabase.from('strategic_axes').delete().eq('id', id);
   };
 
+  const updateStrategicAxisUsage = async (id: string, usageType: string[]) => {
+    return await supabase.from('strategic_axes').update({ usage_type: usageType }).eq('id', id).select().single();
+  };
+
   const createAction = async (data: Omit<Action, 'id' | 'created_at' | 'updated_at'>) => {
     const actionData = {
       ...data,
@@ -252,6 +265,10 @@ export const useSupabaseData = () => {
     return await supabase.from('actions').delete().eq('id', id);
   };
 
+  const updateActionUsage = async (id: string, usageType: string[]) => {
+    return await supabase.from('actions').update({ usage_type: usageType }).eq('id', id).select().single();
+  };
+
   const createProduct = async (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     const productData = {
       ...data,
@@ -266,6 +283,10 @@ export const useSupabaseData = () => {
 
   const deleteProduct = async (id: string) => {
     return await supabase.from('products').delete().eq('id', id);
+  };
+
+  const updateProductUsage = async (id: string, usageType: string[]) => {
+    return await supabase.from('products').update({ usage_type: usageType }).eq('id', id).select().single();
   };
 
   const uploadFile = async (file: File, bucket: string = 'reports', folder?: string) => {
@@ -490,12 +511,15 @@ export const useSupabaseData = () => {
     createStrategicAxis,
     updateStrategicAxis,
     deleteStrategicAxis,
+    updateStrategicAxisUsage,
     createAction,
     updateAction,
     deleteAction,
+    updateActionUsage,
     createProduct,
     updateProduct,
     deleteProduct,
+    updateProductUsage,
     createCampus,
     updateCampus,
     deleteCampus,

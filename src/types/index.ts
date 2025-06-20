@@ -117,7 +117,7 @@ export interface ManagerReport {
   id: string;
   manager_id: string;
   work_plan_id: string;
-  report_period_id: string;
+  report_period_id?: string;
   title: string;
   description?: string;
   status: 'draft' | 'submitted' | 'reviewed';
