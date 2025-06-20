@@ -47,6 +47,34 @@ export const useSupabaseData = () => {
         return await supabase.from('faculties').select('*, campus(*), faculty_campus(*, campus(*))');
     };
 
+    const fetchFacultiesByCampus = async (campusIds?: string[]) => {
+        let query = supabase.from('faculties').select('*, campus(*), faculty_campus(*, campus(*))');
+        if (campusIds && campusIds.length > 0) {
+            query = query.in('campus_id', campusIds);
+        }
+        return query;
+    };
+
+    const fetchAcademicProgramsByCampus = async (campusIds?: string[]) => {
+        let query = supabase.from('academic_programs').select('*, campus(*), faculty:faculties(*)');
+        if (campusIds && campusIds.length > 0) {
+            query = query.in('campus_id', campusIds);
+        }
+        return query;
+    };
+
+    const fetchManagersByCampus = async (campusIds?: string[]) => {
+        let query = supabase.from('profiles').select('*, campus:campus_id(*)').eq('role', 'Gestor');
+        if (campusIds && campusIds.length > 0) {
+            query = query.in('campus_id', campusIds);
+        }
+        return query;
+    };
+
+    const fetchManagerReportsByManager = async (managerId: string) => {
+        return await supabase.from('manager_reports').select('*, manager:profiles(*), work_plan:work_plans(*), report_period:report_periods(*)').eq('manager_id', managerId);
+    };
+
     const fetchReportPeriods = async () => await supabase.from('report_periods').select('*');
     const fetchSpecificLines = async () => await supabase.from('specific_lines').select('*');
     const fetchIndicators = async () => await supabase.from('indicators').select('*');
@@ -95,14 +123,43 @@ export const useSupabaseData = () => {
     };
 
     // Generic CRUD functions
-    const createRecord = (table: string, data: any) => supabase.from(table).insert(data).select().single();
-    const updateRecord = (table: string, id: string, data: any) => supabase.from(table).update(data).eq('id', id).select().single();
-    const deleteRecord = (table: string, id: string) => supabase.from(table).delete().eq('id', id);
-    const upsertRecord = (table: string, data: any) => supabase.from(table).upsert(data).select().single();
+    const createRecord = async (table: string, data: any) => await supabase.from(table).insert(data).select().single();
+    const updateRecord = async (table: string, id: string, data: any) => await supabase.from(table).update(data).eq('id', id).select().single();
+    const deleteRecord = async (table: string, id: string) => await supabase.from(table).delete().eq('id', id);
+    const upsertRecord = async (table: string, data: any) => await supabase.from(table).upsert(data).select().single();
 
     return {
         // Fetch
-        fetchAcademicPrograms, fetchStrategicAxes, fetchActions, fetchProducts, fetchCampus, fetchFaculties, fetchReportPeriods, fetchSpecificLines, fetchIndicators, fetchProfiles, fetchManagers, fetchReportTemplates, fetchWorkPlans, fetchManagerReports, fetchWorkPlanAssignments, fetchProductProgressReports, fetchDocumentTemplates, fetchTemplateBasedReports, fetchReportSystemConfig, fetchInternationalizationProjects, fetchTemplateReportResponses, fetchPendingWorkPlans, fetchWorkPlanDetails, fetchUsersByCampus, getUserManagedCampus,
+        fetchAcademicPrograms, 
+        fetchStrategicAxes, 
+        fetchActions, 
+        fetchProducts, 
+        fetchCampus, 
+        fetchFaculties, 
+        fetchFacultiesByCampus,
+        fetchAcademicProgramsByCampus,
+        fetchManagersByCampus,
+        fetchManagerReportsByManager,
+        fetchReportPeriods, 
+        fetchSpecificLines, 
+        fetchIndicators, 
+        fetchProfiles, 
+        fetchManagers, 
+        fetchReportTemplates, 
+        fetchWorkPlans, 
+        fetchManagerReports, 
+        fetchWorkPlanAssignments, 
+        fetchProductProgressReports, 
+        fetchDocumentTemplates, 
+        fetchTemplateBasedReports, 
+        fetchReportSystemConfig, 
+        fetchInternationalizationProjects, 
+        fetchTemplateReportResponses, 
+        fetchPendingWorkPlans, 
+        fetchWorkPlanDetails, 
+        fetchUsersByCampus, 
+        getUserManagedCampus,
+        
         // CUD
         uploadFile,
         createCampus: (d: Insert<Campus>) => createRecord('campus', d),
@@ -151,6 +208,7 @@ export const useSupabaseData = () => {
         createManagerReport: (d: Insert<ManagerReport>) => createRecord('manager_reports', d),
         updateManagerReport: (id: string, d: Update<ManagerReport>) => updateRecord('manager_reports', id, d),
         upsertProductProgressReport: (d: Insert<ProductProgressReport>) => upsertRecord('product_progress_reports', d),
+        deleteProductProgressReport: (id: string) => deleteRecord('product_progress_reports', id),
 
         createDocumentTemplate: (d: Insert<DocumentTemplate>) => createRecord('document_templates', d),
         updateDocumentTemplate: (id: string, d: Update<DocumentTemplate>) => updateRecord('document_templates', id, d),

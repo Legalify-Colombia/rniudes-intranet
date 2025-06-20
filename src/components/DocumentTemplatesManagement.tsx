@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, DocumentTemplate } from "@/hooks/useSupabaseData";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { DocumentTemplate } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, Edit, Trash2, FileText, Download, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";

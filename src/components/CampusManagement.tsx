@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2, Building, GraduationCap, School } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData, Campus, Faculty, AcademicProgram } from "@/hooks/useSupabaseData";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { Campus, Faculty, AcademicProgram } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 
