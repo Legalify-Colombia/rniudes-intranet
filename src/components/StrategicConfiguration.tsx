@@ -66,7 +66,10 @@ export function StrategicConfiguration() {
 
   const handleCreateAxis = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await createStrategicAxis(axisForm);
+    const { data, error } = await createStrategicAxis({
+      ...axisForm,
+      created_by: profile?.id || ''
+    });
     
     if (error) {
       toast({
@@ -84,7 +87,10 @@ export function StrategicConfiguration() {
 
   const handleCreateAction = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await createAction(actionForm);
+    const { data, error } = await createAction({
+      ...actionForm,
+      created_by: profile?.id || ''
+    });
     
     if (error) {
       toast({
@@ -102,7 +108,10 @@ export function StrategicConfiguration() {
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await createProduct(productForm);
+    const { data, error } = await createProduct({
+      ...productForm,
+      created_by: profile?.id || ''
+    });
     
     if (error) {
       toast({
