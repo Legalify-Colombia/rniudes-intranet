@@ -983,6 +983,72 @@ export function useSupabaseData() {
     }
   };
 
+  const upsertProductProgressReport = async (report: Omit<ProductProgressReport, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .upsert([report], { onConflict: 'manager_report_id,product_id' })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteProductProgressReport = async (id: string) => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Report System Config functions
+  const fetchReportSystemConfig = async () => {
+    const { data, error } = await supabase
+      .from('report_system_config')
+      .select('*')
+      .single();
+    return { data, error };
+  };
+
+  const updateReportSystemConfig = async (updates: Partial<ReportSystemConfig>) => {
+    const { data, error } = await supabase
+      .from('report_system_config')
+      .update(updates)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Función para obtener reportes con información completa incluyendo períodos
+  const fetchManagerReportsWithPeriods = async () => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        manager:manager_id(*),
+        work_plan:work_plan_id(
+          *,
+          program:program_id(*)
+        ),
+        report_period:report_period_id(*)
+      `)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  };
+
+  // Función para obtener reportes de un gestor específico con períodos
+  const fetchManagerReportsByManagerWithPeriods = async (managerId: string) => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        work_plan:work_plan_id(*),
+        report_period:report_period_id(*)
+      `)
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  };
+
   // File upload function
   const uploadFile = async (file: File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage
