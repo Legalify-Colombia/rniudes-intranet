@@ -10,32 +10,40 @@ export interface Profile {
 
 export interface StrategicAxis {
   id: string;
-  created_at: string;
-  updated_at: string;
   code: string;
   name: string;
+  description?: string;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+  usage_type?: string[];
 }
 
 export interface Action {
   id: string;
-  created_at: string;
-  updated_at: string;
   code: string;
   name: string;
+  description?: string;
   strategic_axis_id: string;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+  usage_type?: string[];
   strategic_axis?: StrategicAxis;
 }
 
 export interface Product {
   id: string;
-  created_at: string;
-  updated_at: string;
   name: string;
+  description?: string;
   action_id: string;
   created_by: string;
-  action?: Action;
+  created_at: string;
+  updated_at: string;
+  usage_type?: string[];
+  action?: Action & {
+    strategic_axis?: StrategicAxis;
+  };
 }
 
 export interface Program {

@@ -138,9 +138,30 @@ export const useSupabaseData = () => {
   const createStrategicAxis = async (axisData: Omit<StrategicAxis, 'id' | 'created_at' | 'updated_at'>): Promise<Result<StrategicAxis>> => {
     const { data, error } = await supabase
       .from('strategic_axes')
-      .insert(axisData)
+      .insert({
+        ...axisData,
+        created_by: profile?.id || ''
+      })
       .select()
       .single();
+    return { data, error };
+  };
+
+  const updateStrategicAxis = async (id: string, axisData: Partial<StrategicAxis>): Promise<Result<StrategicAxis>> => {
+    const { data, error } = await supabase
+      .from('strategic_axes')
+      .update(axisData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteStrategicAxis = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('strategic_axes')
+      .delete()
+      .eq('id', id);
     return { data, error };
   };
 
@@ -159,9 +180,30 @@ export const useSupabaseData = () => {
   const createAction = async (actionData: Omit<Action, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Action>> => {
     const { data, error } = await supabase
       .from('actions')
-      .insert(actionData)
+      .insert({
+        ...actionData,
+        created_by: profile?.id || ''
+      })
       .select()
       .single();
+    return { data, error };
+  };
+
+  const updateAction = async (id: string, actionData: Partial<Action>): Promise<Result<Action>> => {
+    const { data, error } = await supabase
+      .from('actions')
+      .update(actionData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteAction = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('actions')
+      .delete()
+      .eq('id', id);
     return { data, error };
   };
 
@@ -183,9 +225,30 @@ export const useSupabaseData = () => {
   const createProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Product>> => {
     const { data, error } = await supabase
       .from('products')
-      .insert(productData)
+      .insert({
+        ...productData,
+        created_by: profile?.id || ''
+      })
       .select()
       .single();
+    return { data, error };
+  };
+
+  const updateProduct = async (id: string, productData: Partial<Product>): Promise<Result<Product>> => {
+    const { data, error } = await supabase
+      .from('products')
+      .update(productData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteProduct = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
     return { data, error };
   };
 
@@ -1373,10 +1436,16 @@ export const useSupabaseData = () => {
   return {
     fetchStrategicAxes,
     createStrategicAxis,
+    updateStrategicAxis,
+    deleteStrategicAxis,
     fetchActions,
     createAction,
+    updateAction,
+    deleteAction,
     fetchProducts,
     createProduct,
+    updateProduct,
+    deleteProduct,
     fetchCampus,
     createCampus,
     updateCampus,
