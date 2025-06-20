@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +41,8 @@ export function UserManagement() {
     numberOfWeeks: 16,
   });
 
-  const positions = getValidPositions();
+  // Get positions and ensure they're all valid
+  const positions = getValidPositions().filter(pos => pos && pos.trim().length > 0);
 
   useEffect(() => {
     loadUsers();
@@ -76,14 +76,17 @@ export function UserManagement() {
   const handlePositionChange = (position: string) => {
     console.log('UserManagement - Position change called with:', position, 'Type:', typeof position);
     
-    if (validatePosition(position)) {
+    // Extra validation to ensure we never set an empty string
+    if (position && typeof position === 'string' && position.trim().length > 0 && validatePosition(position)) {
       console.log('UserManagement - Setting valid position:', position);
       setFormData(prev => ({
         ...prev,
-        position,
+        position: position.trim(),
       }));
     } else {
       console.log('UserManagement - Invalid position detected, not setting:', position);
+      // Reset to empty string to show placeholder
+      setFormData(prev => ({ ...prev, position: '' }));
     }
   };
 
@@ -327,11 +330,18 @@ export function UserManagement() {
                     <SelectValue placeholder="Seleccionar cargo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {positions.map((position) => (
-                      <SelectItem key={position} value={position}>
-                        {position}
-                      </SelectItem>
-                    ))}
+                    {positions.map((position) => {
+                      // Additional safety check for each item
+                      if (!position || typeof position !== 'string' || position.trim().length === 0) {
+                        console.warn('UserManagement - Skipping invalid position:', position);
+                        return null;
+                      }
+                      return (
+                        <SelectItem key={position} value={position}>
+                          {position}
+                        </SelectItem>
+                      );
+                    }).filter(Boolean)}
                   </SelectContent>
                 </Select>
               </div>
