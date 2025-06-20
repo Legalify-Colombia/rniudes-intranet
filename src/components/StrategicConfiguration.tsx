@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StrategicAxesManagement } from "./StrategicAxesManagement";
@@ -28,9 +29,11 @@ export function StrategicConfiguration() {
         <TabsContent value="axes">
           <StrategicAxesManagement />
         </TabsContent>
+        
         <TabsContent value="actions">
           <ActionsManagement />
         </TabsContent>
+        
         <TabsContent value="products">
           <ProductsManagement />
         </TabsContent>

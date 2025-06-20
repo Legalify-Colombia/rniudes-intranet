@@ -1107,6 +1107,43 @@ export const useSupabaseData = () => {
     }
   };
 
+  // Template-based report details
+  const fetchTemplateBasedReportDetails = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports')
+      .select(`
+        *,
+        report_template:report_templates(*),
+        manager:profiles(*)
+      `)
+      .eq('id', reportId)
+      .single();
+    return { data, error };
+  };
+
+  // Custom plan details
+  const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('custom_plans')
+      .select(`
+        *,
+        plan_type:plan_types(*),
+        responses:custom_plan_responses(
+          *,
+          plan_field:plan_fields(*)
+        ),
+        assignments:custom_plan_assignments(
+          *,
+          strategic_axis:strategic_axes(*),
+          action:actions(*),
+          product:products(*)
+        )
+      `)
+      .eq('id', planId)
+      .single();
+    return { data, error };
+  };
+
   // Plan Types Management
   const fetchPlanTypes = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
@@ -1438,5 +1475,11 @@ export const useSupabaseData = () => {
     upsertCustomPlanResponse,
     fetchCustomPlanAssignments,
     upsertCustomPlanAssignment,
+    
+    // Template-based report details
+    fetchTemplateBasedReportDetails,
+    
+    // Custom plan details
+    fetchCustomPlanDetails,
   };
 };
