@@ -1231,6 +1231,9 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          is_visible: boolean | null
+          max_weekly_hours: number | null
+          min_weekly_hours: number | null
           name: string
           updated_at: string | null
         }
@@ -1240,6 +1243,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_visible?: boolean | null
+          max_weekly_hours?: number | null
+          min_weekly_hours?: number | null
           name: string
           updated_at?: string | null
         }
@@ -1249,6 +1255,9 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          is_visible?: boolean | null
+          max_weekly_hours?: number | null
+          min_weekly_hours?: number | null
           name?: string
           updated_at?: string | null
         }
@@ -2356,6 +2365,17 @@ export type Database = {
         }
         Returns: string
       }
+      get_available_plan_types_for_manager: {
+        Args: { manager_profile_id: string }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          min_weekly_hours: number
+          max_weekly_hours: number
+          field_count: number
+        }[]
+      }
       get_next_version_number: {
         Args: { p_manager_report_id: string; p_template_id: string }
         Returns: number
@@ -2366,6 +2386,17 @@ export type Database = {
       }
     }
     Enums: {
+      field_type:
+        | "numeric"
+        | "short_text"
+        | "long_text"
+        | "dropdown"
+        | "file"
+        | "section"
+        | "manager_name"
+        | "campus_name"
+        | "program_director"
+        | "strategic_axes"
       work_plan_status:
         | "draft"
         | "submitted"
@@ -2487,6 +2518,18 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      field_type: [
+        "numeric",
+        "short_text",
+        "long_text",
+        "dropdown",
+        "file",
+        "section",
+        "manager_name",
+        "campus_name",
+        "program_director",
+        "strategic_axes",
+      ],
       work_plan_status: [
         "draft",
         "submitted",

@@ -1207,7 +1207,7 @@ export const useSupabaseData = () => {
     return { data, error };
   };
 
-  // Plan Types Management
+  // Plan Types Management with new fields
   const fetchPlanTypes = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('plan_types')
@@ -1247,7 +1247,7 @@ export const useSupabaseData = () => {
     return { data, error };
   };
 
-  // Plan Fields Management
+  // Plan Fields Management with new field types
   const fetchPlanFields = async (planTypeId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('plan_fields')
@@ -1282,6 +1282,15 @@ export const useSupabaseData = () => {
       .delete()
       .eq('id', id);
     return { data, error };
+  };
+
+  // Function to get available plan types for manager based on hours
+  const getAvailablePlanTypesForManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .rpc('get_available_plan_types_for_manager', {
+        manager_profile_id: managerId
+      });
+    return { data: data || [], error };
   };
 
   // Plan Type Configuration
@@ -1532,6 +1541,7 @@ export const useSupabaseData = () => {
     createPlanField,
     updatePlanField,
     deletePlanField,
+    getAvailablePlanTypesForManager,
     configurePlanTypeElements,
     
     // Custom Plans functions
