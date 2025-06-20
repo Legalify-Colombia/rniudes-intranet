@@ -123,6 +123,86 @@ export interface DocumentTemplate {
   updated_at: string;
 }
 
+export interface SpecificLine {
+  id: string;
+  title: string;
+  description?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Indicator {
+  id: string;
+  name: string;
+  data_type: 'numeric' | 'short_text' | 'long_text' | 'file' | 'link';
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PartnerInstitution {
+  id: string;
+  project_id: string;
+  institution_name: string;
+  country: string;
+  contact_professor_name: string;
+  contact_professor_email: string;
+  created_at: string;
+}
+
+export interface InternationalizationProject {
+  id: string;
+  manager_id: string;
+  program_id: string;
+  schedule_description?: string;
+  project_title: string;
+  strategic_axis_id?: string;
+  specific_line_id?: string;
+  duration_months?: number;
+  project_summary?: string;
+  introduction?: string;
+  general_objective?: string;
+  specific_objectives?: string[];
+  methodology?: string;
+  activities_schedule?: string;
+  results?: string;
+  indicators_text?: string;
+  impact?: string;
+  bibliography?: string;
+  participation_letter_url?: string;
+  participation_letter_name?: string;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  submitted_date?: string;
+  approved_date?: string;
+  approved_by?: string;
+  approval_comments?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InternationalizationReport {
+  id: string;
+  project_id: string;
+  manager_id: string;
+  report_period_id: string;
+  objectives_achieved?: string;
+  activities_executed?: string;
+  activities_in_progress?: string;
+  project_timing?: 'ahead' | 'on_time' | 'delayed';
+  difficulties?: string[];
+  project_status?: 'normal' | 'abnormal';
+  abnormal_reason?: string;
+  status: 'draft' | 'submitted' | 'reviewed';
+  submitted_date?: string;
+  reviewed_date?: string;
+  reviewed_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useSupabaseData() {
   const { profile } = useAuth();
 
@@ -899,6 +979,287 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Specific Lines Management
+  const fetchSpecificLines = async (): Promise<Result<SpecificLine[]>> => {
+    const { data, error } = await supabase
+      .from('specific_lines')
+      .select('*')
+      .eq('is_active', true)
+      .order('title');
+    return { data: data || [], error };
+  };
+
+  const createSpecificLine = async (lineData: Omit<SpecificLine, 'id' | 'created_at' | 'updated_at'>): Promise<Result<SpecificLine>> => {
+    const { data, error } = await supabase
+      .from('specific_lines')
+      .insert({
+        ...lineData,
+        created_by: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateSpecificLine = async (id: string, lineData: Partial<SpecificLine>): Promise<Result<SpecificLine>> => {
+    const { data, error } = await supabase
+      .from('specific_lines')
+      .update(lineData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteSpecificLine = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('specific_lines')
+      .update({ is_active: false })
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Indicators Management
+  const fetchIndicators = async (): Promise<Result<Indicator[]>> => {
+    const { data, error } = await supabase
+      .from('indicators')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    return { data: data || [], error };
+  };
+
+  const createIndicator = async (indicatorData: Omit<Indicator, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Indicator>> => {
+    const { data, error } = await supabase
+      .from('indicators')
+      .insert({
+        ...indicatorData,
+        created_by: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateIndicator = async (id: string, indicatorData: Partial<Indicator>): Promise<Result<Indicator>> => {
+    const { data, error } = await supabase
+      .from('indicators')
+      .update(indicatorData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteIndicator = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('indicators')
+      .update({ is_active: false })
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Internationalization Projects Management
+  const fetchInternationalizationProjects = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('internationalization_projects')
+      .select(`
+        *,
+        manager:profiles(*),
+        program:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        ),
+        strategic_axis:strategic_axes(*),
+        specific_line:specific_lines(*),
+        partner_institutions:project_partner_institutions(*)
+      `)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const fetchInternationalizationProjectsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('internationalization_projects')
+      .select(`
+        *,
+        manager:profiles(*),
+        program:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        ),
+        strategic_axis:strategic_axes(*),
+        specific_line:specific_lines(*),
+        partner_institutions:project_partner_institutions(*)
+      `)
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const createInternationalizationProject = async (projectData: Omit<InternationalizationProject, 'id' | 'created_at' | 'updated_at'>): Promise<Result<InternationalizationProject>> => {
+    const { data, error } = await supabase
+      .from('internationalization_projects')
+      .insert({
+        ...projectData,
+        manager_id: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateInternationalizationProject = async (id: string, projectData: Partial<InternationalizationProject>): Promise<Result<InternationalizationProject>> => {
+    const { data, error } = await supabase
+      .from('internationalization_projects')
+      .update(projectData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const approveInternationalizationProject = async (id: string, status: 'approved' | 'rejected', comments?: string): Promise<Result<InternationalizationProject>> => {
+    const updateData: any = {
+      status,
+      approved_by: profile?.id,
+      approved_date: new Date().toISOString()
+    };
+    
+    if (comments) {
+      updateData.approval_comments = comments;
+    }
+    
+    const { data, error } = await supabase
+      .from('internationalization_projects')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Partner Institutions Management
+  const createPartnerInstitution = async (institutionData: Omit<PartnerInstitution, 'id' | 'created_at'>): Promise<Result<PartnerInstitution>> => {
+    const { data, error } = await supabase
+      .from('project_partner_institutions')
+      .insert(institutionData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePartnerInstitution = async (id: string, institutionData: Partial<PartnerInstitution>): Promise<Result<PartnerInstitution>> => {
+    const { data, error } = await supabase
+      .from('project_partner_institutions')
+      .update(institutionData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePartnerInstitution = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('project_partner_institutions')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Internationalization Reports Management
+  const fetchInternationalizationReports = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('internationalization_reports')
+      .select(`
+        *,
+        project:internationalization_projects(*),
+        manager:profiles(*),
+        report_period:report_periods(*)
+      `)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const fetchInternationalizationReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('internationalization_reports')
+      .select(`
+        *,
+        project:internationalization_projects(*),
+        manager:profiles(*),
+        report_period:report_periods(*)
+      `)
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const createInternationalizationReport = async (reportData: Omit<InternationalizationReport, 'id' | 'created_at' | 'updated_at'>): Promise<Result<InternationalizationReport>> => {
+    const { data, error } = await supabase
+      .from('internationalization_reports')
+      .insert({
+        ...reportData,
+        manager_id: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateInternationalizationReport = async (id: string, reportData: Partial<InternationalizationReport>): Promise<Result<InternationalizationReport>> => {
+    const { data, error } = await supabase
+      .from('internationalization_reports')
+      .update(reportData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Enhanced Strategic Management with usage types
+  const updateStrategicAxisUsage = async (id: string, usageTypes: string[]): Promise<Result<StrategicAxis>> => {
+    const { data, error } = await supabase
+      .from('strategic_axes')
+      .update({ usage_type: usageTypes })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateActionUsage = async (id: string, usageTypes: string[]): Promise<Result<Action>> => {
+    const { data, error } = await supabase
+      .from('actions')
+      .update({ usage_type: usageTypes })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateProductUsage = async (id: string, usageTypes: string[]): Promise<Result<Product>> => {
+    const { data, error } = await supabase
+      .from('products')
+      .update({ usage_type: usageTypes })
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Check if manager can edit reports
+  const checkReportEditPermission = async (reportId: string): Promise<Result<boolean>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select('can_edit')
+      .eq('id', reportId)
+      .single();
+    return { data: data?.can_edit || false, error };
+  };
+
   return {
     fetchStrategicAxes,
     createStrategicAxis,
@@ -969,5 +1330,29 @@ export function useSupabaseData() {
     deleteTemplateBasedReport,
     fetchTemplateReportResponses,
     upsertTemplateReportResponse,
+    fetchSpecificLines,
+    createSpecificLine,
+    updateSpecificLine,
+    deleteSpecificLine,
+    fetchIndicators,
+    createIndicator,
+    updateIndicator,
+    deleteIndicator,
+    fetchInternationalizationProjects,
+    fetchInternationalizationProjectsByManager,
+    createInternationalizationProject,
+    updateInternationalizationProject,
+    approveInternationalizationProject,
+    createPartnerInstitution,
+    updatePartnerInstitution,
+    deletePartnerInstitution,
+    fetchInternationalizationReports,
+    fetchInternationalizationReportsByManager,
+    createInternationalizationReport,
+    updateInternationalizationReport,
+    updateStrategicAxisUsage,
+    updateActionUsage,
+    updateProductUsage,
+    checkReportEditPermission,
   };
 }

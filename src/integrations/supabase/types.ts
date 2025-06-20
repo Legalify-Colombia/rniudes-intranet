@@ -72,28 +72,34 @@ export type Database = {
           code: string
           created_at: string | null
           created_by: string
+          description: string | null
           id: string
           name: string
           strategic_axis_id: string
           updated_at: string | null
+          usage_type: string[] | null
         }
         Insert: {
           code: string
           created_at?: string | null
           created_by: string
+          description?: string | null
           id?: string
           name: string
           strategic_axis_id: string
           updated_at?: string | null
+          usage_type?: string[] | null
         }
         Update: {
           code?: string
           created_at?: string | null
           created_by?: string
+          description?: string | null
           id?: string
           name?: string
           strategic_axis_id?: string
           updated_at?: string | null
+          usage_type?: string[] | null
         }
         Relationships: [
           {
@@ -306,6 +312,266 @@ export type Database = {
           },
         ]
       }
+      indicators: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          data_type: string
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          data_type: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          data_type?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicators_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internationalization_projects: {
+        Row: {
+          activities_schedule: string | null
+          approval_comments: string | null
+          approved_by: string | null
+          approved_date: string | null
+          bibliography: string | null
+          created_at: string | null
+          duration_months: number | null
+          general_objective: string | null
+          id: string
+          impact: string | null
+          indicators_text: string | null
+          introduction: string | null
+          manager_id: string
+          methodology: string | null
+          participation_letter_name: string | null
+          participation_letter_url: string | null
+          program_id: string
+          project_summary: string | null
+          project_title: string
+          results: string | null
+          schedule_description: string | null
+          specific_line_id: string | null
+          specific_objectives: string[] | null
+          status: string | null
+          strategic_axis_id: string | null
+          submitted_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activities_schedule?: string | null
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          bibliography?: string | null
+          created_at?: string | null
+          duration_months?: number | null
+          general_objective?: string | null
+          id?: string
+          impact?: string | null
+          indicators_text?: string | null
+          introduction?: string | null
+          manager_id: string
+          methodology?: string | null
+          participation_letter_name?: string | null
+          participation_letter_url?: string | null
+          program_id: string
+          project_summary?: string | null
+          project_title: string
+          results?: string | null
+          schedule_description?: string | null
+          specific_line_id?: string | null
+          specific_objectives?: string[] | null
+          status?: string | null
+          strategic_axis_id?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activities_schedule?: string | null
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          bibliography?: string | null
+          created_at?: string | null
+          duration_months?: number | null
+          general_objective?: string | null
+          id?: string
+          impact?: string | null
+          indicators_text?: string | null
+          introduction?: string | null
+          manager_id?: string
+          methodology?: string | null
+          participation_letter_name?: string | null
+          participation_letter_url?: string | null
+          program_id?: string
+          project_summary?: string | null
+          project_title?: string
+          results?: string | null
+          schedule_description?: string | null
+          specific_line_id?: string | null
+          specific_objectives?: string[] | null
+          status?: string | null
+          strategic_axis_id?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internationalization_projects_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "academic_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["program_id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_specific_line_id_fkey"
+            columns: ["specific_line_id"]
+            isOneToOne: false
+            referencedRelation: "specific_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internationalization_reports: {
+        Row: {
+          abnormal_reason: string | null
+          activities_executed: string | null
+          activities_in_progress: string | null
+          created_at: string | null
+          difficulties: string[] | null
+          id: string
+          manager_id: string
+          objectives_achieved: string | null
+          project_id: string
+          project_status: string | null
+          project_timing: string | null
+          report_period_id: string
+          reviewed_by: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          abnormal_reason?: string | null
+          activities_executed?: string | null
+          activities_in_progress?: string | null
+          created_at?: string | null
+          difficulties?: string[] | null
+          id?: string
+          manager_id: string
+          objectives_achieved?: string | null
+          project_id: string
+          project_status?: string | null
+          project_timing?: string | null
+          report_period_id: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          abnormal_reason?: string | null
+          activities_executed?: string | null
+          activities_in_progress?: string | null
+          created_at?: string | null
+          difficulties?: string[] | null
+          id?: string
+          manager_id?: string
+          objectives_achieved?: string | null
+          project_id?: string
+          project_status?: string | null
+          project_timing?: string | null
+          report_period_id?: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internationalization_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "internationalization_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manager_report_versions: {
         Row: {
           created_at: string | null
@@ -372,6 +638,7 @@ export type Database = {
       }
       manager_reports: {
         Row: {
+          can_edit: boolean | null
           completion_percentage: number | null
           created_at: string | null
           description: string | null
@@ -391,6 +658,7 @@ export type Database = {
           work_plan_id: string
         }
         Insert: {
+          can_edit?: boolean | null
           completion_percentage?: number | null
           created_at?: string | null
           description?: string | null
@@ -410,6 +678,7 @@ export type Database = {
           work_plan_id: string
         }
         Update: {
+          can_edit?: boolean | null
           completion_percentage?: number | null
           created_at?: string | null
           description?: string | null
@@ -688,25 +957,31 @@ export type Database = {
           action_id: string
           created_at: string | null
           created_by: string
+          description: string | null
           id: string
           name: string
           updated_at: string | null
+          usage_type: string[] | null
         }
         Insert: {
           action_id: string
           created_at?: string | null
           created_by: string
+          description?: string | null
           id?: string
           name: string
           updated_at?: string | null
+          usage_type?: string[] | null
         }
         Update: {
           action_id?: string
           created_at?: string | null
           created_by?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string | null
+          usage_type?: string[] | null
         }
         Relationships: [
           {
@@ -780,6 +1055,44 @@ export type Database = {
             columns: ["campus_id"]
             isOneToOne: false
             referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_partner_institutions: {
+        Row: {
+          contact_professor_email: string
+          contact_professor_name: string
+          country: string
+          created_at: string | null
+          id: string
+          institution_name: string
+          project_id: string
+        }
+        Insert: {
+          contact_professor_email: string
+          contact_professor_name: string
+          country: string
+          created_at?: string | null
+          id?: string
+          institution_name: string
+          project_id: string
+        }
+        Update: {
+          contact_professor_email?: string
+          contact_professor_name?: string
+          country?: string
+          created_at?: string | null
+          id?: string
+          institution_name?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_partner_institutions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "internationalization_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -977,30 +1290,74 @@ export type Database = {
           },
         ]
       }
+      specific_lines: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specific_lines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       strategic_axes: {
         Row: {
           code: string
           created_at: string | null
           created_by: string
+          description: string | null
           id: string
           name: string
           updated_at: string | null
+          usage_type: string[] | null
         }
         Insert: {
           code: string
           created_at?: string | null
           created_by: string
+          description?: string | null
           id?: string
           name: string
           updated_at?: string | null
+          usage_type?: string[] | null
         }
         Update: {
           code?: string
           created_at?: string | null
           created_by?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string | null
+          usage_type?: string[] | null
         }
         Relationships: [
           {
@@ -1498,6 +1855,10 @@ export type Database = {
       get_next_version_number: {
         Args: { p_manager_report_id: string; p_template_id: string }
         Returns: number
+      }
+      is_period_active: {
+        Args: { period_id: string }
+        Returns: boolean
       }
     }
     Enums: {
