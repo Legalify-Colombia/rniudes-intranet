@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { 
+import type { 
   AcademicProgram, 
   StrategicAxis, 
   Action, 
@@ -26,7 +25,7 @@ import {
   WorkPlanAssignment
 } from '@/types';
 
-export { 
+export type { 
   AcademicProgram, 
   StrategicAxis, 
   Action, 
