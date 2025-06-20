@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationFeed } from "@/components/NotificationFeed";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Building2,
   GraduationCap,
@@ -22,7 +23,6 @@ export function AdminDashboard() {
   const { 
     fetchCampus,
     fetchFaculties,
-    fetchProfiles,
     fetchStrategicAxes,
     fetchActions,
     fetchProducts
@@ -44,6 +44,20 @@ export function AdminDashboard() {
   useEffect(() => {
     loadAdminData();
   }, [selectedCampus]);
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+      return { data: null, error };
+    }
+  };
 
   const loadAdminData = async () => {
     setLoading(true);

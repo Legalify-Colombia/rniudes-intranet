@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -485,11 +486,7 @@ export function PlanTypesManagement() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          if (confirm('¿Estás seguro de eliminar este tipo de plan?')) {
-                            // handleDeletePlanType(planType.id);
-                          }
-                        }}
+                        onClick={() => handleDeletePlanType(planType.id)}
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
@@ -632,11 +629,7 @@ export function PlanTypesManagement() {
                         <Button 
                           size="sm" 
                           variant="ghost"
-                          onClick={() => {
-                            if (confirm('¿Estás seguro de eliminar este campo?')) {
-                              // handleDeleteField(field.id);
-                            }
-                          }}
+                          onClick={() => handleDeleteField(field.id)}
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
@@ -658,20 +651,4 @@ export function PlanTypesManagement() {
       )}
     </div>
   );
-
-  function getFieldTypeLabel(fieldType: string) {
-    const labels = {
-      'numeric': 'Numérico',
-      'short_text': 'Texto Corto',
-      'long_text': 'Texto Extenso',
-      'dropdown': 'Lista Desplegable',
-      'file': 'Archivo',
-      'section': 'Sección',
-      'manager_name': 'Nombre del Gestor',
-      'campus_name': 'Campus',
-      'program_director': 'Director de Programa',
-      'strategic_axes': 'Ejes Estratégicos'
-    };
-    return labels[fieldType as keyof typeof labels] || fieldType;
-  }
 }
