@@ -1,4 +1,4 @@
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+
 import { PostgrestError } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,11 +11,9 @@ interface Result<T> {
 }
 
 export function useSupabaseData() {
-  const supabaseClient = useSupabaseClient();
-
   const fetchStrategicAxes = async (): Promise<Result<StrategicAxis[]>> => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('strategic_axes')
         .select('*')
         .order('code');
@@ -34,7 +32,7 @@ export function useSupabaseData() {
 
   const fetchActions = async (): Promise<Result<Action[]>> => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('actions')
         .select('*, strategic_axis(id, code, name)')
         .order('code');
@@ -53,7 +51,7 @@ export function useSupabaseData() {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('products')
         .select('*, action(id, code, name, strategic_axis(id, code, name))')
         .order('name');
@@ -72,7 +70,7 @@ export function useSupabaseData() {
 
   const fetchWorkPlans = async () => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('work_plans')
         .select('*')
         .order('created_at', { ascending: false });
@@ -91,7 +89,7 @@ export function useSupabaseData() {
 
   const fetchWorkPlanAssignments = async (workPlanId: string) => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('work_plan_assignments')
         .select('*, product(id, name, action(id, strategic_axis(id)))')
         .eq('work_plan_id', workPlanId);
@@ -110,7 +108,7 @@ export function useSupabaseData() {
 
   const fetchManagerReports = async () => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('manager_reports')
         .select('*')
         .order('created_at', { ascending: false });
@@ -129,7 +127,7 @@ export function useSupabaseData() {
 
   const fetchManagerReportsByManager = async (managerId: string) => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('manager_reports')
         .select('*')
         .eq('manager_id', managerId)
@@ -149,7 +147,7 @@ export function useSupabaseData() {
 
   const createManagerReport = async (reportData: any) => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('manager_reports')
         .insert(reportData)
         .select()
@@ -169,7 +167,7 @@ export function useSupabaseData() {
 
   const updateManagerReport = async (reportId: string, updates: any) => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('manager_reports')
         .update(updates)
         .eq('id', reportId)
@@ -190,7 +188,7 @@ export function useSupabaseData() {
 
   const fetchProductProgressReports = async (managerReportId: string) => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('product_progress_reports')
         .select('*')
         .eq('manager_report_id', managerReportId);
@@ -209,7 +207,7 @@ export function useSupabaseData() {
 
   const upsertProductProgressReport = async (reportData: any) => {
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('product_progress_reports')
         .upsert(reportData, {
           onConflict: 'manager_report_id,product_id'
@@ -234,7 +232,7 @@ export function useSupabaseData() {
     const filePath = `reports/${reportId}/${productId}/${fileName}`;
 
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .storage
         .from('evidences')
         .upload(filePath, file, {
@@ -256,7 +254,7 @@ export function useSupabaseData() {
 
   const deleteEvidenceFile = async (filePath: string) => {
     try {
-      const { error } = await supabaseClient
+      const { error } = await supabase
         .storage
         .from('evidences')
         .remove([filePath]);
