@@ -1088,6 +1088,25 @@ export const useSupabaseData = () => {
     }
   };
 
+  const submitTemplateBasedReport = async (reportId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('template_based_reports')
+        .update({
+          status: 'submitted',
+          submitted_date: new Date().toISOString(),
+        })
+        .eq('id', reportId)
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error submitting template based report:', error);
+      return { data: null, error };
+    }
+  };
+
   return {
     fetchStrategicAxes,
     createStrategicAxis,
@@ -1170,5 +1189,6 @@ export const useSupabaseData = () => {
     submitIndicatorReport,
     deleteIndicatorReport,
     checkPeriodActive,
+    submitTemplateBasedReport,
   };
 };

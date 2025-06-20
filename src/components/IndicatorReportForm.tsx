@@ -42,7 +42,12 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
       ]);
 
       if (indicatorsResult.data) {
-        setIndicators(indicatorsResult.data);
+        // Cast data_type to the expected union type
+        const typedIndicators = indicatorsResult.data.map(indicator => ({
+          ...indicator,
+          data_type: indicator.data_type as "numeric" | "short_text" | "long_text" | "file" | "link"
+        }));
+        setIndicators(typedIndicators);
       }
 
       if (reportResult.data) {
@@ -76,6 +81,15 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
         [field]: value,
         indicator_id: indicatorId,
         indicator_report_id: reportId || '',
+        id: prev[indicatorId]?.id || '',
+        created_at: prev[indicatorId]?.created_at || '',
+        updated_at: prev[indicatorId]?.updated_at || '',
+        numeric_value: prev[indicatorId]?.numeric_value || 0,
+        text_value: prev[indicatorId]?.text_value || '',
+        file_url: prev[indicatorId]?.file_url || '',
+        file_name: prev[indicatorId]?.file_name || '',
+        link_value: prev[indicatorId]?.link_value || '',
+        observations: prev[indicatorId]?.observations || '',
       } as IndicatorResponse
     }));
   };
@@ -128,8 +142,24 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
     }
   };
 
+  const getResponse = (indicatorId: string): IndicatorResponse => {
+    return responses[indicatorId] || {
+      id: '',
+      created_at: '',
+      updated_at: '',
+      indicator_report_id: reportId || '',
+      indicator_id: indicatorId,
+      numeric_value: 0,
+      text_value: '',
+      file_url: '',
+      file_name: '',
+      link_value: '',
+      observations: ''
+    };
+  };
+
   const renderIndicatorInput = (indicator: Indicator) => {
-    const response = responses[indicator.id] || {};
+    const response = getResponse(indicator.id);
 
     switch (indicator.data_type) {
       case "numeric":
@@ -243,35 +273,38 @@ export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: Indica
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {indicators.map((indicator) => (
-            <div key={indicator.id} className="space-y-3 p-4 border rounded-lg">
-              <div>
-                <Label className="text-base font-medium">{indicator.name}</Label>
-                <p className="text-sm text-gray-600 mt-1">
-                  Tipo: {indicator.data_type === 'numeric' ? 'Numérico' : 
-                         indicator.data_type === 'short_text' ? 'Texto Corto' :
-                         indicator.data_type === 'long_text' ? 'Texto Largo' :
-                         indicator.data_type === 'file' ? 'Adjunto' : 'Link'}
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor={`indicator-${indicator.id}`}>Respuesta</Label>
-                {renderIndicatorInput(indicator)}
-              </div>
+          {indicators.map((indicator) => {
+            const response = getResponse(indicator.id);
+            return (
+              <div key={indicator.id} className="space-y-3 p-4 border rounded-lg">
+                <div>
+                  <Label className="text-base font-medium">{indicator.name}</Label>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Tipo: {indicator.data_type === 'numeric' ? 'Numérico' : 
+                           indicator.data_type === 'short_text' ? 'Texto Corto' :
+                           indicator.data_type === 'long_text' ? 'Texto Largo' :
+                           indicator.data_type === 'file' ? 'Adjunto' : 'Link'}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor={`indicator-${indicator.id}`}>Respuesta</Label>
+                  {renderIndicatorInput(indicator)}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor={`observations-${indicator.id}`}>Observaciones (Opcional)</Label>
-                <Textarea
-                  id={`observations-${indicator.id}`}
-                  value={responses[indicator.id]?.observations || ''}
-                  onChange={(e) => handleResponseChange(indicator.id, 'observations', e.target.value)}
-                  placeholder="Observaciones adicionales sobre este indicador"
-                  rows={2}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor={`observations-${indicator.id}`}>Observaciones (Opcional)</Label>
+                  <Textarea
+                    id={`observations-${indicator.id}`}
+                    value={response.observations || ''}
+                    onChange={(e) => handleResponseChange(indicator.id, 'observations', e.target.value)}
+                    placeholder="Observaciones adicionales sobre este indicador"
+                    rows={2}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
     </div>
