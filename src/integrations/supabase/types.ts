@@ -1012,6 +1012,161 @@ export type Database = {
           },
         ]
       }
+      template_based_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          manager_id: string
+          report_period_id: string
+          report_template_id: string
+          reviewed_by: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id: string
+          report_period_id: string
+          report_template_id: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id?: string
+          report_period_id?: string
+          report_template_id?: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_based_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_template_id_fkey"
+            columns: ["report_template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_report_responses: {
+        Row: {
+          action_id: string | null
+          created_at: string | null
+          evidence_file_names: string[] | null
+          evidence_files: string[] | null
+          id: string
+          observations: string | null
+          product_id: string | null
+          progress_percentage: number | null
+          response_text: string | null
+          strategic_axis_id: string | null
+          template_report_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          product_id?: string | null
+          progress_percentage?: number | null
+          response_text?: string | null
+          strategic_axis_id?: string | null
+          template_report_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          product_id?: string | null
+          progress_percentage?: number | null
+          response_text?: string | null
+          strategic_axis_id?: string | null
+          template_report_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_report_responses_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_template_report_id_fkey"
+            columns: ["template_report_id"]
+            isOneToOne: false
+            referencedRelation: "template_based_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_template_report_id_fkey"
+            columns: ["template_report_id"]
+            isOneToOne: false
+            referencedRelation: "template_based_reports_with_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_plan_assignments: {
         Row: {
           assigned_hours: number
@@ -1153,6 +1308,60 @@ export type Database = {
       }
     }
     Views: {
+      template_based_reports_with_details: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          manager_email: string | null
+          manager_id: string | null
+          manager_name: string | null
+          period_end: string | null
+          period_name: string | null
+          period_start: string | null
+          report_period_id: string | null
+          report_template_id: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          template_description: string | null
+          template_name: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_based_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_template_id_fkey"
+            columns: ["report_template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_full_report_data: {
         Row: {
           action_name: string | null
