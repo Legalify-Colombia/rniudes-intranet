@@ -1,7 +1,7 @@
+
 import { PostgrestError } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from 'uuid';
 
-import { Action, StrategicAxis } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Result<T> {
@@ -9,11 +9,42 @@ interface Result<T> {
   error: PostgrestError | Error | null;
 }
 
+// Export types for use in components
+export interface StrategicAxis {
+  id: string;
+  code: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Action {
+  id: string;
+  code: string;
+  name: string;
+  strategic_axis_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  strategic_axis?: StrategicAxis;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  action_id: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  action?: Action & { strategic_axis?: StrategicAxis };
+}
+
 // Types for campus management
 export interface Campus {
   id: string;
   name: string;
-  description?: string;
+  address?: string;
   created_at: string;
   updated_at: string;
 }
@@ -21,20 +52,27 @@ export interface Campus {
 export interface Faculty {
   id: string;
   name: string;
-  description?: string;
+  dean_name?: string;
   campus_id: string;
   created_at: string;
   updated_at: string;
+  campus?: Campus;
+  faculty_campus?: Array<{ campus: Campus }>;
 }
 
 export interface AcademicProgram {
   id: string;
   name: string;
-  description?: string;
+  director_name?: string;
+  director_email?: string;
   faculty_id: string;
   campus_id: string;
+  manager_id?: string;
   created_at: string;
   updated_at: string;
+  faculty?: Faculty;
+  campus?: Campus;
+  manager?: any;
 }
 
 // Document template interface
@@ -48,6 +86,40 @@ export interface DocumentTemplate {
   file_name?: string;
   is_active: boolean;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Report template interface
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  strategic_axis_id?: string;
+  action_id?: string;
+  product_id?: string;
+  strategic_axes_ids?: string[];
+  actions_ids?: string[];
+  products_ids?: string[];
+  is_active: boolean;
+  max_versions?: number;
+  sharepoint_base_url?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Manager report version interface
+export interface ManagerReportVersion {
+  id: string;
+  manager_report_id?: string;
+  template_id?: string;
+  version_number: number;
+  progress_percentage?: number;
+  observations?: string;
+  evidence_links?: string[];
+  sharepoint_folder_url?: string;
+  submitted_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -381,11 +453,16 @@ export function useSupabaseData() {
     }
   };
 
-  const updateManagerHours = async (managerId: string, hours: { weekly_hours: number; number_of_weeks: number; total_hours: number }) => {
+  const updateManagerHours = async (managerId: string, weeklyHours: number, numberOfWeeks: number) => {
     try {
+      const totalHours = weeklyHours * numberOfWeeks;
       const { data, error } = await supabase
         .from('profiles')
-        .update(hours)
+        .update({ 
+          weekly_hours: weeklyHours, 
+          number_of_weeks: numberOfWeeks, 
+          total_hours: totalHours 
+        })
         .eq('id', managerId)
         .select()
         .single();
@@ -668,13 +745,19 @@ export function useSupabaseData() {
     }
   };
 
-  const fetchFacultiesByCampus = async (campusId: string) => {
+  const fetchFacultiesByCampus = async (campusIds?: string | string[]) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('faculties')
-        .select('*')
-        .eq('campus_id', campusId)
+        .select('*, campus(id, name)')
         .order('name');
+
+      if (campusIds) {
+        const ids = Array.isArray(campusIds) ? campusIds : [campusIds];
+        query = query.in('campus_id', ids);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching faculties by campus:", error);
@@ -767,13 +850,19 @@ export function useSupabaseData() {
     }
   };
 
-  const fetchAcademicProgramsByCampus = async (campusId: string) => {
+  const fetchAcademicProgramsByCampus = async (campusIds?: string | string[]) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('academic_programs')
-        .select('*, faculty(id, name)')
-        .eq('campus_id', campusId)
+        .select('*, faculty(id, name), campus(id, name)')
         .order('name');
+
+      if (campusIds) {
+        const ids = Array.isArray(campusIds) ? campusIds : [campusIds];
+        query = query.in('campus_id', ids);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching academic programs by campus:", error);
@@ -864,6 +953,54 @@ export function useSupabaseData() {
     }
   };
 
+  const createReportTemplate = async (templateData: Omit<ReportTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_templates')
+        .insert(templateData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating report template:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateReportTemplate = async (templateId: string, updates: Partial<ReportTemplate>) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_templates')
+        .update(updates)
+        .eq('id', templateId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating report template:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteReportTemplate = async (templateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('report_templates')
+        .delete()
+        .eq('id', templateId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting report template:', error);
+      return { error };
+    }
+  };
+
   const fetchReportPeriods = async () => {
     try {
       const { data, error } = await supabase
@@ -876,6 +1013,85 @@ export function useSupabaseData() {
       return { data, error: null };
     } catch (error) {
       console.error('Error fetching report periods:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createReportPeriod = async (periodData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_periods')
+        .insert(periodData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating report period:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateReportPeriod = async (periodId: string, updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_periods')
+        .update(updates)
+        .eq('id', periodId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating report period:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteReportPeriod = async (periodId: string) => {
+    try {
+      const { error } = await supabase
+        .from('report_periods')
+        .delete()
+        .eq('id', periodId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting report period:', error);
+      return { error };
+    }
+  };
+
+  const fetchReportSystemConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('report_system_config')
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error fetching report system config:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateReportSystemConfig = async (updates: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_system_config')
+        .update(updates)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating report system config:', error);
       return { data: null, error };
     }
   };
@@ -994,6 +1210,56 @@ export function useSupabaseData() {
     }
   };
 
+  // Manager report version functions
+  const createManagerReportVersion = async (versionData: Omit<ManagerReportVersion, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('manager_report_versions')
+        .insert(versionData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error creating manager report version:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateManagerReportVersion = async (versionId: string, updates: Partial<ManagerReportVersion>) => {
+    try {
+      const { data, error } = await supabase
+        .from('manager_report_versions')
+        .update(updates)
+        .eq('id', versionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating manager report version:', error);
+      return { data: null, error };
+    }
+  };
+
+  const getNextVersionNumber = async (managerReportId: string, templateId: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_next_version_number', {
+          p_manager_report_id: managerReportId,
+          p_template_id: templateId
+        });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error getting next version number:', error);
+      return { data: null, error };
+    }
+  };
+
   return {
     fetchStrategicAxes,
     fetchActions,
@@ -1039,12 +1305,24 @@ export function useSupabaseData() {
     deleteAcademicProgram,
     // Template-based reports
     fetchReportTemplates,
+    createReportTemplate,
+    updateReportTemplate,
+    deleteReportTemplate,
     fetchReportPeriods,
+    createReportPeriod,
+    updateReportPeriod,
+    deleteReportPeriod,
+    fetchReportSystemConfig,
+    updateReportSystemConfig,
     fetchTemplateBasedReports,
     createTemplateBasedReport,
     updateTemplateBasedReport,
     deleteTemplateBasedReport,
     fetchTemplateReportResponses,
     upsertTemplateReportResponse,
+    // Manager report versions
+    createManagerReportVersion,
+    updateManagerReportVersion,
+    getNextVersionNumber,
   };
 }
