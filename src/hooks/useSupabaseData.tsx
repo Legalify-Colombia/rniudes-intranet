@@ -429,8 +429,8 @@ export function useSupabaseData() {
   };
 
   const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
-    // Use a different approach to avoid relationship ambiguity
-    const { data, error } = await supabase
+    // First get work plans with pending status
+    const { data: workPlansData, error: workPlansError } = await supabase
       .from("work_plans")
       .select(`
         id,
@@ -439,12 +439,30 @@ export function useSupabaseData() {
         total_hours_assigned,
         submitted_date,
         approval_comments,
-        manager:manager_id (
-          id,
-          full_name,
-          email
-        ),
-        program:program_id (
+        manager_id,
+        program_id
+      `)
+      .eq("status", "pending")
+      .order("submitted_date", { ascending: true });
+
+    if (workPlansError) return { data: null, error: workPlansError };
+
+    if (!workPlansData || workPlansData.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Get manager and program details separately to avoid relationship ambiguity
+    const managerIds = [...new Set(workPlansData.map(wp => wp.manager_id).filter(Boolean))];
+    const programIds = [...new Set(workPlansData.map(wp => wp.program_id).filter(Boolean))];
+
+    const [managersResult, programsResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", managerIds),
+      supabase
+        .from("academic_programs")
+        .select(`
           id,
           name,
           campus:campus_id (
@@ -455,27 +473,32 @@ export function useSupabaseData() {
             id,
             name
           )
-        )
-      `)
-      .eq("status", "pending")
-      .order("submitted_date", { ascending: true });
+        `)
+        .in("id", programIds)
+    ]);
 
-    if (error) return { data: null, error };
+    const managersData = managersResult.data || [];
+    const programsData = programsResult.data || [];
 
     // Transform data to match expected format
-    const transformedData = data?.map(item => ({
-      id: item.id,
-      status: item.status,
-      objectives: item.objectives,
-      total_hours_assigned: item.total_hours_assigned,
-      submitted_date: item.submitted_date,
-      approval_comments: item.approval_comments,
-      manager_name: item.manager?.full_name,
-      manager_email: item.manager?.email,
-      program_name: item.program?.name,
-      campus_name: item.program?.campus?.name,
-      faculty_name: item.program?.faculty?.name,
-    })) || [];
+    const transformedData = workPlansData.map(item => {
+      const manager = managersData.find(m => m.id === item.manager_id);
+      const program = programsData.find(p => p.id === item.program_id);
+
+      return {
+        id: item.id,
+        status: item.status,
+        objectives: item.objectives,
+        total_hours_assigned: item.total_hours_assigned,
+        submitted_date: item.submitted_date,
+        approval_comments: item.approval_comments,
+        manager_name: manager?.full_name,
+        manager_email: manager?.email,
+        program_name: program?.name,
+        campus_name: program?.campus?.name,
+        faculty_name: program?.faculty?.name,
+      };
+    });
 
     return { data: transformedData, error: null };
   };
