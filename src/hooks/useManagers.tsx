@@ -12,13 +12,46 @@ export function useManagers() {
     return { data, error };
   };
 
-  const fetchManagersByCampus = async (campusId: string): Promise<Result<Profile[]>> => {
-    const { data, error } = await supabase
+  const fetchManagersByCampus = async (campusIds?: string[]): Promise<Result<any[]>> => {
+    let query = supabase
       .from("profiles")
-      .select("*")
+      .select(`
+        *,
+        academic_programs:academic_programs!manager_id (
+          id,
+          name,
+          director_name,
+          campus:campus!campus_id (
+            id,
+            name
+          ),
+          faculty:faculties!faculty_id (
+            id,
+            name
+          )
+        )
+      `)
       .eq("role", "Gestor")
-      .eq("campus_id", campusId)
       .order("full_name");
+
+    if (campusIds && campusIds.length > 0) {
+      // Get managers who are assigned to programs in the specified campuses
+      const { data: programsData } = await supabase
+        .from("academic_programs")
+        .select("manager_id")
+        .in("campus_id", campusIds);
+      
+      const managerIds = programsData?.map(p => p.manager_id).filter(Boolean) || [];
+      
+      if (managerIds.length > 0) {
+        query = query.in("id", managerIds);
+      } else {
+        // No managers found for these campuses
+        return { data: [], error: null };
+      }
+    }
+
+    const { data, error } = await query;
     return { data, error };
   };
 
@@ -31,9 +64,18 @@ export function useManagers() {
     return { data, error };
   };
 
+  const fetchAvailablePlanTypes = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .rpc('get_available_plan_types_for_manager', {
+        manager_profile_id: managerId
+      });
+    return { data, error };
+  };
+
   return {
     fetchManagers,
     fetchManagersByCampus,
     fetchAllManagers,
+    fetchAvailablePlanTypes,
   };
 }
