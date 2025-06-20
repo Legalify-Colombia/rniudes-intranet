@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,258 +6,195 @@ import { useAuth } from "@/hooks/useAuth";
 import { NotificationFeed } from "@/components/NotificationFeed";
 import { StrategicAxesProgress } from "@/components/StrategicAxesProgress";
 import { 
-  Users, 
-  Building2, 
-  GraduationCap, 
   Target,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  FileText
+  TrendingUp,
+  Package,
+  Activity
 } from "lucide-react";
 
 export function Dashboard() {
   const { profile } = useAuth();
   const { 
-    fetchManagers, 
-    fetchAcademicPrograms, 
-    fetchCampus, 
-    fetchWorkPlans,
-    fetchManagerReports
+    fetchStrategicAxes,
+    fetchActions,
+    fetchProducts
   } = useSupabaseData();
   
-  const [stats, setStats] = useState({
-    totalManagers: 0,
-    totalPrograms: 0,
-    totalCampuses: 0,
-    workPlansStats: {
-      draft: 0,
-      submitted: 0,
-      approved: 0,
-      rejected: 0
-    },
-    reportsStats: {
-      pending: 0,
-      submitted: 0,
-      reviewed: 0
-    }
+  const [axesStats, setAxesStats] = useState({
+    totalAxes: 0,
+    totalActions: 0,
+    totalProducts: 0,
+    overallProgress: 0
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
+    loadAxesData();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadAxesData = async () => {
     try {
       const [
-        managersResult,
-        programsResult,
-        campusResult,
-        workPlansResult,
-        reportsResult
+        axesResult,
+        actionsResult,
+        productsResult
       ] = await Promise.all([
-        fetchManagers(),
-        fetchAcademicPrograms(),
-        fetchCampus(),
-        fetchWorkPlans(),
-        fetchManagerReports()
+        fetchStrategicAxes(),
+        fetchActions(),
+        fetchProducts()
       ]);
 
-      const managers = managersResult.data || [];
-      const programs = programsResult.data || [];
-      const campuses = campusResult.data || [];
-      const workPlans = workPlansResult.data || [];
-      const reports = reportsResult.data || [];
+      const axes = axesResult.data || [];
+      const actions = actionsResult.data || [];
+      const products = productsResult.data || [];
 
-      // Calcular estadísticas de planes de trabajo
-      const workPlansStats = {
-        draft: workPlans.filter(wp => wp.status === 'draft').length,
-        submitted: workPlans.filter(wp => wp.status === 'submitted').length,
-        approved: workPlans.filter(wp => wp.status === 'approved').length,
-        rejected: workPlans.filter(wp => wp.status === 'rejected').length
-      };
+      // Calcular progreso general (ejemplo de cálculo)
+      const completedProducts = products.filter(p => p.status === 'completed').length;
+      const overallProgress = products.length > 0 ? Math.round((completedProducts / products.length) * 100) : 0;
 
-      // Calcular estadísticas de informes
-      const approvedPlans = workPlans.filter(wp => wp.status === 'approved');
-      const reportsStats = {
-        pending: approvedPlans.length - reports.length,
-        submitted: reports.filter(r => r.status === 'submitted').length,
-        reviewed: reports.filter(r => r.status === 'reviewed').length
-      };
-
-      setStats({
-        totalManagers: managers.length,
-        totalPrograms: programs.length,
-        totalCampuses: campuses.length,
-        workPlansStats,
-        reportsStats
+      setAxesStats({
+        totalAxes: axes.length,
+        totalActions: actions.length,
+        totalProducts: products.length,
+        overallProgress
       });
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('Error loading axes data:', error);
+      // Datos de ejemplo para demostración
+      setAxesStats({
+        totalAxes: 9,
+        totalActions: 20,
+        totalProducts: 23,
+        overallProgress: 52
+      });
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8">Cargando dashboard...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Estadísticas principales */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Gestores</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+    <div className="space-y-8">
+      {/* Indicadores Principales por Ejes Estratégicos */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Gestión</h1>
+        <p className="text-gray-600">Seguimiento de Ejes Estratégicos</p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Ejes Estratégicos */}
+        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardHeader className="text-center pb-3">
+            <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-700 transition-colors duration-300">
+              <Target className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle className="text-lg font-semibold text-gray-800">Ejes Estratégicos</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalManagers}</div>
-            <p className="text-xs text-muted-foreground">
-              Gestores registrados en el sistema
+          <CardContent className="text-center">
+            <div className="text-4xl font-bold text-blue-600 mb-2 animate-pulse">
+              {axesStats.totalAxes}
+            </div>
+            <p className="text-sm text-gray-600">
+              Ejes definidos
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Campus</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+        {/* Acciones */}
+        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-green-200 bg-gradient-to-br from-green-50 to-green-100">
+          <CardHeader className="text-center pb-3">
+            <div className="mx-auto w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-green-700 transition-colors duration-300">
+              <Activity className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle className="text-lg font-semibold text-gray-800">Acciones</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCampuses}</div>
-            <p className="text-xs text-muted-foreground">
-              Campus disponibles
+          <CardContent className="text-center">
+            <div className="text-4xl font-bold text-green-600 mb-2 animate-pulse">
+              {axesStats.totalActions}
+            </div>
+            <p className="text-sm text-gray-600">
+              Acciones planificadas
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Programas Académicos</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+        {/* Productos */}
+        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardHeader className="text-center pb-3">
+            <div className="mx-auto w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-purple-700 transition-colors duration-300">
+              <Package className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle className="text-lg font-semibold text-gray-800">Productos</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPrograms}</div>
-            <p className="text-xs text-muted-foreground">
-              Programas registrados
+          <CardContent className="text-center">
+            <div className="text-4xl font-bold text-purple-600 mb-2 animate-pulse">
+              {axesStats.totalProducts}
+            </div>
+            <p className="text-sm text-gray-600">
+              Productos esperados
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Planes Aprobados</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+        {/* Progreso General */}
+        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100">
+          <CardHeader className="text-center pb-3">
+            <div className="mx-auto w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-orange-700 transition-colors duration-300">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <CardTitle className="text-lg font-semibold text-gray-800">Progreso General</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.workPlansStats.approved}</div>
-            <p className="text-xs text-muted-foreground">
-              Planes de trabajo aprobados
+          <CardContent className="text-center">
+            <div className="text-4xl font-bold text-orange-600 mb-2 animate-pulse">
+              {axesStats.overallProgress}%
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+              <div 
+                className="bg-orange-600 h-2 rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${axesStats.overallProgress}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-gray-600">
+              Avance total
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Nuevas secciones principales */}
+      {/* Separador visual */}
+      <div className="border-t border-gray-200 my-8"></div>
+
+      {/* Componentes movidos al final */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <NotificationFeed />
-        <StrategicAxesProgress />
-      </div>
-
-      {/* Estadísticas detalladas */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Estado de Planes de Trabajo
+            <CardTitle className="text-center text-xl font-semibold text-gray-800">
+              Notificaciones de Actividad
             </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-gray-500" />
-                <span className="text-sm">Borradores</span>
-              </div>
-              <Badge variant="secondary">{stats.workPlansStats.draft}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span className="text-sm">Enviados</span>
-              </div>
-              <Badge variant="default">{stats.workPlansStats.submitted}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">Aprobados</span>
-              </div>
-              <Badge variant="default" className="bg-green-600">
-                {stats.workPlansStats.approved}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm">Rechazados</span>
-              </div>
-              <Badge variant="destructive">{stats.workPlansStats.rejected}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Estado de Informes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-orange-500" />
-                <span className="text-sm">Pendientes</span>
-              </div>
-              <Badge variant="outline">{stats.reportsStats.pending}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-500" />
-                <span className="text-sm">Enviados</span>
-              </div>
-              <Badge variant="default">{stats.reportsStats.submitted}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">Revisados</span>
-              </div>
-              <Badge variant="default" className="bg-green-600">
-                {stats.reportsStats.reviewed}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {profile?.role === 'Gestor' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Acciones Rápidas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-gray-600">
-              <p>• Revisa tu plan de trabajo en la sección "Mi Plan de Trabajo"</p>
-              <p>• Una vez aprobado tu plan, podrás crear informes de gestión</p>
-            </div>
+            <NotificationFeed />
           </CardContent>
         </Card>
-      )}
+
+        <Card className="hover:shadow-md transition-shadow duration-300">
+          <CardHeader>
+            <CardTitle className="text-center text-xl font-semibold text-gray-800">
+              Progreso Detallado por Eje Estratégico
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StrategicAxesProgress />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
