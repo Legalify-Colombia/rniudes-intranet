@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,7 +66,13 @@ export function UserManagement() {
       // Load campuses
       const campusResult = await fetchCampus();
       if (campusResult.data) {
-        setCampuses(campusResult.data);
+        // Filter campuses with valid IDs
+        const validCampuses = campusResult.data.filter(campus => 
+          campus.id && 
+          typeof campus.id === 'string' && 
+          campus.id.trim().length > 0
+        );
+        setCampuses(validCampuses);
       }
 
       // For super admin, load all users. For campus admin, load only their managed campuses
@@ -403,11 +408,18 @@ export function UserManagement() {
                           <SelectValue placeholder="Seleccionar campus" />
                         </SelectTrigger>
                         <SelectContent>
-                          {campuses.map(campus => (
-                            <SelectItem key={campus.id} value={campus.id}>
-                              {campus.name}
-                            </SelectItem>
-                          ))}
+                          {campuses.map(campus => {
+                            // Validate campus ID before rendering
+                            if (!campus.id || typeof campus.id !== 'string' || campus.id.trim().length === 0) {
+                              console.warn('UserManagement - Skipping invalid campus:', campus);
+                              return null;
+                            }
+                            return (
+                              <SelectItem key={campus.id} value={campus.id}>
+                                {campus.name}
+                              </SelectItem>
+                            );
+                          }).filter(Boolean)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -453,31 +465,38 @@ export function UserManagement() {
                     <div>
                       <Label>Campus que puede gestionar</Label>
                       <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
-                        {campuses.map(campus => (
-                          <div key={campus.id} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id={`campus_${campus.id}`}
-                              checked={userForm.managed_campus_ids.includes(campus.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setUserForm(prev => ({
-                                    ...prev,
-                                    managed_campus_ids: [...prev.managed_campus_ids, campus.id]
-                                  }));
-                                } else {
-                                  setUserForm(prev => ({
-                                    ...prev,
-                                    managed_campus_ids: prev.managed_campus_ids.filter(id => id !== campus.id)
-                                  }));
-                                }
-                              }}
-                            />
-                            <Label htmlFor={`campus_${campus.id}`} className="text-sm">
-                              {campus.name}
-                            </Label>
-                          </div>
-                        ))}
+                        {campuses.map(campus => {
+                          // Validate campus ID before rendering
+                          if (!campus.id || typeof campus.id !== 'string' || campus.id.trim().length === 0) {
+                            console.warn('UserManagement - Skipping invalid campus for checkbox:', campus);
+                            return null;
+                          }
+                          return (
+                            <div key={campus.id} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`campus_${campus.id}`}
+                                checked={userForm.managed_campus_ids.includes(campus.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setUserForm(prev => ({
+                                      ...prev,
+                                      managed_campus_ids: [...prev.managed_campus_ids, campus.id]
+                                    }));
+                                  } else {
+                                    setUserForm(prev => ({
+                                      ...prev,
+                                      managed_campus_ids: prev.managed_campus_ids.filter(id => id !== campus.id)
+                                    }));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`campus_${campus.id}`} className="text-sm">
+                                {campus.name}
+                              </Label>
+                            </div>
+                          );
+                        }).filter(Boolean)}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
                         Si no selecciona ninguno, podrá gestionar todos los campus
@@ -551,32 +570,39 @@ export function UserManagement() {
                     {editingUser === user.id && user.role === 'Administrador' ? (
                       <div className="max-w-xs">
                         <div className="space-y-1 max-h-20 overflow-y-auto">
-                          {campuses.map(campus => (
-                            <div key={campus.id} className="flex items-center space-x-1">
-                              <input
-                                type="checkbox"
-                                id={`edit_campus_${campus.id}`}
-                                checked={editForm.managed_campus_ids.includes(campus.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setEditForm(prev => ({
-                                      ...prev,
-                                      managed_campus_ids: [...prev.managed_campus_ids, campus.id]
-                                    }));
-                                  } else {
-                                    setEditForm(prev => ({
-                                      ...prev,
-                                      managed_campus_ids: prev.managed_campus_ids.filter(id => id !== campus.id)
-                                    }));
-                                  }
-                                }}
-                                className="w-3 h-3"
-                              />
-                              <label htmlFor={`edit_campus_${campus.id}`} className="text-xs">
-                                {campus.name}
-                              </label>
-                            </div>
-                          ))}
+                          {campuses.map(campus => {
+                            // Validate campus ID before rendering
+                            if (!campus.id || typeof campus.id !== 'string' || campus.id.trim().length === 0) {
+                              console.warn('UserManagement - Skipping invalid campus for edit:', campus);
+                              return null;
+                            }
+                            return (
+                              <div key={campus.id} className="flex items-center space-x-1">
+                                <input
+                                  type="checkbox"
+                                  id={`edit_campus_${campus.id}`}
+                                  checked={editForm.managed_campus_ids.includes(campus.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setEditForm(prev => ({
+                                        ...prev,
+                                        managed_campus_ids: [...prev.managed_campus_ids, campus.id]
+                                      }));
+                                    } else {
+                                      setEditForm(prev => ({
+                                        ...prev,
+                                        managed_campus_ids: prev.managed_campus_ids.filter(id => id !== campus.id)
+                                      }));
+                                    }
+                                  }}
+                                  className="w-3 h-3"
+                                />
+                                <label htmlFor={`edit_campus_${campus.id}`} className="text-xs">
+                                  {campus.name}
+                                </label>
+                              </div>
+                            );
+                          }).filter(Boolean)}
                         </div>
                       </div>
                     ) : (

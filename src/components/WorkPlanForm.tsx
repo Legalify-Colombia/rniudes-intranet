@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,15 +47,33 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     try {
       // Cargar ejes estratégicos
       const { data: axesData } = await fetchStrategicAxes();
-      setStrategicAxes(axesData || []);
+      // Filter strategic axes with valid IDs
+      const validAxes = (axesData || []).filter(axis => 
+        axis.id && 
+        typeof axis.id === 'string' && 
+        axis.id.trim().length > 0
+      );
+      setStrategicAxes(validAxes);
 
       // Cargar acciones
       const { data: actionsData } = await fetchActions();
-      setActions(actionsData || []);
+      // Filter actions with valid IDs
+      const validActions = (actionsData || []).filter(action => 
+        action.id && 
+        typeof action.id === 'string' && 
+        action.id.trim().length > 0
+      );
+      setActions(validActions);
 
       // Cargar productos
       const { data: productsData } = await fetchProducts();
-      setProducts(productsData || []);
+      // Filter products with valid IDs
+      const validProducts = (productsData || []).filter(product => 
+        product.id && 
+        typeof product.id === 'string' && 
+        product.id.trim().length > 0
+      );
+      setProducts(validProducts);
 
       // Buscar plan de trabajo existente
       const { data: workPlansData } = await fetchWorkPlans();
