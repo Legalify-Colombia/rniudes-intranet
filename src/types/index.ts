@@ -3,7 +3,7 @@
 export interface StrategicAxis {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   code: string;
   usage_type: string[] | 'gestores' | 'internacionalizacion';
   created_by: string;
@@ -14,24 +14,26 @@ export interface StrategicAxis {
 export interface Action {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   code: string;
   strategic_axis_id: string;
   usage_type: string[] | 'gestores' | 'internacionalizacion';
   created_by: string;
   created_at: string;
   updated_at: string;
+  strategic_axes?: StrategicAxis;
 }
 
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   action_id: string;
   usage_type: string[] | 'gestores' | 'internacionalizacion';
   created_by: string;
   created_at: string;
   updated_at: string;
+  actions?: Action;
 }
 
 // Campus and academic types
@@ -64,8 +66,8 @@ export interface AcademicProgram {
   director_name: string;
   director_email: string;
   manager_id?: string;
-  snies_code: string;
-  level: string;
+  snies_code?: string;
+  level?: string;
   created_at: string;
   updated_at: string;
   campus?: Campus;
@@ -328,4 +330,33 @@ export interface ReportSystemConfig {
   require_evidence: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Work plan types
+export interface WorkPlan {
+  id: string;
+  manager_id: string;
+  program_id: string;
+  objectives?: string;
+  total_hours_assigned: number;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  comments?: string;
+  coordinator_comments?: string;
+  approval_comments?: string;
+  submitted_date?: string;
+  approved_date?: string;
+  coordinator_approval_date?: string;
+  approved_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkPlanAssignment {
+  id: string;
+  work_plan_id: string;
+  product_id: string;
+  assigned_hours: number;
+  created_at: string;
+  updated_at: string;
+  product?: Product;
 }

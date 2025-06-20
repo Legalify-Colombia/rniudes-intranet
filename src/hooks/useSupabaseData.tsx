@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { 
   AcademicProgram, 
@@ -20,7 +21,9 @@ import {
   ManagerReportVersion,
   TemplateBasedReport,
   TemplateReportResponse,
-  ReportSystemConfig
+  ReportSystemConfig,
+  WorkPlan,
+  WorkPlanAssignment
 } from '@/types';
 
 export { 
@@ -44,7 +47,9 @@ export {
   ManagerReportVersion,
   TemplateBasedReport,
   TemplateReportResponse,
-  ReportSystemConfig
+  ReportSystemConfig,
+  WorkPlan,
+  WorkPlanAssignment
 };
 
 export const useSupabaseData = () => {
@@ -1018,7 +1023,7 @@ export const useSupabaseData = () => {
     }
   };
 
-  // Missing functions from other components
+  // Usage update functions
   const updateStrategicAxisUsage = async (id: string, usageType: string[]) => {
     try {
       const { data, error } = await supabase
@@ -1064,7 +1069,7 @@ export const useSupabaseData = () => {
     }
   };
 
-  // Template report functions (placeholders)
+  // Template report functions
   const fetchReportTemplates = async () => {
     try {
       const { data, error } = await supabase
@@ -1148,7 +1153,6 @@ export const useSupabaseData = () => {
     }
   };
 
-  // New functions
   const createPartnerInstitution = async (institutionData: Omit<ProjectPartnerInstitution, 'id' | 'created_at'>) => {
     try {
       const { data, error } = await supabase
@@ -1355,6 +1359,114 @@ export const useSupabaseData = () => {
     }
   };
 
+  // Work plan functions
+  const createWorkPlan = async (workPlanData: Omit<WorkPlan, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .insert([workPlanData])
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating work plan:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateWorkPlan = async (id: string, updates: Partial<WorkPlan>) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating work plan:', error);
+      return { data: null, error };
+    }
+  };
+
+  const upsertWorkPlanAssignment = async (assignmentData: Omit<WorkPlanAssignment, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plan_assignments')
+        .upsert(assignmentData)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error upserting work plan assignment:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchWorkPlanDetails = async (workPlanId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .select(`
+          *,
+          work_plan_assignments(
+            *,
+            product:products(*)
+          )
+        `)
+        .eq('id', workPlanId)
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching work plan details:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchPendingWorkPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .select('*')
+        .eq('status', 'submitted')
+        .order('submitted_date', { ascending: false });
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching pending work plans:', error);
+      return { data: null, error };
+    }
+  };
+
+  const approveWorkPlan = async (id: string, approvalData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('work_plans')
+        .update(approvalData)
+        .eq('id', id)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error approving work plan:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateUserCampusAccess = async (userId: string, campusIds: string[]) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ managed_campus_ids: campusIds })
+        .eq('id', userId)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating user campus access:', error);
+      return { data: null, error };
+    }
+  };
+
   return {
     fetchAcademicPrograms,
     fetchStrategicAxes,
@@ -1449,6 +1561,14 @@ export const useSupabaseData = () => {
     getNextVersionNumber,
     createReportTemplate,
     updateReportTemplate,
-    deleteReportTemplate
+    deleteReportTemplate,
+    // Work plan functions
+    createWorkPlan,
+    updateWorkPlan,
+    upsertWorkPlanAssignment,
+    fetchWorkPlanDetails,
+    fetchPendingWorkPlans,
+    approveWorkPlan,
+    updateUserCampusAccess
   };
 };
