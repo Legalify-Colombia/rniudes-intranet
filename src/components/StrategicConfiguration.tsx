@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, StrategicAxis, Action, Product } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/hooks/useAuth";
 import { ReportTemplatesManagement } from "./ReportTemplatesManagement";
 import { DocumentTemplatesManagement } from "./DocumentTemplatesManagement";
 
@@ -22,6 +23,7 @@ export function StrategicConfiguration() {
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { profile } = useAuth();
   
   const {
     fetchStrategicAxes,

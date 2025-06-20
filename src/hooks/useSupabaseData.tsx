@@ -139,10 +139,7 @@ export function useSupabaseData() {
   const createStrategicAxis = async (axisData: Omit<StrategicAxis, 'id' | 'created_at' | 'updated_at'>): Promise<Result<StrategicAxis>> => {
     const { data, error } = await supabase
       .from('strategic_axes')
-      .insert({
-        ...axisData,
-        created_by: profile?.id || ''
-      })
+      .insert(axisData)
       .select()
       .single();
     return { data, error };
@@ -163,10 +160,7 @@ export function useSupabaseData() {
   const createAction = async (actionData: Omit<Action, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Action>> => {
     const { data, error } = await supabase
       .from('actions')
-      .insert({
-        ...actionData,
-        created_by: profile?.id || ''
-      })
+      .insert(actionData)
       .select()
       .single();
     return { data, error };
@@ -190,10 +184,7 @@ export function useSupabaseData() {
   const createProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Result<Product>> => {
     const { data, error } = await supabase
       .from('products')
-      .insert({
-        ...productData,
-        created_by: profile?.id || ''
-      })
+      .insert(productData)
       .select()
       .single();
     return { data, error };
@@ -355,28 +346,25 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  // User Management
+  // Users Management
   const fetchUsers = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`
+        *,
+        campus:campus(*)
+      `)
       .order('full_name');
     return { data: data || [], error };
   };
 
-  const fetchManagers = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'Gestor')
-      .order('full_name');
-    return { data: data || [], error };
-  };
-
-  const fetchManagersByCampus = async (campusIds?: string[]): Promise<Result<any[]>> => {
+  const fetchUsersByCampus = async (campusIds?: string[]): Promise<Result<any[]>> => {
     let query = supabase
       .from('profiles')
-      .select('*');
+      .select(`
+        *,
+        campus:campus(*)
+      `);
 
     if (campusIds && campusIds.length > 0) {
       query = query.in('campus_id', campusIds);
@@ -386,44 +374,50 @@ export function useSupabaseData() {
     return { data: data || [], error };
   };
 
-  const updateManagerHours = async (managerId: string, weeklyHours: number, numberOfWeeks: number): Promise<Result<any>> => {
-    const totalHours = weeklyHours * numberOfWeeks;
+  const updateUser = async (id: string, userData: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('profiles')
-      .update({
-        weekly_hours: weeklyHours,
-        number_of_weeks: numberOfWeeks,
-        total_hours: totalHours
-      })
-      .eq('id', managerId)
+      .update(userData)
+      .eq('id', id)
       .select()
       .single();
     return { data, error };
   };
 
-  const getUserManagedCampus = async (userId: string): Promise<Result<any>> => {
+  const updateUserCampusAccess = async (userId: string, campusIds: string[]): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('campus_id, managed_campus_ids')
+      .update({ managed_campus_ids: campusIds })
       .eq('id', userId)
+      .select()
       .single();
     return { data, error };
   };
 
-  // File Upload
-  const uploadFile = async (file: File, folder: string): Promise<Result<string>> => {
-    const fileName = `${Date.now()}_${file.name}`;
-    const { data, error } = await supabase.storage
-      .from('documents')
-      .upload(`${folder}/${fileName}`, file);
+  const deleteUser = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
 
-    if (error) return { data: null, error };
+  // File Upload
+  const uploadFile = async (file: File, bucket: string, fileName?: string): Promise<Result<{ publicUrl: string }>> => {
+    const fileNameToUse = fileName || `${Date.now()}_${file.name}`;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileNameToUse, file);
+
+    if (error) {
+      return { data: null, error };
+    }
 
     const { data: { publicUrl } } = supabase.storage
-      .from('documents')
-      .getPublicUrl(`${folder}/${fileName}`);
+      .from(bucket)
+      .getPublicUrl(fileNameToUse);
 
-    return { data: publicUrl, error: null };
+    return { data: { publicUrl }, error: null };
   };
 
   // Document Templates
@@ -433,7 +427,7 @@ export function useSupabaseData() {
       .select('*')
       .eq('is_active', true)
       .order('name');
-    return { data: data || [], error };
+    return { data: (data || []).map(item => ({ ...item, template_type: item.template_type as 'pdf' | 'doc' })), error };
   };
 
   const createDocumentTemplate = async (templateData: Omit<DocumentTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<Result<DocumentTemplate>> => {
@@ -442,7 +436,7 @@ export function useSupabaseData() {
       .insert(templateData)
       .select()
       .single();
-    return { data, error };
+    return { data: data ? { ...data, template_type: data.template_type as 'pdf' | 'doc' } : null, error };
   };
 
   const updateDocumentTemplate = async (id: string, templateData: Partial<DocumentTemplate>): Promise<Result<DocumentTemplate>> => {
@@ -452,7 +446,7 @@ export function useSupabaseData() {
       .eq('id', id)
       .select()
       .single();
-    return { data, error };
+    return { data: data ? { ...data, template_type: data.template_type as 'pdf' | 'doc' } : null, error };
   };
 
   const deleteDocumentTemplate = async (id: string): Promise<Result<null>> => {
@@ -594,16 +588,63 @@ export function useSupabaseData() {
   // Work Plans
   const fetchWorkPlans = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
-      .from('work_plans')
+      .from('work_plans_with_manager')
       .select('*')
       .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('work_plans_with_manager')
+      .select('*')
+      .eq('status', 'submitted')
+      .order('submitted_date', { ascending: true });
+    return { data: data || [], error };
+  };
+
+  const fetchWorkPlanDetails = async (workPlanId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('work_plans')
+      .select(`
+        *,
+        program:academic_programs(
+          *,
+          campus:campus(*),
+          faculty:faculties(*)
+        ),
+        manager:profiles(*)
+      `)
+      .eq('id', workPlanId)
+      .single();
+    return { data, error };
+  };
+
+  const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('work_plan_assignments')
+      .select(`
+        *,
+        product:products(
+          *,
+          action:actions(
+            *,
+            strategic_axis:strategic_axes(*)
+          )
+        )
+      `)
+      .eq('work_plan_id', workPlanId)
+      .order('created_at');
     return { data: data || [], error };
   };
 
   const createWorkPlan = async (workPlanData: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('work_plans')
-      .insert(workPlanData)
+      .insert({
+        ...workPlanData,
+        manager_id: profile?.id || ''
+      })
       .select()
       .single();
     return { data, error };
@@ -619,23 +660,14 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from('work_plans_with_manager')
-      .select('*')
-      .eq('status', 'submitted')
-      .order('submitted_date', { ascending: false });
-    return { data: data || [], error };
-  };
-
-  const approveWorkPlan = async (id: string, approvalData: any): Promise<Result<any>> => {
+  const approveWorkPlan = async (id: string, comments?: string): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('work_plans')
       .update({
-        ...approvalData,
         status: 'approved',
+        approved_by: profile?.id,
         approved_date: new Date().toISOString(),
-        approved_by: profile?.id
+        approval_comments: comments || ''
       })
       .eq('id', id)
       .select()
@@ -643,31 +675,10 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const fetchWorkPlanDetails = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from('work_plans')
-      .select(`
-        *,
-        work_plan_assignments:work_plan_assignments(
-          *,
-          product:products(
-            *,
-            action:actions(
-              *,
-              strategic_axis:strategic_axes(*)
-            )
-          )
-        )
-      `)
-      .eq('id', id)
-      .single();
-    return { data, error };
-  };
-
   const upsertWorkPlanAssignment = async (assignmentData: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('work_plan_assignments')
-      .upsert(assignmentData, { onConflict: 'work_plan_id,product_id' })
+      .upsert(assignmentData)
       .select()
       .single();
     return { data, error };
@@ -677,17 +688,68 @@ export function useSupabaseData() {
   const fetchManagerReports = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('manager_reports')
-      .select('*')
+      .select(`
+        *,
+        manager:profiles(*),
+        work_plan:work_plans(*),
+        report_period:report_periods(*)
+      `)
       .order('created_at', { ascending: false });
     return { data: data || [], error };
   };
 
-  const fetchProductProgressReports = async (): Promise<Result<any[]>> => {
+  const fetchManagerReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .select(`
+        *,
+        manager:profiles(*),
+        work_plan:work_plans(*),
+        report_period:report_periods(*)
+      `)
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
+  const createManagerReport = async (reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .insert({
+        ...reportData,
+        manager_id: profile?.id || ''
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReport = async (id: string, reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('manager_reports')
+      .update(reportData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // Product Progress Reports
+  const fetchProductProgressReports = async (managerReportId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('product_progress_reports')
       .select('*')
-      .order('created_at', { ascending: false });
+      .eq('manager_report_id', managerReportId);
     return { data: data || [], error };
+  };
+
+  const upsertProductProgressReport = async (reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('product_progress_reports')
+      .upsert(reportData)
+      .select()
+      .single();
+    return { data, error };
   };
 
   const deleteProductProgressReport = async (id: string): Promise<Result<null>> => {
@@ -707,30 +769,58 @@ export function useSupabaseData() {
     return { data: data || [], error };
   };
 
+  const fetchTemplateBasedReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports_with_details')
+      .select('*')
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false });
+    return { data: data || [], error };
+  };
+
   const createTemplateBasedReport = async (reportData: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('template_based_reports')
-      .insert(reportData)
+      .insert({
+        ...reportData,
+        manager_id: profile?.id || ''
+      })
       .select()
       .single();
     return { data, error };
   };
 
-  const fetchTemplateReportResponses = async (reportId: string): Promise<Result<any[]>> => {
+  const updateTemplateBasedReport = async (id: string, reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports')
+      .update(reportData)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteTemplateBasedReport = async (id: string): Promise<Result<null>> => {
+    const { data, error } = await supabase
+      .from('template_based_reports')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  };
+
+  // Template Report Responses
+  const fetchTemplateReportResponses = async (templateReportId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from('template_report_responses')
       .select('*')
-      .eq('template_report_id', reportId)
-      .order('created_at');
+      .eq('template_report_id', templateReportId);
     return { data: data || [], error };
   };
 
   const upsertTemplateReportResponse = async (responseData: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from('template_report_responses')
-      .upsert(responseData, { 
-        onConflict: 'template_report_id,strategic_axis_id,action_id,product_id' 
-      })
+      .upsert(responseData)
       .select()
       .single();
     return { data, error };
@@ -758,10 +848,10 @@ export function useSupabaseData() {
     updateAcademicProgram,
     deleteAcademicProgram,
     fetchUsers,
-    fetchManagers,
-    fetchManagersByCampus,
-    updateManagerHours,
-    getUserManagedCampus,
+    fetchUsersByCampus,
+    updateUser,
+    updateUserCampusAccess,
+    deleteUser,
     uploadFile,
     fetchDocumentTemplates,
     createDocumentTemplate,
@@ -781,17 +871,25 @@ export function useSupabaseData() {
     updateManagerReportVersion,
     getNextVersionNumber,
     fetchWorkPlans,
+    fetchPendingWorkPlans,
+    fetchWorkPlanDetails,
+    fetchWorkPlanAssignments,
     createWorkPlan,
     updateWorkPlan,
-    fetchPendingWorkPlans,
     approveWorkPlan,
-    fetchWorkPlanDetails,
     upsertWorkPlanAssignment,
     fetchManagerReports,
+    fetchManagerReportsByManager,
+    createManagerReport,
+    updateManagerReport,
     fetchProductProgressReports,
+    upsertProductProgressReport,
     deleteProductProgressReport,
     fetchTemplateBasedReports,
+    fetchTemplateBasedReportsByManager,
     createTemplateBasedReport,
+    updateTemplateBasedReport,
+    deleteTemplateBasedReport,
     fetchTemplateReportResponses,
     upsertTemplateReportResponse,
   };
