@@ -538,7 +538,7 @@ export function UserManagement() {
                             </Button>
                           </>
                         ) : (
-                          // Solo mostrar el botón editar para gestores, no para administradores de internacionalización
+                          // Only show edit button for users with editable properties
                           user.role === 'Gestor' || user.role === 'Administrador' ? (
                             <Button 
                               size="sm" 
