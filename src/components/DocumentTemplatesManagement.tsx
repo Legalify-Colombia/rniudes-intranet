@@ -229,7 +229,9 @@ Ejemplo de uso:
                   <Label htmlFor="template_type">Tipo de Documento</Label>
                   <Select 
                     value={formData.template_type} 
-                    onValueChange={(value: "pdf" | "doc") => setFormData(prev => ({ ...prev, template_type: value }))}
+                    onValueChange={(value: "pdf" | "doc") => 
+                      setFormData(prev => ({ ...prev, template_type: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar tipo" />
@@ -241,31 +243,41 @@ Ejemplo de uso:
                   </Select>
                 </div>
               </div>
+              
               <div>
-                <Label htmlFor="description">Descripción (opcional)</Label>
-                <Input
+                <Label htmlFor="description">Descripción</Label>
+                <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Descripción de la plantilla"
+                  rows={3}
                 />
               </div>
+
               <div>
                 <Label htmlFor="template_content">Contenido de la Plantilla</Label>
                 <Textarea
                   id="template_content"
                   value={formData.template_content}
                   onChange={(e) => setFormData(prev => ({ ...prev, template_content: e.target.value }))}
-                  placeholder="Contenido de la plantilla con campos <> para datos dinámicos"
-                  rows={8}
+                  placeholder="Contenido de la plantilla con campos dinámicos..."
+                  rows={10}
+                  className="font-mono text-sm"
                   required
                 />
               </div>
+
               <Alert>
+                <FileText className="h-4 w-4" />
                 <AlertDescription>
-                  <pre className="text-xs whitespace-pre-wrap">{getPlaceholderExamples()}</pre>
+                  <details>
+                    <summary className="cursor-pointer font-medium">Ver campos disponibles</summary>
+                    <pre className="text-xs mt-2 whitespace-pre-wrap">{getPlaceholderExamples()}</pre>
+                  </details>
                 </AlertDescription>
               </Alert>
+
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancelar
@@ -293,6 +305,7 @@ Ejemplo de uso:
                 <TableHead>Nombre</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Descripción</TableHead>
+                <TableHead>Estado</TableHead>
                 <TableHead>Creado</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -306,7 +319,14 @@ Ejemplo de uso:
                       {template.template_type.toUpperCase()}
                     </Badge>
                   </TableCell>
-                  <TableCell>{template.description || '-'}</TableCell>
+                  <TableCell className="max-w-xs truncate">
+                    {template.description || 'Sin descripción'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={template.is_active ? "default" : "secondary"}>
+                      {template.is_active ? "Activa" : "Inactiva"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     {new Date(template.created_at).toLocaleDateString('es-ES')}
                   </TableCell>
@@ -339,6 +359,12 @@ Ejemplo de uso:
               ))}
             </TableBody>
           </Table>
+
+          {documentTemplates.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No hay plantillas de documentos registradas.
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -364,7 +390,9 @@ Ejemplo de uso:
                 <Label htmlFor="edit_template_type">Tipo de Documento</Label>
                 <Select 
                   value={formData.template_type} 
-                  onValueChange={(value: "pdf" | "doc") => setFormData(prev => ({ ...prev, template_type: value }))}
+                  onValueChange={(value: "pdf" | "doc") => 
+                    setFormData(prev => ({ ...prev, template_type: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar tipo" />
@@ -376,31 +404,31 @@ Ejemplo de uso:
                 </Select>
               </div>
             </div>
+            
             <div>
-              <Label htmlFor="edit_description">Descripción (opcional)</Label>
-              <Input
+              <Label htmlFor="edit_description">Descripción</Label>
+              <Textarea
                 id="edit_description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Descripción de la plantilla"
+                rows={3}
               />
             </div>
+
             <div>
               <Label htmlFor="edit_template_content">Contenido de la Plantilla</Label>
               <Textarea
                 id="edit_template_content"
                 value={formData.template_content}
                 onChange={(e) => setFormData(prev => ({ ...prev, template_content: e.target.value }))}
-                placeholder="Contenido de la plantilla con campos <> para datos dinámicos"
-                rows={8}
+                placeholder="Contenido de la plantilla con campos dinámicos..."
+                rows={10}
+                className="font-mono text-sm"
                 required
               />
             </div>
-            <Alert>
-              <AlertDescription>
-                <pre className="text-xs whitespace-pre-wrap">{getPlaceholderExamples()}</pre>
-              </AlertDescription>
-            </Alert>
+
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
@@ -420,21 +448,38 @@ Ejemplo de uso:
             <DialogTitle>Vista Previa: {selectedTemplate?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold mb-2">Información de la Plantilla:</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><strong>Tipo:</strong> {selectedTemplate?.template_type.toUpperCase()}</div>
-                <div><strong>Descripción:</strong> {selectedTemplate?.description || 'Sin descripción'}</div>
-              </div>
-            </div>
             <div>
-              <h4 className="font-semibold mb-2">Contenido de la Plantilla:</h4>
-              <div className="p-4 border rounded-lg bg-white">
-                <pre className="whitespace-pre-wrap text-sm">
+              <Label>Tipo de Documento</Label>
+              <Badge variant={selectedTemplate?.template_type === 'pdf' ? 'default' : 'secondary'}>
+                {selectedTemplate?.template_type?.toUpperCase()}
+              </Badge>
+            </div>
+            
+            {selectedTemplate?.description && (
+              <div>
+                <Label>Descripción</Label>
+                <p className="text-sm text-gray-600">{selectedTemplate.description}</p>
+              </div>
+            )}
+
+            <div>
+              <Label>Contenido de la Plantilla</Label>
+              <div className="bg-gray-50 p-4 rounded border max-h-96 overflow-auto">
+                <pre className="text-sm whitespace-pre-wrap font-mono">
                   {selectedTemplate?.template_content}
                 </pre>
               </div>
             </div>
+
+            <Alert>
+              <FileText className="h-4 w-4" />
+              <AlertDescription>
+                <details>
+                  <summary className="cursor-pointer font-medium">Ver campos disponibles</summary>
+                  <pre className="text-xs mt-2 whitespace-pre-wrap">{getPlaceholderExamples()}</pre>
+                </details>
+              </AlertDescription>
+            </Alert>
           </div>
         </DialogContent>
       </Dialog>
