@@ -15,7 +15,12 @@ import {
   Indicator,
   InternationalizationProject,
   ProjectPartnerInstitution,
-  InternationalizationReport
+  InternationalizationReport,
+  ReportTemplate,
+  ManagerReportVersion,
+  TemplateBasedReport,
+  TemplateReportResponse,
+  ReportSystemConfig
 } from '@/types';
 
 export { 
@@ -34,7 +39,12 @@ export {
   Indicator,
   InternationalizationProject,
   ProjectPartnerInstitution,
-  InternationalizationReport
+  InternationalizationReport,
+  ReportTemplate,
+  ManagerReportVersion,
+  TemplateBasedReport,
+  TemplateReportResponse,
+  ReportSystemConfig
 };
 
 export const useSupabaseData = () => {
@@ -335,9 +345,9 @@ export const useSupabaseData = () => {
   };
 
   // Product Progress Reports
-  const fetchProductProgressReports = async () => {
+  const fetchProductProgressReports = async (managerReportId?: string) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('product_progress_reports')
         .select(`
           *,
@@ -345,6 +355,12 @@ export const useSupabaseData = () => {
           products(*)
         `)
         .order('created_at', { ascending: false });
+
+      if (managerReportId) {
+        query = query.eq('manager_report_id', managerReportId);
+      }
+
+      const { data, error } = await query;
       return { data, error };
     } catch (error) {
       console.error('Error fetching product progress reports:', error);
@@ -1132,6 +1148,213 @@ export const useSupabaseData = () => {
     }
   };
 
+  // New functions
+  const createPartnerInstitution = async (institutionData: Omit<ProjectPartnerInstitution, 'id' | 'created_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('project_partner_institutions')
+        .insert([institutionData])
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating partner institution:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchInternationalizationProjects = async (managerId?: string) => {
+    try {
+      let query = supabase
+        .from('internationalization_projects')
+        .select(`
+          *,
+          strategic_axes(*),
+          specific_lines(*),
+          academic_programs(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (managerId) {
+        query = query.eq('manager_id', managerId);
+      }
+
+      const { data, error } = await query;
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching internationalization projects:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchManagerReportsByManager = async (managerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('manager_reports')
+        .select(`
+          *,
+          report_periods(*),
+          work_plan:work_plans(*)
+        `)
+        .eq('manager_id', managerId)
+        .order('created_at', { ascending: false });
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching manager reports by manager:', error);
+      return { data: null, error };
+    }
+  };
+
+  const fetchTemplateBasedReports = async (managerId?: string) => {
+    try {
+      let query = supabase
+        .from('template_based_reports')
+        .select(`
+          *,
+          report_template:report_templates(*),
+          report_period:report_periods(*),
+          manager:profiles(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (managerId) {
+        query = query.eq('manager_id', managerId);
+      }
+
+      const { data, error } = await query;
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching template based reports:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteTemplateBasedReport = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('template_based_reports')
+        .delete()
+        .eq('id', id);
+      return { error };
+    } catch (error) {
+      console.error('Error deleting template based report:', error);
+      return { error };
+    }
+  };
+
+  const fetchReportSystemConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('report_system_config')
+        .select('*')
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching report system config:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateReportSystemConfig = async (id: string, updates: Partial<ReportSystemConfig>) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_system_config')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating report system config:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createManagerReportVersion = async (versionData: Omit<ManagerReportVersion, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('manager_report_versions')
+        .insert([versionData])
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating manager report version:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateManagerReportVersion = async (id: string, updates: Partial<ManagerReportVersion>) => {
+    try {
+      const { data, error } = await supabase
+        .from('manager_report_versions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating manager report version:', error);
+      return { data: null, error };
+    }
+  };
+
+  const getNextVersionNumber = async (managerReportId: string, templateId: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_next_version_number', {
+          p_manager_report_id: managerReportId,
+          p_template_id: templateId
+        });
+      return { data, error };
+    } catch (error) {
+      console.error('Error getting next version number:', error);
+      return { data: null, error };
+    }
+  };
+
+  const createReportTemplate = async (templateData: Omit<ReportTemplate, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_templates')
+        .insert([templateData])
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating report template:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateReportTemplate = async (id: string, updates: Partial<ReportTemplate>) => {
+    try {
+      const { data, error } = await supabase
+        .from('report_templates')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      return { data, error };
+    } catch (error) {
+      console.error('Error updating report template:', error);
+      return { data: null, error };
+    }
+  };
+
+  const deleteReportTemplate = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('report_templates')
+        .delete()
+        .eq('id', id);
+      return { error };
+    } catch (error) {
+      console.error('Error deleting report template:', error);
+      return { error };
+    }
+  };
+
   return {
     fetchAcademicPrograms,
     fetchStrategicAxes,
@@ -1213,6 +1436,19 @@ export const useSupabaseData = () => {
     updateTemplateBasedReport,
     fetchTemplateReportResponses,
     upsertTemplateReportResponse,
-    checkReportEditPermission
+    checkReportEditPermission,
+    createPartnerInstitution,
+    fetchInternationalizationProjects,
+    fetchManagerReportsByManager,
+    fetchTemplateBasedReports,
+    deleteTemplateBasedReport,
+    fetchReportSystemConfig,
+    updateReportSystemConfig,
+    createManagerReportVersion,
+    updateManagerReportVersion,
+    getNextVersionNumber,
+    createReportTemplate,
+    updateReportTemplate,
+    deleteReportTemplate
   };
 };

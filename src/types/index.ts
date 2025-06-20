@@ -64,6 +64,8 @@ export interface AcademicProgram {
   director_name: string;
   director_email: string;
   manager_id?: string;
+  snies_code: string;
+  level: string;
   created_at: string;
   updated_at: string;
   campus?: Campus;
@@ -154,6 +156,39 @@ export interface DocumentTemplate {
   file_name?: string;
   is_active: boolean;
   created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Report template types
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  strategic_axis_id?: string;
+  action_id?: string;
+  product_id?: string;
+  strategic_axes_ids?: string[];
+  actions_ids?: string[];
+  products_ids?: string[];
+  sharepoint_base_url?: string;
+  is_active: boolean;
+  max_versions: number;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagerReportVersion {
+  id: string;
+  manager_report_id?: string;
+  template_id?: string;
+  version_number: number;
+  progress_percentage?: number;
+  observations?: string;
+  evidence_links?: string[];
+  sharepoint_folder_url?: string;
+  submitted_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -253,3 +288,44 @@ export interface InternationalizationReport {
   report_periods?: ReportPeriod;
 }
 
+// Template based reports
+export interface TemplateBasedReport {
+  id: string;
+  report_template_id: string;
+  report_period_id: string;
+  manager_id: string;
+  title: string;
+  description?: string;
+  status: 'draft' | 'submitted' | 'reviewed';
+  submitted_date?: string;
+  reviewed_date?: string;
+  reviewed_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateReportResponse {
+  id: string;
+  template_report_id: string;
+  strategic_axis_id?: string;
+  action_id?: string;
+  product_id?: string;
+  response_text?: string;
+  progress_percentage?: number;
+  observations?: string;
+  evidence_files?: string[];
+  evidence_file_names?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Report system config
+export interface ReportSystemConfig {
+  id: string;
+  reports_enabled: boolean;
+  max_reports_per_period: number;
+  auto_calculate_progress: boolean;
+  require_evidence: boolean;
+  created_at: string;
+  updated_at: string;
+}
