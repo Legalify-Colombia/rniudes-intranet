@@ -2,8 +2,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,6 +35,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [workPlan, setWorkPlan] = useState<any>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [objectives, setObjectives] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [inputValues, setInputValues] = useState<{[key: string]: number}>({});
 
@@ -61,6 +66,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
 
       if (existingPlan) {
         setWorkPlan(existingPlan);
+        setObjectives(existingPlan.objectives || '');
         // Cargar asignaciones existentes
         const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
         setAssignments(assignmentsData || []);
@@ -89,6 +95,13 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     await updateAssignment(productId, hours);
   };
 
+  const handleObjectivesChange = async (value: string) => {
+    setObjectives(value);
+    if (workPlan) {
+      await updateWorkPlan(workPlan.id, { objectives: value });
+    }
+  };
+
   const updateAssignment = async (productId: string, hours: number) => {
     let currentWorkPlan = workPlan;
 
@@ -98,7 +111,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         manager_id: manager.id,
         program_id: manager.academic_programs[0]?.id,
         total_hours_assigned: 0,
-        status: 'draft' as const
+        status: 'draft' as const,
+        objectives: objectives
       };
       
       const { data: createdPlan, error } = await createWorkPlan(newPlan);
@@ -170,15 +184,40 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       return;
     }
 
-    const { error } = await updateWorkPlan(workPlan.id, { status: 'submitted' });
+    if (!objectives.trim()) {
+      toast({ title: "Error", description: "Debe agregar objetivos antes de enviar", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await updateWorkPlan(workPlan.id, { 
+      status: 'pending',
+      submitted_date: new Date().toISOString(),
+      objectives: objectives
+    });
+    
     if (error) {
       toast({ title: "Error", description: "No se pudo enviar para aprobación", variant: "destructive" });
       return;
     }
 
     toast({ title: "Éxito", description: "Plan enviado para aprobación" });
-    setWorkPlan(prev => ({ ...prev, status: 'submitted' }));
+    setWorkPlan(prev => ({ ...prev, status: 'pending', submitted_date: new Date().toISOString() }));
     onSave();
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Borrador</Badge>;
+      case 'pending':
+        return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
+      case 'approved':
+        return <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Aprobado</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rechazado</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
   if (loading) {
@@ -196,12 +235,17 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       }))
   }));
 
+  const isReadOnly = workPlan?.status === 'pending' || workPlan?.status === 'approved';
+
   return (
     <Card className="w-full max-w-7xl">
       <CardHeader>
-        <CardTitle className="text-xl font-bold">
-          Plan de Trabajo - {manager.full_name}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl font-bold">
+            Plan de Trabajo - {manager.full_name}
+          </CardTitle>
+          {workPlan?.status && getStatusBadge(workPlan.status)}
+        </div>
         <div className="text-sm text-gray-600 space-y-1">
           <p>Programa: {manager.academic_programs?.[0]?.name}</p>
           <p>Horas Disponibles: <span className="font-bold text-blue-600">{manager.total_hours}</span></p>
@@ -210,9 +254,40 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
             {getAvailableHours()}
           </span></p>
         </div>
+
+        {workPlan?.status === 'rejected' && workPlan?.approval_comments && (
+          <Alert className="border-red-200 bg-red-50">
+            <XCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <strong>Plan rechazado:</strong> {workPlan.approval_comments}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {workPlan?.status === 'approved' && workPlan?.approval_comments && (
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <strong>Plan aprobado:</strong> {workPlan.approval_comments}
+            </AlertDescription>
+          </Alert>
+        )}
       </CardHeader>
       
-      <CardContent>
+      <CardContent className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Objetivos del Plan de Trabajo:
+          </label>
+          <Textarea
+            value={objectives}
+            onChange={(e) => handleObjectivesChange(e.target.value)}
+            placeholder="Describe los objetivos principales de tu plan de trabajo..."
+            className="min-h-[100px]"
+            disabled={isReadOnly}
+          />
+        </div>
+
         <Table className="border">
           <TableHeader>
             <TableRow className="bg-blue-600">
@@ -272,7 +347,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
                           onChange={(e) => handleInputChange(product.id, e.target.value)}
                           onBlur={(e) => handleInputBlur(product.id, e.target.value)}
                           className="w-16 h-8 text-center"
-                          disabled={workPlan?.status === 'submitted' || workPlan?.status === 'approved'}
+                          disabled={isReadOnly}
                         />
                       </TableCell>
                     </TableRow>
@@ -297,13 +372,22 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
             <Button variant="outline" onClick={onClose}>
               Cerrar
             </Button>
-            {workPlan?.status !== 'submitted' && workPlan?.status !== 'approved' && (
+            {workPlan?.status === 'draft' && (
               <Button 
                 onClick={submitForApproval}
-                disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0}
+                disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Enviar para Aprobación
+              </Button>
+            )}
+            {workPlan?.status === 'rejected' && (
+              <Button 
+                onClick={submitForApproval}
+                disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Reenviar para Aprobación
               </Button>
             )}
           </div>

@@ -502,18 +502,10 @@ export function useSupabaseData() {
   // Función para obtener planes pendientes de aprobación
   const fetchPendingWorkPlans = async () => {
     const { data, error } = await supabase
-      .from('work_plans')
-      .select(`
-        *,
-        manager:profiles!work_plans_manager_id_fkey(
-          id,
-          full_name,
-          email,
-          position
-        )
-      `)
+      .from('work_plans_with_manager')
+      .select('*')
       .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+      .order('submitted_date', { ascending: true });
 
     return { data, error };
   };

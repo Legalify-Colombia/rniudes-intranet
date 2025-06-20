@@ -25,6 +25,7 @@ export function WorkPlanApproval() {
     try {
       const { data, error } = await fetchPendingWorkPlans();
       if (error) throw error;
+      console.log('Planes pendientes cargados:', data);
       setWorkPlans(data || []);
     } catch (error) {
       console.error('Error loading pending work plans:', error);
@@ -100,7 +101,7 @@ export function WorkPlanApproval() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">
-                  Plan de Trabajo - {plan.manager?.full_name}
+                  Plan de Trabajo - {plan.manager_name}
                 </CardTitle>
                 <Badge variant="secondary">
                   <Clock className="h-3 w-3 mr-1" />
@@ -108,16 +109,17 @@ export function WorkPlanApproval() {
                 </Badge>
               </div>
               <div className="text-sm text-gray-600">
-                <p><strong>Gestor:</strong> {plan.manager?.full_name}</p>
-                <p><strong>Email:</strong> {plan.manager?.email}</p>
-                <p><strong>Cargo:</strong> {plan.manager?.position}</p>
-                <p><strong>Fecha de envío:</strong> {new Date(plan.submitted_date).toLocaleDateString()}</p>
+                <p><strong>Gestor:</strong> {plan.manager_name}</p>
+                <p><strong>Email:</strong> {plan.manager_email}</p>
+                <p><strong>Cargo:</strong> {plan.manager_position}</p>
+                <p><strong>Programa:</strong> {plan.program_name}</p>
+                <p><strong>Fecha de envío:</strong> {plan.submitted_date ? new Date(plan.submitted_date).toLocaleDateString() : 'No disponible'}</p>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <h4 className="font-medium mb-2">Objetivos:</h4>
-                <p className="text-sm text-gray-700">{plan.objectives}</p>
+                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{plan.objectives || 'No se han definido objetivos'}</p>
               </div>
 
               <div>
