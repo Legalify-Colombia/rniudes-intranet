@@ -153,15 +153,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
                 className="h-8 w-auto transition-transform duration-300 group-hover:scale-105"
               />
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                UDES
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Sistema de Gestión
-              </span>
-            </div>
-          </div>
+           </div>
         </SidebarHeader>
         
         <SidebarContent className="bg-white dark:bg-gray-900 p-4">
