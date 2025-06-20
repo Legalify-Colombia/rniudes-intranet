@@ -487,19 +487,57 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  // Función específica para aprobar/rechazar planes de trabajo
+  // Función específica para aprobar/rechazar planes de trabajo - CORREGIDA
   const approveWorkPlan = async (workPlanId: string, status: 'approved' | 'rejected', comments?: string) => {
+    console.log('Aprobando plan:', { workPlanId, status, comments, approvedBy: profile?.id });
+    
+    const updateData: any = { 
+      status,
+      approval_comments: comments || null
+    };
+
+    // Solo establecer fecha de aprobación y aprobador si es aprobado
+    if (status === 'approved') {
+      updateData.approved_date = new Date().toISOString();
+      updateData.approved_by = profile?.id;
+    } else {
+      // Si es rechazado, limpiar campos de aprobación
+      updateData.approved_date = null;
+      updateData.approved_by = null;
+    }
+
     const { data, error } = await supabase
       .from('work_plans')
-      .update({ 
-        status,
-        approval_comments: comments,
-        approved_date: status === 'approved' ? new Date().toISOString() : null,
-        approved_by: profile?.id
-      })
+      .update(updateData)
       .eq('id', workPlanId)
       .select();
 
+    console.log('Resultado de aprobación:', { data, error });
+    return { data, error };
+  };
+
+  // Nueva función para obtener detalles completos de un plan de trabajo
+  const fetchWorkPlanDetails = async (workPlanId: string) => {
+    const { data, error } = await supabase
+      .from('work_plans')
+      .select(`
+        *,
+        manager:profiles!work_plans_manager_id_fkey(
+          id,
+          full_name,
+          email,
+          position
+        ),
+        program:academic_programs!work_plans_program_id_fkey(
+          id,
+          name,
+          campus:campus_id(name),
+          faculty:faculty_id(name)
+        )
+      `)
+      .eq('id', workPlanId)
+      .single();
+    
     return { data, error };
   };
 
@@ -691,6 +729,7 @@ export function useSupabaseData() {
     updateWorkPlan,
     approveWorkPlan,
     fetchPendingWorkPlans,
+    fetchWorkPlanDetails,
     // Work Plan Assignments
     fetchWorkPlanAssignments,
     upsertWorkPlanAssignment,

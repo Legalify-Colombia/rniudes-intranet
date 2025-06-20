@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CheckCircle, XCircle, Clock, AlertCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { WorkPlanPreview } from "./WorkPlanPreview";
 
 export function WorkPlanApproval() {
   const { fetchPendingWorkPlans, approveWorkPlan } = useSupabaseData();
@@ -15,6 +17,7 @@ export function WorkPlanApproval() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [comments, setComments] = useState<{ [key: string]: string }>({});
+  const [previewOpen, setPreviewOpen] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,8 +45,13 @@ export function WorkPlanApproval() {
   const handleApproval = async (workPlanId: string, status: 'approved' | 'rejected') => {
     setActionLoading(workPlanId);
     try {
+      console.log('Iniciando aprobación:', { workPlanId, status, comments: comments[workPlanId] });
+      
       const { error } = await approveWorkPlan(workPlanId, status, comments[workPlanId]);
-      if (error) throw error;
+      if (error) {
+        console.error('Error en aprobación:', error);
+        throw error;
+      }
 
       toast({
         title: "Éxito",
@@ -103,10 +111,26 @@ export function WorkPlanApproval() {
                 <CardTitle className="text-lg">
                   Plan de Trabajo - {plan.manager_name}
                 </CardTitle>
-                <Badge variant="secondary">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Pendiente
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Dialog open={previewOpen === plan.id} onOpenChange={(open) => setPreviewOpen(open ? plan.id : null)}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-2" />
+                        Previsualizar
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+                      <DialogHeader>
+                        <DialogTitle>Previsualización del Plan de Trabajo</DialogTitle>
+                      </DialogHeader>
+                      <WorkPlanPreview workPlanId={plan.id} />
+                    </DialogContent>
+                  </Dialog>
+                  <Badge variant="secondary">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Pendiente
+                  </Badge>
+                </div>
               </div>
               <div className="text-sm text-gray-600">
                 <p><strong>Gestor:</strong> {plan.manager_name}</p>
