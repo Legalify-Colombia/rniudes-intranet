@@ -1,4 +1,5 @@
-import { Calendar, Users, Building, UserCheck, BarChart3, FileText, CheckSquare } from "lucide-react"
+
+import { Calendar, Users, Building, UserCheck, BarChart3, FileText, CheckSquare, Database } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -52,6 +53,16 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         icon: BarChart3,
         roles: ["Administrador", "Coordinador", "Gestor"],
         color: "text-blue-600"
+      }
+    ];
+
+    const sniesItems = [
+      {
+        title: "SNIES",
+        url: "snies",
+        icon: Database,
+        roles: ["Administrador", "Coordinador", "Gestor"],
+        color: "text-purple-600"
       }
     ];
 
@@ -120,7 +131,13 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
       }
     ];
 
-    const allItems = [...baseItems, ...adminItems, ...coordinatorItems, ...managerItems];
+    // Organizar elementos según el rol - SNIES va segundo para todos
+    let allItems = [];
+    if (profile?.role === "Gestor") {
+      allItems = [...baseItems, ...sniesItems, ...managerItems];
+    } else {
+      allItems = [...baseItems, ...sniesItems, ...adminItems, ...coordinatorItems, ...managerItems];
+    }
     
     return allItems.filter(item => 
       profile && item.roles.includes(profile.role)

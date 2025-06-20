@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -382,6 +381,132 @@ export function useSupabaseData() {
         .single();
 
       return { data: { ...data, consolidated_data: consolidatedData }, error };
+    },
+    // SNIES functions adicionales
+    fetchSniesAcademicLevels: async (): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_academic_levels')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      return { data: data || [], error };
+    },
+
+    fetchSniesProgramTypes: async (): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_program_types')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      return { data: data || [], error };
+    },
+
+    fetchSniesRecognitionTypes: async (): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_recognition_types')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      return { data: data || [], error };
+    },
+
+    fetchSniesDepartments: async (): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_departments')
+        .select('*, country:snies_countries(name)')
+        .eq('is_active', true)
+        .order('name');
+      return { data: data || [], error };
+    },
+
+    createSniesAcademicLevel: async (academicLevel: any): Promise<Result<any>> => {
+      const { data, error } = await supabase
+        .from('snies_academic_levels')
+        .insert(academicLevel)
+        .select()
+        .single();
+      return { data, error };
+    },
+
+    createSniesProgramType: async (programType: any): Promise<Result<any>> => {
+      const { data, error } = await supabase
+        .from('snies_program_types')
+        .insert(programType)
+        .select()
+        .single();
+      return { data, error };
+    },
+
+    createSniesRecognitionType: async (recognitionType: any): Promise<Result<any>> => {
+      const { data, error } = await supabase
+        .from('snies_recognition_types')
+        .insert(recognitionType)
+        .select()
+        .single();
+      return { data, error };
+    },
+
+    createSniesDepartment: async (department: any): Promise<Result<any>> => {
+      const { data, error } = await supabase
+        .from('snies_departments')
+        .insert(department)
+        .select()
+        .single();
+      return { data, error };
+    },
+
+    bulkCreateSniesAcademicLevels: async (academicLevels: any[]): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_academic_levels')
+        .insert(academicLevels)
+        .select();
+      return { data: data || [], error };
+    },
+
+    bulkCreateSniesProgramTypes: async (programTypes: any[]): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_program_types')
+        .insert(programTypes)
+        .select();
+      return { data: data || [], error };
+    },
+
+    bulkCreateSniesRecognitionTypes: async (recognitionTypes: any[]): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_recognition_types')
+        .insert(recognitionTypes)
+        .select();
+      return { data: data || [], error };
+    },
+
+    bulkCreateSniesDepartments: async (departments: any[]): Promise<Result<any[]>> => {
+      const { data, error } = await supabase
+        .from('snies_departments')
+        .insert(departments)
+        .select();
+      return { data: data || [], error };
+    },
+
+    // Función para parsear CSV
+    parseCSV: (csvText: string): any[] => {
+      const lines = csvText.trim().split('\n');
+      if (lines.length < 2) return [];
+      
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const result = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        if (values.length === headers.length) {
+          const row: any = {};
+          headers.forEach((header, index) => {
+            row[header] = values[index];
+          });
+          result.push(row);
+        }
+      }
+      
+      return result;
     }
   };
 }

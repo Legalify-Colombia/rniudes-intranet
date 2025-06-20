@@ -1,50 +1,87 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Plus, Upload, Download, CheckCircle, XCircle } from "lucide-react";
 
 export function SniesConfigurationManagement() {
   const {
     fetchSniesCountries,
-    createSniesCountry,
-    bulkCreateSniesCountries,
     fetchSniesMunicipalities,
+    fetchSniesAcademicLevels,
+    fetchSniesProgramTypes,
+    fetchSniesRecognitionTypes,
+    fetchSniesDepartments,
+    createSniesCountry,
     createSniesMunicipality,
+    createSniesAcademicLevel,
+    createSniesProgramType,
+    createSniesRecognitionType,
+    createSniesDepartment,
+    bulkCreateSniesCountries,
     bulkCreateSniesMunicipalities,
+    bulkCreateSniesAcademicLevels,
+    bulkCreateSniesProgramTypes,
+    bulkCreateSniesRecognitionTypes,
+    bulkCreateSniesDepartments,
+    parseCSV
   } = useSupabaseData();
+  
   const { toast } = useToast();
 
+  // Estados para los datos
   const [countries, setCountries] = useState<any[]>([]);
   const [municipalities, setMunicipalities] = useState<any[]>([]);
-  const [newCountryName, setNewCountryName] = useState("");
-  const [newCountryCode, setNewCountryCode] = useState("");
-  const [newCountryAlpha2, setNewCountryAlpha2] = useState("");
-  const [newCountryAlpha3, setNewCountryAlpha3] = useState("");
-  const [bulkCountryData, setBulkCountryData] = useState("");
-  const [newMunicipalityName, setNewMunicipalityName] = useState("");
-  const [newMunicipalityCode, setNewMunicipalityCode] = useState("");
-  const [bulkMunicipalityData, setBulkMunicipalityData] = useState("");
+  const [academicLevels, setAcademicLevels] = useState<any[]>([]);
+  const [programTypes, setProgramTypes] = useState<any[]>([]);
+  const [recognitionTypes, setRecognitionTypes] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  
   const [loading, setLoading] = useState(true);
 
+  // Estados para formularios individuales
+  const [newItem, setNewItem] = useState({ id: '', name: '', description: '', country_id: '' });
+  
+  // Estados para importación CSV
+  const [csvData, setCsvData] = useState('');
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+
   useEffect(() => {
-    loadData();
+    loadAllData();
   }, []);
 
-  const loadData = async () => {
+  const loadAllData = async () => {
     setLoading(true);
     try {
-      const [countriesResult, municipalitiesResult] = await Promise.all([
+      const [
+        countriesResult,
+        municipalitiesResult,
+        academicLevelsResult,
+        programTypesResult,
+        recognitionTypesResult,
+        departmentsResult
+      ] = await Promise.all([
         fetchSniesCountries(),
         fetchSniesMunicipalities(),
+        fetchSniesAcademicLevels(),
+        fetchSniesProgramTypes(),
+        fetchSniesRecognitionTypes(),
+        fetchSniesDepartments()
       ]);
 
       setCountries(countriesResult.data || []);
       setMunicipalities(municipalitiesResult.data || []);
+      setAcademicLevels(academicLevelsResult.data || []);
+      setProgramTypes(programTypesResult.data || []);
+      setRecognitionTypes(recognitionTypesResult.data || []);
+      setDepartments(departmentsResult.data || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -57,165 +94,142 @@ export function SniesConfigurationManagement() {
     }
   };
 
-  const handleCreateCountry = async () => {
-    if (!newCountryName || !newCountryCode) {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        setCsvData(text);
+      };
+      reader.readAsText(file);
+    } else {
       toast({
         title: "Error",
-        description: "El nombre y el código del país son obligatorios",
+        description: "Por favor selecciona un archivo CSV válido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateItem = async (type: string) => {
+    if (!newItem.id || !newItem.name) {
+      toast({
+        title: "Error",
+        description: "ID y nombre son obligatorios",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const validCountryData = {
-        id: newCountryCode,
-        name: newCountryName,
-        alpha_2: newCountryAlpha2 || null,
-        alpha_3: newCountryAlpha3 || null,
+      const itemData = {
+        id: newItem.id,
+        name: newItem.name,
+        description: newItem.description || null,
+        ...(type === 'departments' && { country_id: newItem.country_id }),
         is_active: true
       };
 
-      const { error } = await createSniesCountry(validCountryData);
-
-      if (error) {
-        throw error;
+      let result;
+      switch (type) {
+        case 'countries':
+          result = await createSniesCountry(itemData);
+          break;
+        case 'municipalities':
+          result = await createSniesMunicipality(itemData);
+          break;
+        case 'academic_levels':
+          result = await createSniesAcademicLevel(itemData);
+          break;
+        case 'program_types':
+          result = await createSniesProgramType(itemData);
+          break;
+        case 'recognition_types':
+          result = await createSniesRecognitionType(itemData);
+          break;
+        case 'departments':
+          result = await createSniesDepartment(itemData);
+          break;
+        default:
+          throw new Error('Tipo no válido');
       }
+
+      if (result.error) throw result.error;
 
       toast({
         title: "Éxito",
-        description: "País creado correctamente",
+        description: "Elemento creado correctamente",
       });
 
-      setNewCountryName("");
-      setNewCountryCode("");
-      setNewCountryAlpha2("");
-      setNewCountryAlpha3("");
-      await loadData();
+      setNewItem({ id: '', name: '', description: '', country_id: '' });
+      await loadAllData();
     } catch (error) {
-      console.error("Error creating country:", error);
+      console.error("Error creating item:", error);
       toast({
         title: "Error",
-        description: "No se pudo crear el país",
+        description: "No se pudo crear el elemento",
         variant: "destructive",
       });
     }
   };
 
-  const handleBulkCreateCountries = async () => {
-    if (!bulkCountryData) {
+  const handleBulkCreate = async (type: string) => {
+    if (!csvData) {
       toast({
         title: "Error",
-        description: "Los datos del país a granel son obligatorios",
+        description: "No hay datos CSV para importar",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const countriesData = JSON.parse(bulkCountryData);
-      if (!Array.isArray(countriesData)) {
-        throw new Error("Los datos deben ser un array de países");
+      const parsedData = parseCSV(csvData);
+      if (!parsedData.length) {
+        throw new Error("No se pudieron parsear los datos CSV");
       }
 
-      const { error } = await bulkCreateSniesCountries(countriesData);
-
-      if (error) {
-        throw error;
+      let result;
+      switch (type) {
+        case 'countries':
+          result = await bulkCreateSniesCountries(parsedData);
+          break;
+        case 'municipalities':
+          result = await bulkCreateSniesMunicipalities(parsedData);
+          break;
+        case 'academic_levels':
+          result = await bulkCreateSniesAcademicLevels(parsedData);
+          break;
+        case 'program_types':
+          result = await bulkCreateSniesProgramTypes(parsedData);
+          break;
+        case 'recognition_types':
+          result = await bulkCreateSniesRecognitionTypes(parsedData);
+          break;
+        case 'departments':
+          result = await bulkCreateSniesDepartments(parsedData);
+          break;
+        default:
+          throw new Error('Tipo no válido');
       }
+
+      if (result.error) throw result.error;
 
       toast({
         title: "Éxito",
-        description: "Países creados correctamente a granel",
+        description: `${parsedData.length} elementos importados correctamente`,
       });
 
-      setBulkCountryData("");
-      await loadData();
+      setCsvData('');
+      setCsvFile(null);
+      await loadAllData();
     } catch (error) {
-      console.error("Error creating countries in bulk:", error);
+      console.error("Error bulk creating:", error);
       toast({
         title: "Error",
-        description: "No se pudieron crear los países a granel",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCreateMunicipality = async () => {
-    if (!newMunicipalityName || !newMunicipalityCode) {
-      toast({
-        title: "Error",
-        description: "El nombre y el código del municipio son obligatorios",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const municipalityData = {
-        id: newMunicipalityCode,
-        name: newMunicipalityName,
-        is_active: true,
-      };
-
-      const { error } = await createSniesMunicipality(municipalityData);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Éxito",
-        description: "Municipio creado correctamente",
-      });
-
-      setNewMunicipalityName("");
-      setNewMunicipalityCode("");
-      await loadData();
-    } catch (error) {
-      console.error("Error creating municipality:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo crear el municipio",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleBulkCreateMunicipalities = async () => {
-    if (!bulkMunicipalityData) {
-      toast({
-        title: "Error",
-        description: "Los datos del municipio a granel son obligatorios",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const municipalitiesData = JSON.parse(bulkMunicipalityData);
-      if (!Array.isArray(municipalitiesData)) {
-        throw new Error("Los datos deben ser un array de municipios");
-      }
-
-      const { error } = await bulkCreateSniesMunicipalities(municipalitiesData);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Éxito",
-        description: "Municipios creados correctamente a granel",
-      });
-
-      setBulkMunicipalityData("");
-      await loadData();
-    } catch (error) {
-      console.error("Error creating municipalities in bulk:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron crear los municipios a granel",
+        description: "No se pudieron importar los elementos",
         variant: "destructive",
       });
     }
@@ -229,161 +243,191 @@ export function SniesConfigurationManagement() {
     );
   };
 
+  const downloadCSVTemplate = (type: string) => {
+    let headers = '';
+    switch (type) {
+      case 'countries':
+        headers = 'id,name,description,alpha_2,alpha_3';
+        break;
+      case 'municipalities':
+        headers = 'id,name,description,country_id';
+        break;
+      case 'departments':
+        headers = 'id,name,description,country_id';
+        break;
+      default:
+        headers = 'id,name,description';
+    }
+
+    const csvContent = `${headers}\n`;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `template_${type}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   if (loading) {
-    return <div className="flex justify-center p-8">Cargando datos...</div>;
+    return <div className="flex justify-center p-8">Cargando configuración SNIES...</div>;
   }
+
+  const renderConfigSection = (title: string, data: any[], type: string) => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          {title}
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => downloadCSVTemplate(type)}>
+              <Download className="w-4 h-4 mr-2" />
+              Plantilla CSV
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {/* Formulario individual */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+            <div>
+              <Label htmlFor={`${type}_id`}>ID</Label>
+              <Input
+                id={`${type}_id`}
+                value={newItem.id}
+                onChange={(e) => setNewItem(prev => ({ ...prev, id: e.target.value }))}
+                placeholder="ID único"
+              />
+            </div>
+            <div>
+              <Label htmlFor={`${type}_name`}>Nombre</Label>
+              <Input
+                id={`${type}_name`}
+                value={newItem.name}
+                onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Nombre"
+              />
+            </div>
+            <div>
+              <Label htmlFor={`${type}_description`}>Descripción</Label>
+              <Input
+                id={`${type}_description`}
+                value={newItem.description}
+                onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descripción (opcional)"
+              />
+            </div>
+            {type === 'departments' && (
+              <div>
+                <Label htmlFor={`${type}_country`}>País</Label>
+                <select
+                  id={`${type}_country`}
+                  value={newItem.country_id}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, country_id: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Seleccionar país</option>
+                  {countries.map(country => (
+                    <option key={country.id} value={country.id}>{country.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex items-end">
+              <Button onClick={() => handleCreateItem(type)} className="w-full">
+                <Plus className="w-4 h-4 mr-2" />
+                Crear
+              </Button>
+            </div>
+          </div>
+
+          {/* Importación CSV */}
+          <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+            <h4 className="font-medium">Importación Masiva (CSV)</h4>
+            <div>
+              <Label htmlFor={`${type}_csv`}>Archivo CSV</Label>
+              <Input
+                id={`${type}_csv`}
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+              />
+            </div>
+            <Button onClick={() => handleBulkCreate(type)} disabled={!csvData}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar CSV
+            </Button>
+          </div>
+
+          {/* Lista de elementos */}
+          <div>
+            <h4 className="font-medium mb-3">Lista de {title}</h4>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  {type === 'departments' && <TableHead>País</TableHead>}
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-sm">{item.id}</TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.description || '-'}</TableCell>
+                    {type === 'departments' && (
+                      <TableCell>{item.country?.name || '-'}</TableCell>
+                    )}
+                    <TableCell>{getStatusBadge(item.is_active)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuración de Países SNIES</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Crear País</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="countryName">Nombre del País</Label>
-                <Input
-                  type="text"
-                  id="countryName"
-                  value={newCountryName}
-                  onChange={(e) => setNewCountryName(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="countryCode">Código del País</Label>
-                <Input
-                  type="text"
-                  id="countryCode"
-                  value={newCountryCode}
-                  onChange={(e) => setNewCountryCode(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="countryAlpha2">Código Alpha-2</Label>
-                <Input
-                  type="text"
-                  id="countryAlpha2"
-                  value={newCountryAlpha2}
-                  onChange={(e) => setNewCountryAlpha2(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="countryAlpha3">Código Alpha-3</Label>
-                <Input
-                  type="text"
-                  id="countryAlpha3"
-                  value={newCountryAlpha3}
-                  onChange={(e) => setNewCountryAlpha3(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button onClick={handleCreateCountry}>Crear País</Button>
+      <Tabs defaultValue="countries" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="countries">Países</TabsTrigger>
+          <TabsTrigger value="departments">Departamentos</TabsTrigger>
+          <TabsTrigger value="municipalities">Municipios</TabsTrigger>
+          <TabsTrigger value="academic_levels">Niveles Académicos</TabsTrigger>
+          <TabsTrigger value="program_types">Tipos de Programa</TabsTrigger>
+          <TabsTrigger value="recognition_types">Tipos de Reconocimiento</TabsTrigger>
+        </TabsList>
 
-            <h3 className="text-lg font-medium mt-6">Creación Masiva de Países (JSON)</h3>
-            <div>
-              <Label htmlFor="bulkCountryData">Datos JSON de Países</Label>
-              <Input
-                type="textarea"
-                id="bulkCountryData"
-                value={bulkCountryData}
-                onChange={(e) => setBulkCountryData(e.target.value)}
-                placeholder="[{&quot;id&quot;: &quot;USA&quot;, &quot;name&quot;: &quot;Estados Unidos&quot;}, ...]"
-              />
-            </div>
-            <Button onClick={handleBulkCreateCountries}>Crear Países en Lote</Button>
+        <TabsContent value="countries">
+          {renderConfigSection("Países", countries, "countries")}
+        </TabsContent>
 
-            <h3 className="text-lg font-medium mt-6">Lista de Países</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {countries.map((country) => (
-                  <TableRow key={country.id}>
-                    <TableCell>{country.id}</TableCell>
-                    <TableCell>{country.name}</TableCell>
-                    <TableCell>{getStatusBadge(country.is_active)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="departments">
+          {renderConfigSection("Departamentos", departments, "departments")}
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuración de Municipios SNIES</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Crear Municipio</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="municipalityName">Nombre del Municipio</Label>
-                <Input
-                  type="text"
-                  id="municipalityName"
-                  value={newMunicipalityName}
-                  onChange={(e) => setNewMunicipalityName(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="municipalityCode">Código del Municipio</Label>
-                <Input
-                  type="text"
-                  id="municipalityCode"
-                  value={newMunicipalityCode}
-                  onChange={(e) => setNewMunicipalityCode(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button onClick={handleCreateMunicipality}>Crear Municipio</Button>
+        <TabsContent value="municipalities">
+          {renderConfigSection("Municipios", municipalities, "municipalities")}
+        </TabsContent>
 
-            <h3 className="text-lg font-medium mt-6">Creación Masiva de Municipios (JSON)</h3>
-            <div>
-              <Label htmlFor="bulkMunicipalityData">Datos JSON de Municipios</Label>
-              <Input
-                type="textarea"
-                id="bulkMunicipalityData"
-                value={bulkMunicipalityData}
-                onChange={(e) => setBulkMunicipalityData(e.target.value)}
-                placeholder="[{&quot;id&quot;: &quot;11001&quot;, &quot;name&quot;: &quot;Bogotá D.C.&quot;}, ...]"
-              />
-            </div>
-            <Button onClick={handleBulkCreateMunicipalities}>
-              Crear Municipios en Lote
-            </Button>
+        <TabsContent value="academic_levels">
+          {renderConfigSection("Niveles Académicos", academicLevels, "academic_levels")}
+        </TabsContent>
 
-            <h3 className="text-lg font-medium mt-6">Lista de Municipios</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Estado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {municipalities.map((municipality) => (
-                  <TableRow key={municipality.id}>
-                    <TableCell>{municipality.id}</TableCell>
-                    <TableCell>{municipality.name}</TableCell>
-                    <TableCell>{getStatusBadge(municipality.is_active)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="program_types">
+          {renderConfigSection("Tipos de Programa", programTypes, "program_types")}
+        </TabsContent>
+
+        <TabsContent value="recognition_types">
+          {renderConfigSection("Tipos de Reconocimiento", recognitionTypes, "recognition_types")}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

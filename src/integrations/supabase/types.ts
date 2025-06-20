@@ -1787,6 +1787,30 @@ export type Database = {
           },
         ]
       }
+      snies_academic_levels: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       snies_biological_sex: {
         Row: {
           created_at: string | null
@@ -1878,6 +1902,38 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      snies_departments: {
+        Row: {
+          country_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          country_id?: string | null
+          created_at?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          country_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_departments_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "snies_countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       snies_document_types: {
         Row: {
@@ -2104,6 +2160,54 @@ export type Database = {
           },
         ]
       }
+      snies_program_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_recognition_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       snies_report_data: {
         Row: {
           created_at: string | null
@@ -2215,6 +2319,7 @@ export type Database = {
           created_at: string | null
           field_label: string
           field_name: string
+          field_options: Json | null
           field_order: number | null
           field_type: string
           id: string
@@ -2228,6 +2333,7 @@ export type Database = {
           created_at?: string | null
           field_label: string
           field_name: string
+          field_options?: Json | null
           field_order?: number | null
           field_type: string
           id?: string
@@ -2241,6 +2347,7 @@ export type Database = {
           created_at?: string | null
           field_label?: string
           field_name?: string
+          field_options?: Json | null
           field_order?: number | null
           field_type?: string
           id?: string
