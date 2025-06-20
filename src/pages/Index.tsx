@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { UserManagement } from "@/components/UserManagement";
-import { CampusManagement } from "@/components/CampusManagement";
+import CampusManagement from "@/components/CampusManagement";
 import { InternationalizationManagers } from "@/components/InternationalizationManagers";
 import { StrategicConfiguration } from "@/components/StrategicConfiguration";
 import { ManagerReports } from "@/components/ManagerReports";

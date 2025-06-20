@@ -1,17 +1,5 @@
+
 import React, { useState, useEffect, FC } from "react";
-// import { useSupabaseData } from "@/hooks/useSupabaseData";
-// import { useAuth } from "@/hooks/useAuth";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
-// import { Textarea } from "@/components/ui/textarea";
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-// import { Badge } from "@/components/ui/badge";
-// import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Building, GraduationCap, Users } from "lucide-react";
 
 // --- START: Mock Implementations for Demonstration ---
@@ -47,7 +35,7 @@ const useSupabaseData = () => ({
   updateAcademicProgram: async (id: string, data: any) => { console.log('Updating program:', id, data); return { error: null }; },
   deleteAcademicProgram: async (id: string) => { console.log('Deleting program:', id); return { error: null }; },
   fetchManagers: async () => ({ data: [{ id: 'manager-1', full_name: 'Juan Gestor', email: 'juan.gestor@example.com', role: 'Gestor', campus_id: 'campus-1' }] }),
-  getUserManagedCampus: async (userId: string) => ({ data: { managed_campus_ids: ['campus-1'] } }),
+  getUserManagedCampus: async (userId: string) => ({ data: { managed_campus_ids: ['campus-1'], campus_id: 'campus-1' } }),
 });
 
 // Mock UI Components (replace with your actual component library like shadcn/ui)
@@ -71,13 +59,13 @@ const DialogContent: FC<{ children: React.ReactNode, className?: string }> = ({ 
 const DialogHeader: FC<{ children: React.ReactNode }> = ({ children }) => <div className="mb-4">{children}</div>;
 const DialogTitle: FC<{ children: React.ReactNode }> = ({ children }) => <h2 className="text-lg font-semibold">{children}</h2>;
 const Select: FC<{ onValueChange: (value: string) => void, value?: string, children: React.ReactNode }> = ({ onValueChange, value, children }) => <select onChange={e => onValueChange(e.target.value)} value={value}  className="flex h-10 w-full items-center justify-between rounded-md border px-3 py-2">{children}</select>;
-const SelectTrigger: FC<{ children: React.ReactNode, className?: string }> = ({ children }) => <>{children}</>;
+const SelectTrigger: FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
 const SelectValue: FC<{ placeholder?: string }> = ({ placeholder }) => <option value="" disabled>{placeholder}</option>;
 const SelectContent: FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
 const SelectItem: FC<{ value: string, children: React.ReactNode }> = ({ value, children }) => <option value={value}>{children}</option>;
 const Tabs: FC<{ defaultValue: string, onValueChange?: (value: string) => void, children: React.ReactNode }> = ({ defaultValue, onValueChange, children }) => { const [activeTab, setActiveTab] = useState(defaultValue); const kids = React.Children.map(children, (child: any) => React.cloneElement(child, { activeTab, setActiveTab: onValueChange || setActiveTab })); return <div>{kids}</div>;};
-const TabsList: FC<{ children: React.ReactNode, className?: string, activeTab?: string, setActiveTab?: (value: string) => void }> = ({ children, className, activeTab, setActiveTab }) => <div className={`inline-flex h-10 items-center justify-center rounded-md bg-gray-200 p-1 ${className}`}>{React.Children.map(children, (child: any) => React.cloneElement(child, { activeTab, setActiveTab }))}</div>;
-const TabsTrigger: FC<{ value: string, children: React.ReactNode, className?: string, activeTab?: string, setActiveTab?: (value: string) => void }> = ({ value, children, activeTab, setActiveTab }) => <button onClick={() => setActiveTab?.(value)} className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ${activeTab === value ? 'bg-white shadow' : ''}`}>{children}</button>;
+const TabsList: FC<{ children: React.ReactNode, activeTab?: string, setActiveTab?: (value: string) => void }> = ({ children, activeTab, setActiveTab }) => <div className="inline-flex h-10 items-center justify-center rounded-md bg-gray-200 p-1">{React.Children.map(children, (child: any) => React.cloneElement(child, { activeTab, setActiveTab }))}</div>;
+const TabsTrigger: FC<{ value: string, children: React.ReactNode, activeTab?: string, setActiveTab?: (value: string) => void }> = ({ value, children, activeTab, setActiveTab }) => <button onClick={() => setActiveTab?.(value)} className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ${activeTab === value ? 'bg-white shadow' : ''}`}>{children}</button>;
 const TabsContent: FC<{ value: string, children: React.ReactNode, activeTab?: string }> = ({ value, children, activeTab }) => activeTab === value ? <div>{children}</div> : null;
 const Badge: FC<{ variant?: string, children: React.ReactNode }> = ({ children, variant }) => <span className={`px-2 py-1 text-xs font-semibold rounded-full ${variant === 'secondary' ? 'bg-gray-200 text-gray-800' : 'bg-blue-500 text-white'}`}>{children}</span>;
 // --- END: Mock Implementations ---
@@ -119,7 +107,7 @@ interface Manager {
 
 type EditType = 'campus' | 'faculty' | 'program';
 
-export default function CampusManagement() {
+const CampusManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
  
@@ -166,7 +154,7 @@ export default function CampusManagement() {
       if (profile?.id && profile?.role === 'Administrador') {
         const { data: managedData } = await getUserManagedCampus(profile.id);
         if (managedData) {
-          managedCampusIds = managedData.managed_campus_ids || (managedData.campus_id ? [managedData.campus_id] : []);
+          managedCampusIds = managedData.managed_campus_ids || [];
           setUserManagedCampus(managedCampusIds);
         }
       }
@@ -290,8 +278,8 @@ export default function CampusManagement() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
-      <Tabs defaultValue="campus" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="campus">
+        <TabsList>
           <TabsTrigger value="campus"><Building className="h-4 w-4 mr-2" />Campus</TabsTrigger>
           <TabsTrigger value="faculties"><GraduationCap className="h-4 w-4 mr-2" />Facultades</TabsTrigger>
           <TabsTrigger value="programs"><Users className="h-4 w-4 mr-2" />Programas</TabsTrigger>
@@ -459,7 +447,7 @@ export default function CampusManagement() {
                                         </div>
                                         <div>
                                             <Label>Facultad</Label>
-                                            <Select onValueChange={(value) => setProgramForm(p => ({...p, faculty_id: value}))} value={programForm.faculty_id} disabled={!programForm.campus_id}>
+                                            <Select onValueChange={(value) => setProgramForm(p => ({...p, faculty_id: value}))} value={programForm.faculty_id}>
                                                <SelectValue placeholder="Seleccionar facultad"/>
                                                {faculties.filter(f => f.campus_id === programForm.campus_id).map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                                             </Select>
@@ -550,4 +538,6 @@ export default function CampusManagement() {
         </Dialog>
     </div>
   );
-}
+};
+
+export default CampusManagement;
