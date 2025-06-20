@@ -754,7 +754,18 @@ export function CampusManagement() {
                     </div>
                     
                     <div className="flex justify-end space-x-2">
-                      <Button type="button" variant="outline" onClick={() => setProgramDialog(false)}>
+                      <Button type="button" variant="outline" onClick={() => {
+                        setProgramDialog(false);
+                        setEditingProgram(null);
+                        setProgramForm({ 
+                          name: "", 
+                          campus_id: "", 
+                          faculty_id: "", 
+                          director_name: "", 
+                          director_email: "",
+                          manager_id: ""
+                        });
+                      }}>
                         Cancelar
                       </Button>
                       <Button type="submit" className="institutional-gradient text-white">
