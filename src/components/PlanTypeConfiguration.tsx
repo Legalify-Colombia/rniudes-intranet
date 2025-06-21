@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,29 +9,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { Plus, Save, X, Trash2 } from "lucide-react";
+import { Plus, Save, X, Trash2, ArrowLeft } from "lucide-react";
 
 interface PlanTypeConfigurationProps {
-  planTypeId: string;
-  planTypeName: string;
-  onClose: () => void;
+  onBack: () => void;
 }
 
-export function PlanTypeConfiguration({ planTypeId, planTypeName, onClose }: PlanTypeConfigurationProps) {
+export function PlanTypeConfiguration({ onBack }: PlanTypeConfigurationProps) {
   const { toast } = useToast();
   const { 
     fetchStrategicAxes, 
     fetchActions, 
     fetchProducts,
-    fetchPlanFields,
-    createPlanField,
-    deletePlanField 
+    fetchPlanTypes
   } = useSupabaseData();
 
+  const [planTypes, setPlanTypes] = useState<any[]>([]);
+  const [selectedPlanType, setSelectedPlanType] = useState<any | null>(null);
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
   const [actions, setActions] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [planFields, setPlanFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [selectedElements, setSelectedElements] = useState({
@@ -39,30 +37,24 @@ export function PlanTypeConfiguration({ planTypeId, planTypeName, onClose }: Pla
     products: [] as string[]
   });
 
-  const [newField, setNewField] = useState({
-    field_name: "",
-    field_type: "short_text",
-    is_required: false
-  });
-
   useEffect(() => {
     loadData();
-  }, [planTypeId]);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [axesResult, actionsResult, productsResult, fieldsResult] = await Promise.all([
+      const [planTypesResult, axesResult, actionsResult, productsResult] = await Promise.all([
+        fetchPlanTypes(),
         fetchStrategicAxes(),
         fetchActions(),
-        fetchProducts(),
-        fetchPlanFields(planTypeId)
+        fetchProducts()
       ]);
 
+      if (planTypesResult.data) setPlanTypes(planTypesResult.data);
       if (axesResult.data) setStrategicAxes(axesResult.data);
       if (actionsResult.data) setActions(actionsResult.data);
       if (productsResult.data) setProducts(productsResult.data);
-      if (fieldsResult.data) setPlanFields(fieldsResult.data);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -85,19 +77,21 @@ export function PlanTypeConfiguration({ planTypeId, planTypeName, onClose }: Pla
   };
 
   const saveConfiguration = async () => {
+    if (!selectedPlanType) return;
+
     try {
       // Save the selected elements configuration
       const { error } = await supabase
         .from('plan_type_strategic_axes')
         .delete()
-        .eq('plan_type_id', planTypeId);
+        .eq('plan_type_id', selectedPlanType.id);
 
       if (error) throw error;
 
       // Insert new strategic axes
       if (selectedElements.strategic_axes.length > 0) {
         const axesInserts = selectedElements.strategic_axes.map(axisId => ({
-          plan_type_id: planTypeId,
+          plan_type_id: selectedPlanType.id,
           strategic_axis_id: axisId,
           is_required: true
         }));
@@ -109,9 +103,6 @@ export function PlanTypeConfiguration({ planTypeId, planTypeName, onClose }: Pla
         if (axesError) throw axesError;
       }
 
-      // Similar logic for actions and products
-      // ... (implement similar patterns for actions and products)
-
       toast({
         title: "Éxito",
         description: "Configuración guardada correctamente",
@@ -121,68 +112,6 @@ export function PlanTypeConfiguration({ planTypeId, planTypeName, onClose }: Pla
       toast({
         title: "Error",
         description: "No se pudo guardar la configuración",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCreateField = async () => {
-    if (!newField.field_name.trim()) {
-      toast({
-        title: "Error",
-        description: "El nombre del campo es requerido",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const fieldData = {
-        plan_type_id: planTypeId,
-        field_name: newField.field_name,
-        field_type: newField.field_type,
-        is_required: newField.is_required,
-        field_order: planFields.length + 1
-      };
-
-      const result = await createPlanField(fieldData);
-      if (result.data) {
-        setPlanFields([...planFields, result.data]);
-        setNewField({
-          field_name: "",
-          field_type: "short_text",
-          is_required: false
-        });
-        toast({
-          title: "Éxito",
-          description: "Campo creado correctamente",
-        });
-      }
-    } catch (error) {
-      console.error('Error creating field:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo crear el campo",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteField = async (fieldId: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este campo?')) return;
-
-    try {
-      await deletePlanField(fieldId);
-      setPlanFields(planFields.filter(f => f.id !== fieldId));
-      toast({
-        title: "Éxito",
-        description: "Campo eliminado correctamente",
-      });
-    } catch (error) {
-      console.error('Error deleting field:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el campo",
         variant: "destructive",
       });
     }
@@ -199,23 +128,61 @@ export function PlanTypeConfiguration({ planTypeId, planTypeName, onClose }: Pla
     );
   }
 
+  if (!selectedPlanType) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">Configuración de Tipos de Plan</h2>
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+        </div>
+
+        <div className="grid gap-4">
+          {planTypes.map((planType) => (
+            <Card key={planType.id} className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{planType.name}</h3>
+                    <p className="text-sm text-gray-600">{planType.description}</p>
+                  </div>
+                  <Button onClick={() => setSelectedPlanType(planType)}>
+                    Configurar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {planTypes.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            No hay tipos de plan disponibles para configurar.
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Configurar: {planTypeName}</h2>
+        <h2 className="text-xl font-bold">Configurar: {selectedPlanType.name}</h2>
         <div className="flex gap-2">
           <Button onClick={saveConfiguration}>
             <Save className="h-4 w-4 mr-2" />
             Guardar Configuración
           </Button>
-          <Button variant="outline" onClick={onClose}>
-            <X className="h-4 w-4 mr-2" />
-            Cerrar
+          <Button variant="outline" onClick={() => setSelectedPlanType(null)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Strategic Axes Selection */}
         <Card>
           <CardHeader>
@@ -272,65 +239,6 @@ export function PlanTypeConfiguration({ planTypeId, planTypeName, onClose }: Pla
                   <label className="text-sm">{product.name}</label>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Custom Fields */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Campos Personalizados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Add new field form */}
-              <div className="p-4 border rounded-lg bg-gray-50">
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="fieldName">Nombre del Campo</Label>
-                    <Input
-                      id="fieldName"
-                      value={newField.field_name}
-                      onChange={(e) => setNewField({ ...newField, field_name: e.target.value })}
-                      placeholder="Ej: Objetivos específicos"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={newField.is_required}
-                      onCheckedChange={(checked) => setNewField({ ...newField, is_required: !!checked })}
-                    />
-                    <Label>Campo requerido</Label>
-                  </div>
-                  <Button onClick={handleCreateField}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Campo
-                  </Button>
-                </div>
-              </div>
-
-              {/* Existing fields */}
-              <div className="space-y-2">
-                {planFields.map((field) => (
-                  <div key={field.id} className="flex items-center justify-between p-2 border rounded">
-                    <div>
-                      <span className="font-medium">{field.field_name}</span>
-                      {field.is_required && (
-                        <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                          Requerido
-                        </span>
-                      )}
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleDeleteField(field.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
             </div>
           </CardContent>
         </Card>

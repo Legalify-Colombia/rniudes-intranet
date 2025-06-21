@@ -17,6 +17,36 @@ export interface DocumentTemplate {
   updated_at: string;
 }
 
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_content: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagerReportVersion {
+  id: string;
+  manager_report_id: string;
+  template_id: string;
+  version_number: number;
+  content: any;
+  created_at: string;
+}
+
+export interface SniesReportTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_structure: any;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useSupabaseData() {
   // Strategic Axes
   const fetchStrategicAxes = async (): Promise<Result<StrategicAxis[]>> => {
@@ -222,13 +252,20 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  // File Upload
-  const uploadFile = async (file: File, bucket: string): Promise<Result<any>> => {
-    const fileName = `${Date.now()}-${file.name}`;
+  // File Upload - Fixed to match expected signature
+  const uploadFile = async (file: File, bucket: string, fileName?: string): Promise<Result<any>> => {
+    const finalFileName = fileName || `${Date.now()}-${file.name}`;
     const { data, error } = await supabase.storage
       .from(bucket)
-      .upload(fileName, file);
-    return { data, error };
+      .upload(finalFileName, file);
+    
+    if (error) return { data: null, error };
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(finalFileName);
+    
+    return { data: { ...data, publicUrl }, error: null };
   };
 
   // Indicators
@@ -604,6 +641,162 @@ export function useSupabaseData() {
     return { data: null, error: null };
   };
 
+  // Report Templates
+  const fetchReportTemplates = async (): Promise<Result<ReportTemplate[]>> => {
+    const { data, error } = await supabase
+      .from("report_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const createReportTemplate = async (template: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_templates")
+      .insert(template)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateReportTemplate = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_templates")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteReportTemplate = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_templates")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  // Manager Report Versions
+  const createManagerReportVersion = async (version: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("manager_report_versions")
+      .insert(version)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReportVersion = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("manager_report_versions")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const getNextVersionNumber = async (managerReportId: string, templateId: string): Promise<Result<number>> => {
+    const { data, error } = await supabase
+      .rpc('get_next_version_number', {
+        p_manager_report_id: managerReportId,
+        p_template_id: templateId
+      });
+    return { data, error };
+  };
+
+  // SNIES functions
+  const fetchSniesCountries = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_countries")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesMunicipalities = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_municipalities")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesDocumentTypes = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_document_types")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesBiologicalSex = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_biological_sex")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchSniesMaritalStatus = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_marital_status")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const createSniesCountry = async (country: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("snies_countries")
+      .insert(country)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const createSniesMunicipality = async (municipality: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("snies_municipalities")
+      .insert(municipality)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const bulkCreateSniesCountries = async (countries: any[]): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_countries")
+      .insert(countries)
+      .select();
+    return { data, error };
+  };
+
+  const bulkCreateSniesMunicipalities = async (municipalities: any[]): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_municipalities")
+      .insert(municipalities)
+      .select();
+    return { data, error };
+  };
+
+  const fetchSniesReportTemplates = async (): Promise<Result<SniesReportTemplate[]>> => {
+    const { data, error } = await supabase
+      .from("snies_report_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const consolidateSniesReports = async (templateId: string, periodId: string): Promise<Result<any>> => {
+    // This would be a complex function to consolidate SNIES reports
+    // For now, just return a placeholder
+    return { data: null, error: null };
+  };
+
   return {
     // Strategic Axes
     fetchStrategicAxes,
@@ -685,5 +878,26 @@ export function useSupabaseData() {
     updatePlanField,
     deletePlanField,
     configurePlanTypeElements,
+    // Report Templates
+    fetchReportTemplates,
+    createReportTemplate,
+    updateReportTemplate,
+    deleteReportTemplate,
+    // Manager Report Versions
+    createManagerReportVersion,
+    updateManagerReportVersion,
+    getNextVersionNumber,
+    // SNIES functions
+    fetchSniesCountries,
+    fetchSniesMunicipalities,
+    fetchSniesDocumentTypes,
+    fetchSniesBiologicalSex,
+    fetchSniesMaritalStatus,
+    createSniesCountry,
+    createSniesMunicipality,
+    bulkCreateSniesCountries,
+    bulkCreateSniesMunicipalities,
+    fetchSniesReportTemplates,
+    consolidateSniesReports,
   };
 }
