@@ -3,32 +3,25 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
 export function useFileUpload() {
-  const uploadFile = async (file: File, bucket: string = "evidence", folder: string = ""): Promise<Result<{ url: string; path: string; publicUrl: string }>> => {
+  const uploadFile = async (file: File, folder: string = "uploads"): Promise<Result<string>> => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = folder ? `${folder}/${fileName}` : fileName;
+      const filePath = `${folder}/${fileName}`;
 
-      const { data, error } = await supabase.storage
-        .from(bucket)
+      const { error: uploadError } = await supabase.storage
+        .from('files')
         .upload(filePath, file);
 
-      if (error) {
-        return { data: null, error };
+      if (uploadError) {
+        return { data: null, error: uploadError };
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
+        .from('files')
         .getPublicUrl(filePath);
 
-      return { 
-        data: { 
-          url: publicUrl, 
-          path: filePath,
-          publicUrl: publicUrl
-        }, 
-        error: null 
-      };
+      return { data: publicUrl, error: null };
     } catch (error) {
       return { data: null, error };
     }

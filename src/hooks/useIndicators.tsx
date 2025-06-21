@@ -5,11 +5,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 export function useIndicators() {
   const fetchIndicators = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("indicators")
-      .select("*")
-      .eq("is_active", true)
-      .order("name");
+    const { data, error } = await supabase.from("indicators").select("*").order("name");
     return { data, error };
   };
 
@@ -28,15 +24,6 @@ export function useIndicators() {
     return { data, error };
   };
 
-  const fetchIndicatorReport = async (reportId: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("indicator_reports")
-      .select("*")
-      .eq("id", reportId)
-      .single();
-    return { data, error };
-  };
-
   const createIndicatorReport = async (report: Database["public"]["Tables"]["indicator_reports"]["Insert"]): Promise<Result<any>> => {
     const { data, error } = await supabase.from("indicator_reports").insert(report).select().single();
     return { data, error };
@@ -47,16 +34,21 @@ export function useIndicators() {
     return { data, error };
   };
 
-  const submitIndicatorReport = async (reportId: string): Promise<Result<any>> => {
+  const submitIndicatorReport = async (id: string): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("indicator_reports")
       .update({ 
         status: "submitted",
         submitted_date: new Date().toISOString()
       })
-      .eq("id", reportId)
+      .eq("id", id)
       .select()
       .single();
+    return { data, error };
+  };
+
+  const deleteIndicatorReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase.from("indicator_reports").delete().eq("id", id);
     return { data, error };
   };
 
@@ -65,9 +57,9 @@ export function useIndicators() {
     createIndicator,
     updateIndicator,
     deleteIndicator,
-    fetchIndicatorReport,
     createIndicatorReport,
     updateIndicatorReport,
     submitIndicatorReport,
+    deleteIndicatorReport,
   };
 }

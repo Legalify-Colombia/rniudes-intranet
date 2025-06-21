@@ -10,9 +10,11 @@ import { useWorkPlans } from "./useWorkPlans";
 import { useWorkPlanAssignments } from "./useWorkPlanAssignments";
 import { useAcademicPrograms } from "./useAcademicPrograms";
 import { usePlanTypes } from "./usePlanTypes";
+import { useCustomPlans } from "./useCustomPlans";
 import { useIndicators } from "./useIndicators";
 import { useDocumentTemplates } from "./useDocumentTemplates";
 import { useTemplateReports } from "./useTemplateReports";
+import { useReportPeriods } from "./useReportPeriods";
 import { useUsers } from "./useUsers";
 import { useFileUpload } from "./useFileUpload";
 import { useSnies } from "./useSnies";
@@ -93,9 +95,11 @@ export function useSupabaseData() {
   const workPlanAssignments = useWorkPlanAssignments();
   const academicPrograms = useAcademicPrograms();
   const planTypes = usePlanTypes();
+  const customPlans = useCustomPlans();
   const indicators = useIndicators();
   const documentTemplates = useDocumentTemplates();
   const templateReports = useTemplateReports();
+  const reportPeriods = useReportPeriods();
   const users = useUsers();
   const fileUpload = useFileUpload();
   const snies = useSnies();
@@ -135,6 +139,9 @@ export function useSupabaseData() {
     // Plan Types
     ...planTypes,
     
+    // Custom Plans
+    ...customPlans,
+    
     // Indicators
     ...indicators,
     
@@ -143,6 +150,9 @@ export function useSupabaseData() {
     
     // Template Reports
     ...templateReports,
+    
+    // Report Periods
+    ...reportPeriods,
     
     // Users
     ...users,
