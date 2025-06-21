@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
@@ -81,10 +80,11 @@ export function useSnies() {
       // Delete existing data
       await supabase.from("snies_report_data").delete().eq("report_id", reportId);
       
-      // Insert new data
-      const dataToInsert = reportData.map(row => ({
+      // Insert new data with row_index
+      const dataToInsert = reportData.map((row, index) => ({
         report_id: reportId,
-        field_data: row
+        field_data: row,
+        row_index: index
       }));
       
       const { data, error } = await supabase.from("snies_report_data").insert(dataToInsert);
@@ -109,11 +109,11 @@ export function useSnies() {
     }
   };
 
-  const uploadFile = async (file: File, folder: string = "uploads"): Promise<Result<{ publicUrl: string }>> => {
+  const uploadFile = async (file: File, folder: string = "uploads", fileName?: string): Promise<Result<{ publicUrl: string }>> => {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${folder}/${fileName}`;
+      const finalFileName = fileName || `${Math.random()}.${fileExt}`;
+      const filePath = `${folder}/${finalFileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('files')

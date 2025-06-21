@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import type { CustomPlan, Result } from "@/types/supabase";
 
 export function useWorkPlans() {
+  const fetchWorkPlans = async (): Promise<Result<CustomPlan[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        plan_type:plan_type_id(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
   const fetchPendingWorkPlans = async (): Promise<Result<CustomPlan[]>> => {
     const { data, error } = await supabase
       .from("custom_plans")
@@ -59,6 +71,7 @@ export function useWorkPlans() {
   };
 
   return {
+    fetchWorkPlans,
     fetchPendingWorkPlans,
     approveWorkPlan,
     createWorkPlan,
