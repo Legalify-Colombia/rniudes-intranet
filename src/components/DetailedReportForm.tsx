@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -119,7 +118,7 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
         const { data, error } = await uploadFile(file, 'reports', fileName);
         if (error) throw error;
         
-        newFiles.push(data.url);
+        newFiles.push(data.publicUrl);
         newFileNames.push(file.name);
       }
 
