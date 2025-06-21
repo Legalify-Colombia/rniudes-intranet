@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,7 @@ interface NotificationItem {
 export function NotificationFeed() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { fetchWorkPlans, fetchManagerReports, fetchManagers, fetchAcademicPrograms, fetchCampus } = useSupabaseData();
+  const { fetchCustomPlans, fetchManagerReports, fetchManagers, fetchAcademicPrograms, fetchCampus } = useSupabaseData();
 
   useEffect(() => {
     loadNotifications();
@@ -26,15 +25,15 @@ export function NotificationFeed() {
 
   const loadNotifications = async () => {
     try {
-      const [workPlansResult, reportsResult, managersResult, programsResult, campusResult] = await Promise.all([
-        fetchWorkPlans(),
+      const [customPlansResult, reportsResult, managersResult, programsResult, campusResult] = await Promise.all([
+        fetchCustomPlans(),
         fetchManagerReports(),
         fetchManagers(),
         fetchAcademicPrograms(),
         fetchCampus()
       ]);
 
-      const workPlans = workPlansResult.data || [];
+      const customPlans = customPlansResult.data || [];
       const reports = reportsResult.data || [];
       const managers = managersResult.data || [];
       const programs = programsResult.data || [];
@@ -42,18 +41,20 @@ export function NotificationFeed() {
 
       const notificationsList: NotificationItem[] = [];
 
-      // Procesar planes de trabajo enviados
-      workPlans
+      // Procesar planes de trabajo enviados (custom plans)
+      customPlans
         .filter(plan => plan.status === 'submitted' || plan.status === 'approved')
         .forEach(plan => {
           const manager = managers.find(m => m.id === plan.manager_id);
-          const program = programs.find(p => p.id === plan.program_id);
+          // For custom plans, we need to get program from manager's profile
+          const managerProfile = manager?.profile || manager;
+          const program = programs.find(p => p.manager_id === plan.manager_id);
           const campus = campuses.find(c => c.id === program?.campus_id);
 
           if (manager && program && campus) {
             notificationsList.push({
               id: `plan-${plan.id}`,
-              manager_name: manager.full_name,
+              manager_name: managerProfile?.full_name || manager.full_name || 'Manager',
               program_name: program.name,
               campus_name: campus.name,
               action_type: 'plan_submitted',
@@ -67,14 +68,15 @@ export function NotificationFeed() {
         .filter(report => report.status === 'submitted' || report.status === 'reviewed')
         .forEach(report => {
           const manager = managers.find(m => m.id === report.manager_id);
-          const workPlan = workPlans.find(wp => wp.id === report.work_plan_id);
-          const program = programs.find(p => p.id === workPlan?.program_id);
+          const customPlan = customPlans.find(cp => cp.id === report.work_plan_id);
+          const program = programs.find(p => p.manager_id === report.manager_id);
           const campus = campuses.find(c => c.id === program?.campus_id);
 
           if (manager && program && campus) {
+            const managerProfile = manager?.profile || manager;
             notificationsList.push({
               id: `report-${report.id}`,
-              manager_name: manager.full_name,
+              manager_name: managerProfile?.full_name || manager.full_name || 'Manager',
               program_name: program.name,
               campus_name: campus.name,
               action_type: 'report_submitted',

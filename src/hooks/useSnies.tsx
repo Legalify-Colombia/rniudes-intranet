@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
@@ -75,6 +76,14 @@ export function useSnies() {
     return { data, error };
   };
 
+  const fetchSniesReports = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_reports")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
   const saveSniesReportData = async (reportId: string, reportData: any[]): Promise<Result<any>> => {
     try {
       // Delete existing data
@@ -146,6 +155,7 @@ export function useSnies() {
     fetchSniesReportTemplates,
     fetchSniesTemplateFields,
     fetchSniesReportData,
+    fetchSniesReports,
     saveSniesReportData,
     consolidateSniesReports,
     uploadFile,

@@ -21,10 +21,10 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     fetchStrategicAxes, 
     fetchActions, 
     fetchProducts, 
-    fetchWorkPlans,
+    fetchCustomPlans,
     fetchWorkPlanAssignments,
-    createWorkPlan,
-    updateWorkPlan,
+    createCustomPlan,
+    updateCustomPlan,
     upsertWorkPlanAssignment 
   } = useSupabaseData();
   const { toast } = useToast();
@@ -75,15 +75,17 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       );
       setProducts(validProducts);
 
-      // Buscar plan de trabajo existente
-      const { data: workPlansData } = await fetchWorkPlans();
-      const existingPlan = workPlansData?.find(
+      // Buscar plan de trabajo existente (custom plans)
+      const { data: customPlansData } = await fetchCustomPlans();
+      const existingPlan = customPlansData?.find(
         (plan: any) => plan.manager_id === manager.id
       );
 
       if (existingPlan) {
         setWorkPlan(existingPlan);
-        setObjectives(existingPlan.objectives || '');
+        // For custom plans, objectives might be in a different field or structure
+        const planObjectives = existingPlan.title || existingPlan.description || '';
+        setObjectives(planObjectives);
         // Cargar asignaciones existentes
         const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
         setAssignments(assignmentsData || []);
@@ -115,7 +117,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const handleObjectivesChange = async (value: string) => {
     setObjectives(value);
     if (workPlan) {
-      await updateWorkPlan(workPlan.id, { objectives: value });
+      await updateCustomPlan(workPlan.id, { title: value });
     }
   };
 
@@ -123,16 +125,15 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     let currentWorkPlan = workPlan;
 
     if (!currentWorkPlan) {
-      // Crear plan de trabajo si no existe
+      // Crear plan de trabajo si no existe (custom plan)
       const newPlan = {
         manager_id: manager.id,
-        program_id: manager.academic_programs[0]?.id,
-        total_hours_assigned: 0,
-        status: 'draft' as const,
-        objectives: objectives
+        plan_type_id: 'default', // You might need to set a proper plan type
+        title: objectives,
+        status: 'draft' as const
       };
       
-      const { data: createdPlan, error } = await createWorkPlan(newPlan);
+      const { data: createdPlan, error } = await createCustomPlan(newPlan);
       if (error) {
         toast({ title: "Error", description: "No se pudo crear el plan de trabajo", variant: "destructive" });
         return;
@@ -178,7 +179,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     const totalHours = updatedAssignments.reduce((sum, a) => sum + a.assigned_hours, 0);
 
     if (currentWorkPlan) {
-      await updateWorkPlan(currentWorkPlan.id, { total_hours_assigned: totalHours });
+      await updateCustomPlan(currentWorkPlan.id, { title: objectives });
       setWorkPlan(prev => ({ ...prev, total_hours_assigned: totalHours }));
     }
   };
@@ -206,10 +207,10 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       return;
     }
 
-    const { error } = await updateWorkPlan(workPlan.id, { 
-      status: 'pending',
+    const { error } = await updateCustomPlan(workPlan.id, { 
+      status: 'submitted',
       submitted_date: new Date().toISOString(),
-      objectives: objectives
+      title: objectives
     });
     
     if (error) {
@@ -218,7 +219,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     }
 
     toast({ title: "Éxito", description: "Plan enviado para aprobación" });
-    setWorkPlan(prev => ({ ...prev, status: 'pending', submitted_date: new Date().toISOString() }));
+    setWorkPlan(prev => ({ ...prev, status: 'submitted', submitted_date: new Date().toISOString() }));
     onSave();
   };
 
@@ -226,7 +227,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     switch (status) {
       case 'draft':
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Borrador</Badge>;
-      case 'pending':
+      case 'submitted':
         return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
       case 'approved':
         return <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Aprobado</Badge>;
@@ -252,7 +253,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       }))
   }));
 
-  const isReadOnly = workPlan?.status === 'pending' || workPlan?.status === 'approved';
+  const isReadOnly = workPlan?.status === 'submitted' || workPlan?.status === 'approved';
 
   return (
     <Card className="w-full max-w-7xl">
