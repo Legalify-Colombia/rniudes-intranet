@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { ArrowLeft, Save, Send, FileText } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StructuredCustomPlanForm } from "./StructuredCustomPlanForm";
 
 interface CustomPlanFormProps {
   planId?: string;
@@ -131,6 +132,17 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       console.error("Error loading master data:", error);
     }
   };
+
+  // If it's a structured plan type, use the StructuredCustomPlanForm
+  if (planType?.uses_structured_elements) {
+    return (
+      <StructuredCustomPlanForm
+        planId={planId}
+        planTypeId={planTypeId}
+        onSave={onSave}
+      />
+    );
+  }
 
   const handleResponseChange = async (fieldId: string, value: any) => {
     setResponses(prev => ({ ...prev, [fieldId]: value }));
