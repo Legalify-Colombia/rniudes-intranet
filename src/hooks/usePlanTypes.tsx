@@ -9,7 +9,10 @@ export function usePlanTypes() {
     return { data, error };
   };
 
-  const createPlanType = async (planType: Omit<Database["public"]["Tables"]["plan_types"]["Insert"], "created_by"> & { created_by?: string }): Promise<Result<any>> => {
+  const createPlanType = async (planType: Omit<Database["public"]["Tables"]["plan_types"]["Insert"], "created_by"> & { 
+    created_by?: string;
+    uses_structured_elements?: boolean;
+  }): Promise<Result<any>> => {
     // Ensure created_by is set to a default value if not provided
     const planTypeWithCreatedBy = {
       ...planType,
@@ -19,7 +22,9 @@ export function usePlanTypes() {
     return { data, error };
   };
 
-  const updatePlanType = async (id: string, updates: Database["public"]["Tables"]["plan_types"]["Update"]): Promise<Result<any>> => {
+  const updatePlanType = async (id: string, updates: Database["public"]["Tables"]["plan_types"]["Update"] & { 
+    uses_structured_elements?: boolean; 
+  }): Promise<Result<any>> => {
     const { data, error } = await supabase.from("plan_types").update(updates).eq("id", id).select().single();
     return { data, error };
   };

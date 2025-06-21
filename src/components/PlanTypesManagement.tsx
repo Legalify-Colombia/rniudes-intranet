@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Plus, Edit, Trash2, Settings, Save, X, Eye, EyeOff } from "lucide-react";
 import { PlanType, PlanField, StrategicAxis, Action, Product } from "@/types";
+import { PlanTypeElementsConfiguration } from "./PlanTypeElementsConfiguration";
 
 interface PlanFieldForm {
   field_name: string;
@@ -45,6 +46,7 @@ export function PlanTypesManagement() {
   const [selectedPlanType, setSelectedPlanType] = useState<PlanType | null>(null);
   const [planFields, setPlanFields] = useState<PlanField[]>([]);
   const [loading, setLoading] = useState(true);
+  const [configMode, setConfigMode] = useState<'fields' | 'elements'>('fields');
   
   const [isCreating, setIsCreating] = useState(false);
   const [editingPlanType, setEditingPlanType] = useState<PlanType | null>(null);
@@ -53,7 +55,8 @@ export function PlanTypesManagement() {
     description: "",
     min_weekly_hours: 0,
     max_weekly_hours: null as number | null,
-    is_visible: true
+    is_visible: true,
+    uses_structured_elements: false
   });
   
   const [isCreatingField, setIsCreatingField] = useState(false);
@@ -64,12 +67,6 @@ export function PlanTypesManagement() {
     dropdown_options: [],
     is_required: false,
     field_order: 0
-  });
-
-  const [selectedElements, setSelectedElements] = useState({
-    strategic_axes: [] as string[],
-    actions: [] as string[],
-    products: [] as string[]
   });
 
   useEffect(() => {
@@ -146,7 +143,8 @@ export function PlanTypesManagement() {
           description: "",
           min_weekly_hours: 0,
           max_weekly_hours: null,
-          is_visible: true
+          is_visible: true,
+          uses_structured_elements: false
         });
         setIsCreating(false);
         toast({
@@ -171,7 +169,8 @@ export function PlanTypesManagement() {
         description: planType.description,
         min_weekly_hours: planType.min_weekly_hours,
         max_weekly_hours: planType.max_weekly_hours,
-        is_visible: planType.is_visible
+        is_visible: planType.is_visible,
+        uses_structured_elements: planType.uses_structured_elements
       };
 
       const result = await updatePlanType(planType.id, updateData);
@@ -349,6 +348,23 @@ export function PlanTypesManagement() {
     }
   };
 
+  const handleConfigurePlanType = (planType: PlanType & { field_count?: number }) => {
+    setSelectedPlanType(planType);
+    if (planType.uses_structured_elements) {
+      setConfigMode('elements');
+    } else {
+      setConfigMode('fields');
+      loadPlanFields(planType.id);
+    }
+  };
+
+  const handleBackToList = () => {
+    setSelectedPlanType(null);
+    setPlanFields([]);
+    setConfigMode('fields');
+    loadData();
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -357,6 +373,17 @@ export function PlanTypesManagement() {
           <p className="text-gray-600">Cargando configuración...</p>
         </div>
       </div>
+    );
+  }
+
+  // Mostrar configuración de elementos si está seleccionado un plan tipo estructurado
+  if (selectedPlanType && configMode === 'elements') {
+    return (
+      <PlanTypeElementsConfiguration
+        planType={selectedPlanType}
+        onBack={handleBackToList}
+        onSave={handleBackToList}
+      />
     );
   }
 
@@ -413,13 +440,23 @@ export function PlanTypesManagement() {
                     onChange={(e) => setNewPlanType({ ...newPlanType, max_weekly_hours: e.target.value ? parseInt(e.target.value) : null })}
                   />
                 </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <Switch
-                    id="visible"
-                    checked={newPlanType.is_visible}
-                    onCheckedChange={(checked) => setNewPlanType({ ...newPlanType, is_visible: checked })}
-                  />
-                  <Label htmlFor="visible">Visible para gestores</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="visible"
+                      checked={newPlanType.is_visible}
+                      onCheckedChange={(checked) => setNewPlanType({ ...newPlanType, is_visible: checked })}
+                    />
+                    <Label htmlFor="visible">Visible para gestores</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="structured"
+                      checked={newPlanType.uses_structured_elements}
+                      onCheckedChange={(checked) => setNewPlanType({ ...newPlanType, uses_structured_elements: checked })}
+                    />
+                    <Label htmlFor="structured">Usa ejes, acciones y productos</Label>
+                  </div>
                 </div>
               </div>
               <div>
@@ -448,6 +485,7 @@ export function PlanTypesManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre del Plan</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>No. de Campos</TableHead>
                 <TableHead>Horas (Min-Max)</TableHead>
                 <TableHead>Visible</TableHead>
@@ -464,6 +502,17 @@ export function PlanTypesManagement() {
                         <div className="text-sm text-gray-600">{planType.description}</div>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {planType.uses_structured_elements ? (
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+                        Estructurado
+                      </span>
+                    ) : (
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                        Campos
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
@@ -487,10 +536,7 @@ export function PlanTypesManagement() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          setSelectedPlanType(planType);
-                          loadPlanFields(planType.id);
-                        }}
+                        onClick={() => handleConfigurePlanType(planType)}
                       >
                         <Settings className="h-4 w-4" />
                       </Button>
@@ -510,11 +556,16 @@ export function PlanTypesManagement() {
         </CardContent>
       </Card>
 
-      {/* Configuración de Campos */}
-      {selectedPlanType && (
+      {/* Configuración de Campos (solo para tipos tradicionales) */}
+      {selectedPlanType && configMode === 'fields' && (
         <Card>
           <CardHeader>
-            <CardTitle>Configurar Campos: {selectedPlanType.name}</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Configurar Campos: {selectedPlanType.name}</CardTitle>
+              <Button variant="outline" onClick={handleBackToList}>
+                Volver a la Lista
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
