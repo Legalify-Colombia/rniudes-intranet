@@ -3,6 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import type { StrategicAxis, Action, Product, Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
 
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  template_content: string;
+  template_type: string;
+  file_name?: string;
+  file_url?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useSupabaseData() {
   // Strategic Axes
   const fetchStrategicAxes = async (): Promise<Result<StrategicAxis[]>> => {
@@ -92,6 +106,28 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const fetchManagerReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .select(`
+        *,
+        manager:profiles!manager_reports_manager_id_fkey(*),
+        report_period:report_periods(*)
+      `)
+      .eq("manager_id", managerId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const createManagerReport = async (report: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .insert(report)
+      .select()
+      .single();
+    return { data, error };
+  };
+
   const updateManagerReport = async (reportId: string, updates: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("manager_reports")
@@ -108,6 +144,50 @@ export function useSupabaseData() {
       .from("report_periods")
       .select("*")
       .order("start_date", { ascending: false });
+    return { data, error };
+  };
+
+  const createReportPeriod = async (period: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .insert(period)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateReportPeriod = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteReportPeriod = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const fetchReportSystemConfig = async (): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_system_config")
+      .select("*")
+      .single();
+    return { data, error };
+  };
+
+  const updateReportSystemConfig = async (config: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_system_config")
+      .upsert(config)
+      .select()
+      .single();
     return { data, error };
   };
 
@@ -161,6 +241,33 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const createIndicator = async (indicator: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .insert(indicator)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateIndicator = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteIndicator = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
   const fetchIndicatorReport = async (reportId: string): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("indicator_reports")
@@ -170,6 +277,46 @@ export function useSupabaseData() {
       `)
       .eq("id", reportId)
       .single();
+    return { data, error };
+  };
+
+  const createIndicatorReport = async (report: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .insert(report)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateIndicatorReport = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const submitIndicatorReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .update({ 
+        status: "submitted",
+        submitted_date: new Date().toISOString()
+      })
+      .eq("id", reportId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteIndicatorReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .delete()
+      .eq("id", id);
     return { data, error };
   };
 
@@ -210,6 +357,43 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Template Based Reports
+  const fetchUnifiedReports = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("unified_reports")
+      .select("*")
+      .eq("manager_id", managerId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const deleteTemplateBasedReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const submitTemplateBasedReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .update({ 
+        status: "submitted",
+        submitted_date: new Date().toISOString()
+      })
+      .eq("id", reportId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const checkPeriodActive = async (periodId: string): Promise<Result<boolean>> => {
+    const { data, error } = await supabase
+      .rpc('is_period_active', { period_id: periodId });
+    return { data, error };
+  };
+
   // Managers
   const fetchManagers = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
@@ -225,7 +409,8 @@ export function useSupabaseData() {
       .from("custom_plans")
       .select(`
         *,
-        manager:profiles!custom_plans_manager_id_fkey(*)
+        manager:profiles!custom_plans_manager_id_fkey(*),
+        plan_type:plan_types(*)
       `)
       .order("created_at", { ascending: false });
     return { data, error };
@@ -234,7 +419,16 @@ export function useSupabaseData() {
   const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("work_plan_assignments")
-      .select("*")
+      .select(`
+        *,
+        product:products!work_plan_assignments_product_id_fkey(
+          *,
+          action:actions!products_action_id_fkey(
+            *,
+            strategic_axis:strategic_axes!actions_strategic_axis_id_fkey(*)
+          )
+        )
+      `)
       .eq("work_plan_id", workPlanId);
     return { data, error };
   };
@@ -349,6 +543,67 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  // Plan Types Management
+  const createPlanType = async (planType: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .insert(planType)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePlanType = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanType = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const createPlanField = async (field: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .insert(field)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updatePlanField = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanField = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const configurePlanTypeElements = async (planTypeId: string, config: any): Promise<Result<any>> => {
+    // This would be a more complex function that configures strategic axes, actions, and products for a plan type
+    // For now, just return a placeholder
+    return { data: null, error: null };
+  };
+
   return {
     // Strategic Axes
     fetchStrategicAxes,
@@ -371,9 +626,16 @@ export function useSupabaseData() {
     fetchFaculties,
     // Manager Reports
     fetchManagerReports,
+    fetchManagerReportsByManager,
+    createManagerReport,
     updateManagerReport,
     // Report Periods
     fetchReportPeriods,
+    createReportPeriod,
+    updateReportPeriod,
+    deleteReportPeriod,
+    fetchReportSystemConfig,
+    updateReportSystemConfig,
     // Product Progress Reports
     fetchProductProgressReports,
     upsertProductProgressReport,
@@ -382,12 +644,24 @@ export function useSupabaseData() {
     uploadFile,
     // Indicators
     fetchIndicators,
+    createIndicator,
+    updateIndicator,
+    deleteIndicator,
     fetchIndicatorReport,
+    createIndicatorReport,
+    updateIndicatorReport,
+    submitIndicatorReport,
+    deleteIndicatorReport,
     // Document Templates
     fetchDocumentTemplates,
     createDocumentTemplate,
     updateDocumentTemplate,
     deleteDocumentTemplate,
+    // Template Based Reports
+    fetchUnifiedReports,
+    deleteTemplateBasedReport,
+    submitTemplateBasedReport,
+    checkPeriodActive,
     // Managers
     fetchManagers,
     fetchWorkPlans,
@@ -403,5 +677,13 @@ export function useSupabaseData() {
     upsertCustomPlanResponse,
     fetchPlanTypes,
     createCustomPlan,
+    // Plan Types Management
+    createPlanType,
+    updatePlanType,
+    deletePlanType,
+    createPlanField,
+    updatePlanField,
+    deletePlanField,
+    configurePlanTypeElements,
   };
 }
