@@ -9,8 +9,13 @@ export function usePlanTypes() {
     return { data, error };
   };
 
-  const createPlanType = async (planType: Database["public"]["Tables"]["plan_types"]["Insert"]): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("plan_types").insert(planType).select().single();
+  const createPlanType = async (planType: Omit<Database["public"]["Tables"]["plan_types"]["Insert"], "created_by"> & { created_by?: string }): Promise<Result<any>> => {
+    // Ensure created_by is set to a default value if not provided
+    const planTypeWithCreatedBy = {
+      ...planType,
+      created_by: planType.created_by || "system"
+    };
+    const { data, error } = await supabase.from("plan_types").insert(planTypeWithCreatedBy).select().single();
     return { data, error };
   };
 

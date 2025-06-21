@@ -24,6 +24,15 @@ export function useIndicators() {
     return { data, error };
   };
 
+  const fetchIndicatorReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .select("*")
+      .eq("id", id)
+      .single();
+    return { data, error };
+  };
+
   const createIndicatorReport = async (report: Database["public"]["Tables"]["indicator_reports"]["Insert"]): Promise<Result<any>> => {
     const { data, error } = await supabase.from("indicator_reports").insert(report).select().single();
     return { data, error };
@@ -57,6 +66,7 @@ export function useIndicators() {
     createIndicator,
     updateIndicator,
     deleteIndicator,
+    fetchIndicatorReport,
     createIndicatorReport,
     updateIndicatorReport,
     submitIndicatorReport,
