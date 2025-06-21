@@ -1,5 +1,4 @@
 
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
@@ -45,11 +44,43 @@ export function useTemplateReports() {
     return { data, error };
   };
 
+  const deleteTemplateBasedReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const submitTemplateBasedReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .update({ 
+        status: "submitted",
+        submitted_date: new Date().toISOString()
+      })
+      .eq("id", reportId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchUnifiedReports = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("unified_reports")
+      .select("*")
+      .eq("manager_id", managerId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
   return {
     createTemplateBasedReport,
     fetchTemplateBasedReportDetails,
     updateTemplateBasedReport,
     fetchWorkPlanDetails,
+    deleteTemplateBasedReport,
+    submitTemplateBasedReport,
+    fetchUnifiedReports,
   };
 }
-
