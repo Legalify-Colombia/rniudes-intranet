@@ -4,6 +4,18 @@ import type { Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
 
 export function useCustomPlans() {
+  const fetchCustomPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        plan_type:plan_types(*),
+        profiles:manager_id(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
   const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("custom_plans")
@@ -52,6 +64,7 @@ export function useCustomPlans() {
   };
 
   return {
+    fetchCustomPlans,
     fetchCustomPlanDetails,
     createCustomPlan,
     updateCustomPlan,
