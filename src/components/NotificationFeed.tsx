@@ -47,14 +47,13 @@ export function NotificationFeed() {
         .forEach(plan => {
           const manager = managers.find(m => m.id === plan.manager_id);
           // For custom plans, we need to get program from manager's profile
-          const managerProfile = manager?.profile || manager;
           const program = programs.find(p => p.manager_id === plan.manager_id);
           const campus = campuses.find(c => c.id === program?.campus_id);
 
           if (manager && program && campus) {
             notificationsList.push({
               id: `plan-${plan.id}`,
-              manager_name: managerProfile?.full_name || manager.full_name || 'Manager',
+              manager_name: manager.full_name || 'Manager',
               program_name: program.name,
               campus_name: campus.name,
               action_type: 'plan_submitted',
@@ -73,10 +72,9 @@ export function NotificationFeed() {
           const campus = campuses.find(c => c.id === program?.campus_id);
 
           if (manager && program && campus) {
-            const managerProfile = manager?.profile || manager;
             notificationsList.push({
               id: `report-${report.id}`,
-              manager_name: managerProfile?.full_name || manager.full_name || 'Manager',
+              manager_name: manager.full_name || 'Manager',
               program_name: program.name,
               campus_name: campus.name,
               action_type: 'report_submitted',
