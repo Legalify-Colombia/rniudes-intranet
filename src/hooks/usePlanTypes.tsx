@@ -49,21 +49,59 @@ export function usePlanTypes() {
     return { data, error };
   };
 
-  const configurePlanTypeElements = async (planTypeId: string, config: any): Promise<Result<any>> => {
+  const fetchPlanTypeElements = async (planTypeId: string): Promise<Result<any>> => {
+    try {
+      const [axesResult, actionsResult, productsResult] = await Promise.all([
+        supabase.from("plan_type_strategic_axes")
+          .select("*, strategic_axes(*)")
+          .eq("plan_type_id", planTypeId),
+        supabase.from("plan_type_actions")
+          .select("*, actions(*)")
+          .eq("plan_type_id", planTypeId),
+        supabase.from("plan_type_products")
+          .select("*, products(*)")
+          .eq("plan_type_id", planTypeId)
+      ]);
+
+      return {
+        data: {
+          strategicAxes: axesResult.data || [],
+          actions: actionsResult.data || [],
+          products: productsResult.data || []
+        },
+        error: axesResult.error || actionsResult.error || productsResult.error
+      };
+    } catch (error) {
+      return { data: null, error };
+    }
+  };
+
+  const configurePlanTypeElements = async (planTypeId: string, config: {
+    strategicAxes: string[];
+    actions: string[];
+    products: string[];
+    requiredStrategicAxes?: string[];
+    requiredActions?: string[];
+    requiredProducts?: string[];
+  }): Promise<Result<any>> => {
     try {
       // Delete existing configurations
-      await supabase.from("plan_type_strategic_axes").delete().eq("plan_type_id", planTypeId);
-      await supabase.from("plan_type_actions").delete().eq("plan_type_id", planTypeId);
-      await supabase.from("plan_type_products").delete().eq("plan_type_id", planTypeId);
+      await Promise.all([
+        supabase.from("plan_type_strategic_axes").delete().eq("plan_type_id", planTypeId),
+        supabase.from("plan_type_actions").delete().eq("plan_type_id", planTypeId),
+        supabase.from("plan_type_products").delete().eq("plan_type_id", planTypeId)
+      ]);
 
       // Insert new configurations
+      const insertPromises = [];
+
       if (config.strategicAxes?.length > 0) {
         const axesInserts = config.strategicAxes.map((axisId: string) => ({
           plan_type_id: planTypeId,
           strategic_axis_id: axisId,
           is_required: config.requiredStrategicAxes?.includes(axisId) || false
         }));
-        await supabase.from("plan_type_strategic_axes").insert(axesInserts);
+        insertPromises.push(supabase.from("plan_type_strategic_axes").insert(axesInserts));
       }
 
       if (config.actions?.length > 0) {
@@ -72,7 +110,7 @@ export function usePlanTypes() {
           action_id: actionId,
           is_required: config.requiredActions?.includes(actionId) || false
         }));
-        await supabase.from("plan_type_actions").insert(actionsInserts);
+        insertPromises.push(supabase.from("plan_type_actions").insert(actionsInserts));
       }
 
       if (config.products?.length > 0) {
@@ -81,7 +119,11 @@ export function usePlanTypes() {
           product_id: productId,
           is_required: config.requiredProducts?.includes(productId) || false
         }));
-        await supabase.from("plan_type_products").insert(productsInserts);
+        insertPromises.push(supabase.from("plan_type_products").insert(productsInserts));
+      }
+
+      if (insertPromises.length > 0) {
+        await Promise.all(insertPromises);
       }
 
       return { data: { success: true }, error: null };
@@ -99,6 +141,7 @@ export function usePlanTypes() {
     createPlanField,
     updatePlanField,
     deletePlanField,
+    fetchPlanTypeElements,
     configurePlanTypeElements,
   };
 }

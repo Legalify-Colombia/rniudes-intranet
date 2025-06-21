@@ -16,6 +16,18 @@ export function useCustomPlans() {
     return { data, error };
   };
 
+  const fetchCustomPlansByManager = async (managerId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        plan_type:plan_types(*)
+      `)
+      .eq("manager_id", managerId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
   const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("custom_plans")
@@ -63,12 +75,25 @@ export function useCustomPlans() {
     return { data, error };
   };
 
+  const upsertCustomPlanAssignment = async (assignment: Database["public"]["Tables"]["custom_plan_assignments"]["Insert"]): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments")
+      .upsert(assignment, {
+        onConflict: "custom_plan_id,product_id"
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
   return {
     fetchCustomPlans,
+    fetchCustomPlansByManager,
     fetchCustomPlanDetails,
     createCustomPlan,
     updateCustomPlan,
     submitCustomPlan,
     upsertCustomPlanResponse,
+    upsertCustomPlanAssignment,
   };
 }
