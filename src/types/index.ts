@@ -1,3 +1,4 @@
+
 export interface Profile {
   id: string;
   created_at: string;
@@ -214,6 +215,7 @@ export interface PlanType {
   min_weekly_hours: number;
   max_weekly_hours: number | null;
   is_visible: boolean;
+  uses_structured_elements?: boolean;
 }
 
 export interface PlanField {

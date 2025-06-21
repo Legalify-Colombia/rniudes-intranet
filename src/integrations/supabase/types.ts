@@ -1242,6 +1242,7 @@ export type Database = {
           min_weekly_hours: number | null
           name: string
           updated_at: string | null
+          uses_structured_elements: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -1254,6 +1255,7 @@ export type Database = {
           min_weekly_hours?: number | null
           name: string
           updated_at?: string | null
+          uses_structured_elements?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -1266,6 +1268,7 @@ export type Database = {
           min_weekly_hours?: number | null
           name?: string
           updated_at?: string | null
+          uses_structured_elements?: boolean | null
         }
         Relationships: [
           {
