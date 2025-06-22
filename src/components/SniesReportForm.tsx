@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,36 +180,45 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     const [open, setOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     
-    let options = relationData[field.relation_table] || [];
+    // Initialize options with proper validation
+    let options = relationData[field.relation_table];
+    
+    // Ensure options is always an array
+    if (!Array.isArray(options)) {
+      console.warn(`Options for ${field.relation_table} is not an array:`, options);
+      options = [];
+    }
     
     // Filtrar municipios solo para Colombia si es el campo de municipios
     if (field.relation_table === 'snies_municipalities') {
       const currentRow = reportData[rowIndex];
       const selectedCountry = currentRow?.country_id || currentRow?.pais_id;
       
-      if (selectedCountry === '170') {
-        options = relationData[field.relation_table] || [];
-      } else {
+      if (selectedCountry !== '170') {
         options = [];
       }
     }
 
-    // Validar que options sea un array antes de filtrar
-    if (!Array.isArray(options)) {
-      console.warn(`Options for ${field.relation_table} is not an array:`, options);
-      options = [];
-    }
-
-    // Filtrar opciones basado en búsqueda por ID o nombre
+    // Filtrar opciones basado en búsqueda por ID o nombre con validación robusta
     const filteredOptions = options.filter((option: any) => {
-      if (!option || typeof option !== 'object') return false;
-      const id = String(option.id || '');
-      const name = String(option.name || '');
-      return id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             name.toLowerCase().includes(searchTerm.toLowerCase());
+      // Validate each option thoroughly
+      if (!option || typeof option !== 'object' || !option.id || !option.name) {
+        return false;
+      }
+      
+      const id = String(option.id || '').toLowerCase();
+      const name = String(option.name || '').toLowerCase();
+      const search = String(searchTerm || '').toLowerCase();
+      
+      return id.includes(search) || name.includes(search);
     });
 
-    const selectedOption = options.find((option: any) => option && option.id === value);
+    // Ensure we always have a valid array for rendering
+    const safeFilteredOptions = Array.isArray(filteredOptions) ? filteredOptions : [];
+    
+    const selectedOption = options.find((option: any) => 
+      option && option.id && String(option.id) === String(value)
+    );
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -236,21 +246,30 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
             />
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>
             <CommandGroup className="max-h-48 overflow-auto">
-              {filteredOptions.map((option: any) => (
-                <CommandItem
-                  key={option.id}
-                  value={String(option.id)}
-                  onSelect={() => {
-                    updateCell(rowIndex, field.field_name, String(option.id));
-                    setOpen(false);
-                    setSearchTerm("");
-                  }}
-                  className="text-xs"
-                >
-                  <span className="font-mono mr-2">{option.id}</span>
-                  <span>{option.name}</span>
-                </CommandItem>
-              ))}
+              {safeFilteredOptions.length > 0 ? (
+                safeFilteredOptions.map((option: any) => (
+                  <CommandItem
+                    key={`${option.id}-${field.relation_table}`}
+                    value={String(option.id)}
+                    onSelect={() => {
+                      updateCell(rowIndex, field.field_name, String(option.id));
+                      setOpen(false);
+                      setSearchTerm("");
+                    }}
+                    className="text-xs"
+                  >
+                    <span className="font-mono mr-2">{option.id}</span>
+                    <span>{option.name}</span>
+                  </CommandItem>
+                ))
+              ) : (
+                <div className="py-6 text-center text-sm">
+                  {field.relation_table === 'snies_municipalities' && options.length === 0
+                    ? "Seleccione Colombia primero"
+                    : "No se encontraron resultados"
+                  }
+                </div>
+              )}
             </CommandGroup>
           </Command>
         </PopoverContent>
@@ -439,3 +458,4 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     </div>
   );
 }
+
