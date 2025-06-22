@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,19 +179,29 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     const [open, setOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     
-    // Defensive data initialization - ensure we always have valid data
+    // Get relation data with safe initialization
     const relationTableData = relationData[field.relation_table];
-    let options: any[] = [];
     
-    // Triple validation to ensure we have an array
-    if (relationTableData && Array.isArray(relationTableData)) {
+    // Early return if data is not ready
+    if (!relationTableData) {
+      return (
+        <Button
+          variant="outline"
+          className="w-full justify-between h-8 text-xs"
+          disabled={true}
+        >
+          Cargando...
+          <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      );
+    }
+    
+    // Ensure we have a valid array
+    let options: any[] = [];
+    if (Array.isArray(relationTableData)) {
       options = relationTableData;
-    } else if (relationTableData && typeof relationTableData === 'object') {
-      // If it's an object but not an array, log and convert to empty array
-      console.warn(`Expected array for ${field.relation_table}, got:`, relationTableData);
-      options = [];
     } else {
-      // If undefined, null, or other type, use empty array
+      console.warn(`Expected array for ${field.relation_table}, got:`, relationTableData);
       options = [];
     }
     
@@ -206,28 +215,18 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
       }
     }
 
-    // Filter options based on search with robust validation
-    let filteredOptions: any[] = [];
-    try {
-      filteredOptions = options.filter((option: any) => {
-        // Validate each option thoroughly
-        if (!option || typeof option !== 'object' || !option.id || !option.name) {
-          return false;
-        }
-        
-        const id = String(option.id || '').toLowerCase();
-        const name = String(option.name || '').toLowerCase();
-        const search = String(searchTerm || '').toLowerCase();
-        
-        return id.includes(search) || name.includes(search);
-      });
-    } catch (error) {
-      console.error('Error filtering options:', error);
-      filteredOptions = [];
-    }
-
-    // Ensure filteredOptions is always an array
-    const safeFilteredOptions = Array.isArray(filteredOptions) ? filteredOptions : [];
+    // Filter options based on search with validation
+    const filteredOptions = options.filter((option: any) => {
+      if (!option || typeof option !== 'object' || !option.id || !option.name) {
+        return false;
+      }
+      
+      const id = String(option.id || '').toLowerCase();
+      const name = String(option.name || '').toLowerCase();
+      const search = String(searchTerm || '').toLowerCase();
+      
+      return id.includes(search) || name.includes(search);
+    });
     
     const selectedOption = options.find((option: any) => 
       option && option.id && String(option.id) === String(value)
@@ -251,7 +250,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0">
-          <Command>
+          <Command shouldFilter={false}>
             <CommandInput 
               placeholder={`Buscar por código o nombre...`} 
               value={searchTerm}
@@ -259,8 +258,8 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
             />
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>
             <CommandGroup className="max-h-48 overflow-auto">
-              {safeFilteredOptions.length > 0 ? (
-                safeFilteredOptions.map((option: any, index: number) => (
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((option: any, index: number) => (
                   <CommandItem
                     key={`${option.id}-${field.relation_table}-${index}`}
                     value={String(option.id)}
@@ -471,4 +470,3 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     </div>
   );
 }
-
