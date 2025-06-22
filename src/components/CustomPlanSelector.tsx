@@ -34,17 +34,27 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
     setLoading(true);
     try {
       const result = await fetchPlanTypes();
-      if (result.data) {
-        // Filter plan types with valid IDs
+      console.log("Plan types result:", result);
+      
+      if (result.data && Array.isArray(result.data)) {
+        // Filter plan types with valid IDs and ensure array is not empty
         const validPlanTypes = result.data.filter(planType => 
+          planType && 
           planType.id && 
           typeof planType.id === 'string' && 
-          planType.id.trim().length > 0
+          planType.id.trim().length > 0 &&
+          planType.name &&
+          typeof planType.name === 'string'
         );
+        console.log("Valid plan types:", validPlanTypes);
         setPlanTypes(validPlanTypes);
+      } else {
+        console.warn("Invalid plan types data:", result);
+        setPlanTypes([]);
       }
     } catch (error) {
       console.error('Error loading plan types:', error);
+      setPlanTypes([]);
       toast({
         title: "Error",
         description: "No se pudieron cargar los tipos de plan",
@@ -80,6 +90,8 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
           description: "Plan creado correctamente",
         });
         onSelect(result.data.id, 'custom_plan');
+      } else {
+        throw new Error(result.error?.message || "Error creating plan");
       }
     } catch (error) {
       console.error('Error creating custom plan:', error);
@@ -104,6 +116,9 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
     );
   }
 
+  // Ensure planTypes is always an array before rendering
+  const safePlanTypes = Array.isArray(planTypes) ? planTypes : [];
+
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader>
@@ -115,28 +130,27 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="planType">Tipo de Plan</Label>
-          <Select value={selectedPlanType} onValueChange={setSelectedPlanType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona un tipo de plan" />
-            </SelectTrigger>
-            <SelectContent>
-              {planTypes
-                .filter(planType => 
-                  planType.id && 
-                  typeof planType.id === 'string' && 
-                  planType.id.trim().length > 0
-                )
-                .map((planType) => (
+          {safePlanTypes.length > 0 ? (
+            <Select value={selectedPlanType} onValueChange={setSelectedPlanType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un tipo de plan" />
+              </SelectTrigger>
+              <SelectContent>
+                {safePlanTypes.map((planType) => (
                   <SelectItem key={planType.id} value={planType.id}>
                     {planType.name}
                   </SelectItem>
-                ))
-              }
-            </SelectContent>
-          </Select>
-          {selectedPlanType && (
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-sm text-gray-500 p-2 border rounded">
+              No hay tipos de plan disponibles
+            </div>
+          )}
+          {selectedPlanType && safePlanTypes.length > 0 && (
             <p className="text-sm text-gray-600">
-              {planTypes.find(pt => pt.id === selectedPlanType)?.description}
+              {safePlanTypes.find(pt => pt.id === selectedPlanType)?.description || "Sin descripción"}
             </p>
           )}
         </div>
@@ -154,7 +168,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
         <div className="flex gap-2 pt-4">
           <Button
             onClick={handleCreate}
-            disabled={creating || !selectedPlanType || !title.trim()}
+            disabled={creating || !selectedPlanType || !title.trim() || safePlanTypes.length === 0}
             className="flex-1"
           >
             <Plus className="h-4 w-4 mr-2" />
