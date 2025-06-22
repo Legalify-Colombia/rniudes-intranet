@@ -29,29 +29,48 @@ export function CampusSelector({
   required = false
 }: CampusSelectorProps) {
   
+  // Ensure campuses is always an array
+  const safeCampuses = Array.isArray(campuses) ? campuses : [];
+  console.log("CampusSelector: Rendering with campuses:", safeCampuses);
+  console.log("CampusSelector: selectedCampusIds:", selectedCampusIds);
+  
   if (mode === 'single') {
     return (
       <div className="space-y-2">
         <Label>{label} {required && <span className="text-red-500">*</span>}</Label>
         <Select 
           value={selectedCampusIds[0] || ""} 
-          onValueChange={(value) => onSelectionChange(value ? [value] : [])}
+          onValueChange={(value) => {
+            console.log("CampusSelector: Single select onValueChange called with:", value);
+            onSelectionChange(value ? [value] : []);
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
-            {campuses
-              .filter(campus => 
-                campus.id && 
-                typeof campus.id === 'string' && 
-                campus.id.trim().length > 0
-              )
-              .map((campus) => (
-                <SelectItem key={campus.id} value={campus.id}>
-                  {campus.name}
-                </SelectItem>
-              ))
+            {safeCampuses
+              .filter(campus => {
+                const isValid = campus &&
+                  campus.id && 
+                  typeof campus.id === 'string' && 
+                  campus.id.trim().length > 0 &&
+                  campus.name &&
+                  typeof campus.name === 'string';
+                
+                if (!isValid) {
+                  console.warn("CampusSelector: Invalid campus found:", campus);
+                }
+                return isValid;
+              })
+              .map((campus) => {
+                console.log("CampusSelector: Rendering SelectItem for campus:", campus);
+                return (
+                  <SelectItem key={campus.id} value={campus.id}>
+                    {campus.name}
+                  </SelectItem>
+                );
+              })
             }
           </SelectContent>
         </Select>
@@ -66,10 +85,11 @@ export function CampusSelector({
         <div className="flex items-center space-x-2">
           <Checkbox
             id="select-all-campus"
-            checked={selectedCampusIds.length === campuses.length}
+            checked={selectedCampusIds.length === safeCampuses.length}
             onCheckedChange={(checked) => {
+              console.log("CampusSelector: Select all checkbox changed:", checked);
               if (checked) {
-                onSelectionChange(campuses.map(c => c.id));
+                onSelectionChange(safeCampuses.map(c => c.id));
               } else {
                 onSelectionChange([]);
               }
@@ -79,12 +99,13 @@ export function CampusSelector({
             Seleccionar todos
           </Label>
         </div>
-        {campuses.map((campus) => (
+        {safeCampuses.map((campus) => (
           <div key={campus.id} className="flex items-center space-x-2">
             <Checkbox
               id={`campus-${campus.id}`}
               checked={selectedCampusIds.includes(campus.id)}
               onCheckedChange={(checked) => {
+                console.log("CampusSelector: Campus checkbox changed:", campus.id, checked);
                 if (checked) {
                   onSelectionChange([...selectedCampusIds, campus.id]);
                 } else {

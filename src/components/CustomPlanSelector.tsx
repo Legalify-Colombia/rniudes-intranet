@@ -33,32 +33,40 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
   }, []);
 
   const loadPlanTypes = async () => {
+    console.log("CustomPlanSelector: Starting to load plan types");
     setLoading(true);
     try {
       const result = await fetchPlanTypes();
-      console.log("Plan types result:", result);
+      console.log("CustomPlanSelector: Plan types result:", result);
       
       // Ensure we always have a valid array
       let validPlanTypes: any[] = [];
       
       if (result && result.data && Array.isArray(result.data)) {
         // Filter plan types with valid IDs and ensure array is not empty
-        validPlanTypes = result.data.filter(planType => 
-          planType && 
-          typeof planType === 'object' &&
-          planType.id && 
-          typeof planType.id === 'string' && 
-          planType.id.trim().length > 0 &&
-          planType.name &&
-          typeof planType.name === 'string' &&
-          planType.name.trim().length > 0
-        );
+        validPlanTypes = result.data.filter(planType => {
+          const isValid = planType && 
+            typeof planType === 'object' &&
+            planType.id && 
+            typeof planType.id === 'string' && 
+            planType.id.trim().length > 0 &&
+            planType.name &&
+            typeof planType.name === 'string' &&
+            planType.name.trim().length > 0;
+          
+          if (!isValid) {
+            console.warn("CustomPlanSelector: Invalid plan type found:", planType);
+          }
+          return isValid;
+        });
       }
       
-      console.log("Valid plan types:", validPlanTypes);
+      console.log("CustomPlanSelector: Valid plan types:", validPlanTypes);
+      console.log("CustomPlanSelector: Setting planTypes state with:", validPlanTypes);
       setPlanTypes(validPlanTypes);
       
       if (validPlanTypes.length === 0) {
+        console.warn("CustomPlanSelector: No valid plan types found");
         toast({
           title: "Información",
           description: "No hay tipos de plan disponibles en este momento",
@@ -66,7 +74,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
         });
       }
     } catch (error) {
-      console.error('Error loading plan types:', error);
+      console.error('CustomPlanSelector: Error loading plan types:', error);
       setPlanTypes([]);
       toast({
         title: "Error",
@@ -134,6 +142,9 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
   const safePlanTypes = Array.isArray(planTypes) ? planTypes : [];
   const hasValidPlanTypes = safePlanTypes.length > 0;
 
+  console.log("CustomPlanSelector: Rendering with planTypes:", safePlanTypes);
+  console.log("CustomPlanSelector: hasValidPlanTypes:", hasValidPlanTypes);
+
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader>
@@ -146,18 +157,29 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
         <div className="space-y-2">
           <Label htmlFor="planType">Tipo de Plan</Label>
           {hasValidPlanTypes ? (
-            <Select value={selectedPlanType} onValueChange={setSelectedPlanType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un tipo de plan" />
-              </SelectTrigger>
-              <SelectContent>
-                {safePlanTypes.map((planType) => (
-                  <SelectItem key={planType.id} value={planType.id}>
-                    {planType.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div>
+              <Select 
+                value={selectedPlanType} 
+                onValueChange={(value) => {
+                  console.log("CustomPlanSelector: Select onValueChange called with:", value);
+                  setSelectedPlanType(value);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un tipo de plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {safePlanTypes.map((planType) => {
+                    console.log("CustomPlanSelector: Rendering SelectItem for:", planType);
+                    return (
+                      <SelectItem key={planType.id} value={planType.id}>
+                        {planType.name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           ) : (
             <div className="text-sm text-gray-500 p-2 border rounded">
               No hay tipos de plan disponibles
