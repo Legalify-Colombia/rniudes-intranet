@@ -222,7 +222,8 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
   }
 
   const isReadOnly = plan?.status === 'submitted' || plan?.status === 'approved';
-  const maxWeeklyHours = profile?.weekly_hours || 0;
+  // CORREGIDO: Usar total_hours en lugar de weekly_hours
+  const maxTotalHours = profile?.total_hours || 0;
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -258,10 +259,13 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
           </div>
           
           <div className="text-sm text-gray-600">
-            <p>Horas semanales disponibles: {maxWeeklyHours}</p>
+            <p>Horas totales disponibles: {maxTotalHours}</p>
             <p>Total horas asignadas: {getTotalHours()}</p>
-            <p className={getTotalHours() > maxWeeklyHours ? "text-red-600 font-medium" : ""}>
-              Horas restantes: {maxWeeklyHours - getTotalHours()}
+            <p className={getTotalHours() > maxTotalHours ? "text-red-600 font-medium" : ""}>
+              Horas restantes: {maxTotalHours - getTotalHours()}
+            </p>
+            <p className="text-xs text-gray-500">
+              (Cálculo: {profile?.weekly_hours || 0} horas semanales × {profile?.number_of_weeks || 16} semanas = {maxTotalHours} horas totales)
             </p>
           </div>
         </CardContent>
@@ -307,7 +311,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
                       <Input
                         type="number"
                         min="0"
-                        max={maxWeeklyHours}
+                        max={maxTotalHours}
                         value={assignments[product.id] || 0}
                         onChange={(e) => handleHoursChange(product.id, parseInt(e.target.value) || 0)}
                         disabled={isReadOnly}
@@ -328,13 +332,13 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
 
       {!isReadOnly && (
         <div className="flex gap-4">
-          <Button onClick={handleSave} disabled={isLoading || getTotalHours() > maxWeeklyHours}>
+          <Button onClick={handleSave} disabled={isLoading || getTotalHours() > maxTotalHours}>
             <Save className="h-4 w-4 mr-2" />
             {isLoading ? 'Guardando...' : 'Guardar'}
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={isLoading || !title.trim() || getTotalHours() > maxWeeklyHours}
+            disabled={isLoading || !title.trim() || getTotalHours() > maxTotalHours}
           >
             <Send className="h-4 w-4 mr-2" />
             {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
@@ -342,10 +346,10 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
         </div>
       )}
       
-      {getTotalHours() > maxWeeklyHours && (
+      {getTotalHours() > maxTotalHours && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800 font-medium">
-            Error: Has asignado más horas ({getTotalHours()}) de las disponibles ({maxWeeklyHours})
+            Error: Has asignado más horas ({getTotalHours()}) de las disponibles ({maxTotalHours})
           </p>
         </div>
       )}

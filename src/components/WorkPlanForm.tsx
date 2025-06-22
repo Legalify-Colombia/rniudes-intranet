@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,7 +48,6 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     try {
       // Cargar ejes estratégicos
       const { data: axesData } = await fetchStrategicAxes();
-      // Filter strategic axes with valid IDs
       const validAxes = (axesData || []).filter(axis => 
         axis.id && 
         typeof axis.id === 'string' && 
@@ -57,7 +57,6 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
 
       // Cargar acciones
       const { data: actionsData } = await fetchActions();
-      // Filter actions with valid IDs
       const validActions = (actionsData || []).filter(action => 
         action.id && 
         typeof action.id === 'string' && 
@@ -67,7 +66,6 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
 
       // Cargar productos
       const { data: productsData } = await fetchProducts();
-      // Filter products with valid IDs
       const validProducts = (productsData || []).filter(product => 
         product.id && 
         typeof product.id === 'string' && 
@@ -83,7 +81,6 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
 
       if (existingPlan) {
         setWorkPlan(existingPlan);
-        // For custom plans, objectives might be in a different field or structure
         const planObjectives = existingPlan.title || existingPlan.description || '';
         setObjectives(planObjectives);
         // Cargar asignaciones existentes
@@ -125,10 +122,9 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     let currentWorkPlan = workPlan;
 
     if (!currentWorkPlan) {
-      // Crear plan de trabajo si no existe (custom plan)
       const newPlan = {
         manager_id: manager.id,
-        plan_type_id: 'default', // You might need to set a proper plan type
+        plan_type_id: 'default',
         title: objectives,
         status: 'draft' as const
       };
@@ -168,7 +164,6 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       }
     });
 
-    // Calcular y actualizar total de horas del plan
     const updatedAssignments = assignments.map(a => 
       a.product_id === productId ? { ...a, assigned_hours: hours } : a
     );
@@ -193,7 +188,11 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   };
 
   const getAvailableHours = () => {
-    return (manager.total_hours || 0) - getTotalAssignedHours();
+    // CORREGIDO: Usar total_hours en lugar de weekly_hours
+    const totalHours = manager.total_hours || 0;
+    console.log("Manager total_hours:", totalHours);
+    console.log("Total assigned hours:", getTotalAssignedHours());
+    return totalHours - getTotalAssignedHours();
   };
 
   const submitForApproval = async () => {
@@ -266,11 +265,14 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         </div>
         <div className="text-sm text-gray-600 space-y-1">
           <p>Programa: {manager.academic_programs?.[0]?.name}</p>
-          <p>Horas Disponibles: <span className="font-bold text-blue-600">{manager.total_hours}</span></p>
+          <p>Horas Totales Disponibles: <span className="font-bold text-blue-600">{manager.total_hours || 0}</span></p>
           <p>Horas Asignadas: <span className="font-bold text-green-600">{getTotalAssignedHours()}</span></p>
           <p>Balance: <span className={`font-bold ${getAvailableHours() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {getAvailableHours()}
           </span></p>
+          <p className="text-xs text-gray-500">
+            (Cálculo: {manager.weekly_hours || 0} horas semanales × {manager.number_of_weeks || 16} semanas = {manager.total_hours || 0} horas totales)
+          </p>
         </div>
 
         {workPlan?.status === 'rejected' && workPlan?.approval_comments && (
@@ -325,11 +327,11 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
           </TableHeader>
           <TableBody>
             {organizedData.map(axis => 
-              axis.actions.map((action, actionIndex) => 
-                action.products.map((product, productIndex) => {
+              axis.actions.map((action: any, actionIndex: number) => 
+                action.products.map((product: any, productIndex: number) => {
                   const isFirstActionRow = productIndex === 0;
                   const isFirstAxisRow = actionIndex === 0 && productIndex === 0;
-                  const axisRowspan = axis.actions.reduce((sum, a) => sum + a.products.length, 0);
+                  const axisRowspan = axis.actions.reduce((sum: number, a: any) => sum + a.products.length, 0);
                   const actionRowspan = action.products.length;
 
                   return (
@@ -379,7 +381,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         <div className="flex justify-between items-center mt-6 p-4 bg-gray-50 rounded">
           <div className="space-x-4">
             <span className="text-sm">
-              <strong>Total Horas:</strong> {getTotalAssignedHours()} / {manager.total_hours}
+              <strong>Total Horas:</strong> {getTotalAssignedHours()} / {manager.total_hours || 0}
             </span>
             <span className={`text-sm font-bold ${getAvailableHours() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               Balance: {getAvailableHours()}

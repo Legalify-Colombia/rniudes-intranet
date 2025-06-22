@@ -55,7 +55,6 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
         setObjectives(existingPlan.title || '');
         
         // Cargar asignaciones existentes
-        // Por ahora inicializamos vacío, se puede implementar fetch de asignaciones
         setAssignments({});
       }
     } catch (error) {
@@ -118,7 +117,11 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
   };
 
   const getAvailableHours = () => {
-    return (manager.total_hours || 0) - getTotalAssignedHours();
+    // CORREGIDO: Usar total_hours en lugar de weekly_hours
+    const totalHours = manager.total_hours || 0;
+    console.log("Manager total_hours:", totalHours);
+    console.log("Total assigned hours:", getTotalAssignedHours());
+    return totalHours - getTotalAssignedHours();
   };
 
   const submitForApproval = async () => {
@@ -213,11 +216,14 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
           </div>
           <div className="text-sm text-gray-600 space-y-1">
             <p>Tipo de Plan: {planType.name}</p>
-            <p>Horas Disponibles: <span className="font-bold text-blue-600">{manager.total_hours}</span></p>
+            <p>Horas Totales Disponibles: <span className="font-bold text-blue-600">{manager.total_hours || 0}</span></p>
             <p>Horas Asignadas: <span className="font-bold text-green-600">{getTotalAssignedHours()}</span></p>
             <p>Balance: <span className={`font-bold ${getAvailableHours() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {getAvailableHours()}
             </span></p>
+            <p className="text-xs text-gray-500">
+              (Cálculo: {manager.weekly_hours || 0} horas semanales × {manager.number_of_weeks || 16} semanas = {manager.total_hours || 0} horas totales)
+            </p>
           </div>
         </CardHeader>
         
@@ -316,7 +322,7 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
           <div className="flex justify-between items-center mt-6 p-4 bg-gray-50 rounded">
             <div className="space-x-4">
               <span className="text-sm">
-                <strong>Total Horas:</strong> {getTotalAssignedHours()} / {manager.total_hours}
+                <strong>Total Horas:</strong> {getTotalAssignedHours()} / {manager.total_hours || 0}
               </span>
               <span className={`text-sm font-bold ${getAvailableHours() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 Balance: {getAvailableHours()}
