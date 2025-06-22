@@ -33,6 +33,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
     updateCustomPlan,
     submitCustomPlan,
     upsertCustomPlanAssignment,
+    deleteCustomPlanAssignment,
     fetchPlanTypeElements
   } = useSupabaseData();
 
@@ -155,7 +156,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
         // Update plan title
         await updateCustomPlan(currentPlan.id, { title });
         
-        // Save all assignments
+        // Save all assignments and delete those with 0 hours
         for (const [productId, hours] of Object.entries(assignments)) {
           if (hours > 0) {
             await upsertCustomPlanAssignment({
@@ -163,6 +164,9 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
               product_id: productId,
               assigned_hours: hours
             });
+          } else {
+            // Delete assignment if hours is 0
+            await deleteCustomPlanAssignment(currentPlan.id, productId);
           }
         }
       }
@@ -256,7 +260,9 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
           <div className="text-sm text-gray-600">
             <p>Horas semanales disponibles: {maxWeeklyHours}</p>
             <p>Total horas asignadas: {getTotalHours()}</p>
-            <p>Horas restantes: {maxWeeklyHours - getTotalHours()}</p>
+            <p className={getTotalHours() > maxWeeklyHours ? "text-red-600 font-medium" : ""}>
+              Horas restantes: {maxWeeklyHours - getTotalHours()}
+            </p>
           </div>
         </CardContent>
       </Card>

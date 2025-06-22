@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Plus, Edit, Trash2, Settings, Save, X, Eye, EyeOff } from "lucide-react";
 import { PlanType, PlanField, StrategicAxis, Action, Product } from "@/types";
@@ -24,6 +23,7 @@ interface PlanFieldForm {
 
 export function PlanTypesManagement() {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const { 
     fetchPlanTypes, 
     createPlanType, 
@@ -133,8 +133,31 @@ export function PlanTypesManagement() {
       return;
     }
 
+    if (!profile?.id) {
+      toast({
+        title: "Error",
+        description: "Usuario no autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const result = await createPlanType(newPlanType);
+      const result = await createPlanType({
+        ...newPlanType,
+        created_by: profile.id
+      });
+      
+      if (result.error) {
+        console.error('Error creating plan type:', result.error);
+        toast({
+          title: "Error",
+          description: "No se pudo crear el tipo de plan: " + result.error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (result.data) {
         const newTypeWithCount = { ...result.data, field_count: 0 };
         setPlanTypes([...planTypes, newTypeWithCount]);
@@ -156,7 +179,7 @@ export function PlanTypesManagement() {
       console.error('Error creating plan type:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear el tipo de plan",
+        description: "Error inesperado al crear el tipo de plan",
         variant: "destructive",
       });
     }

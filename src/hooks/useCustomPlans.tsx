@@ -34,7 +34,8 @@ export function useCustomPlans() {
       .select(`
         *,
         plan_type:plan_types(*),
-        responses:custom_plan_responses(*)
+        responses:custom_plan_responses(*),
+        assignments:custom_plan_assignments(*)
       `)
       .eq("id", planId)
       .single();
@@ -86,6 +87,15 @@ export function useCustomPlans() {
     return { data, error };
   };
 
+  const deleteCustomPlanAssignment = async (customPlanId: string, productId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments")
+      .delete()
+      .eq("custom_plan_id", customPlanId)
+      .eq("product_id", productId);
+    return { data, error };
+  };
+
   return {
     fetchCustomPlans,
     fetchCustomPlansByManager,
@@ -95,5 +105,6 @@ export function useCustomPlans() {
     submitCustomPlan,
     upsertCustomPlanResponse,
     upsertCustomPlanAssignment,
+    deleteCustomPlanAssignment,
   };
 }

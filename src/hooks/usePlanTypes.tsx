@@ -13,11 +13,18 @@ export function usePlanTypes() {
     created_by?: string;
     uses_structured_elements?: boolean;
   }): Promise<Result<any>> => {
-    // Ensure created_by is set to a default value if not provided
+    // Get current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { data: null, error: new Error("Usuario no autenticado") };
+    }
+
     const planTypeWithCreatedBy = {
       ...planType,
-      created_by: planType.created_by || "system"
+      created_by: user.id
     };
+    
     const { data, error } = await supabase.from("plan_types").insert(planTypeWithCreatedBy).select().single();
     return { data, error };
   };
