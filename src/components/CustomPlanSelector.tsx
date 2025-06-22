@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { usePlanTypes } from "@/hooks/usePlanTypes";
+import { useCustomPlans } from "@/hooks/useCustomPlans";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, FileText } from "lucide-react";
 
@@ -18,7 +19,8 @@ interface CustomPlanSelectorProps {
 export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchPlanTypes, createCustomPlan } = useSupabaseData();
+  const { fetchPlanTypes } = usePlanTypes();
+  const { createCustomPlan } = useCustomPlans();
 
   const [planTypes, setPlanTypes] = useState<any[]>([]);
   const [selectedPlanType, setSelectedPlanType] = useState<string>("");
@@ -36,21 +38,32 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
       const result = await fetchPlanTypes();
       console.log("Plan types result:", result);
       
-      if (result.data && Array.isArray(result.data)) {
+      // Ensure we always have a valid array
+      let validPlanTypes: any[] = [];
+      
+      if (result && result.data && Array.isArray(result.data)) {
         // Filter plan types with valid IDs and ensure array is not empty
-        const validPlanTypes = result.data.filter(planType => 
+        validPlanTypes = result.data.filter(planType => 
           planType && 
+          typeof planType === 'object' &&
           planType.id && 
           typeof planType.id === 'string' && 
           planType.id.trim().length > 0 &&
           planType.name &&
-          typeof planType.name === 'string'
+          typeof planType.name === 'string' &&
+          planType.name.trim().length > 0
         );
-        console.log("Valid plan types:", validPlanTypes);
-        setPlanTypes(validPlanTypes);
-      } else {
-        console.warn("Invalid plan types data:", result);
-        setPlanTypes([]);
+      }
+      
+      console.log("Valid plan types:", validPlanTypes);
+      setPlanTypes(validPlanTypes);
+      
+      if (validPlanTypes.length === 0) {
+        toast({
+          title: "Información",
+          description: "No hay tipos de plan disponibles en este momento",
+          variant: "default",
+        });
       }
     } catch (error) {
       console.error('Error loading plan types:', error);
@@ -84,14 +97,15 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
         status: 'draft'
       });
 
-      if (result.data) {
+      if (result && result.data && result.data.id) {
         toast({
           title: "Éxito",
           description: "Plan creado correctamente",
         });
         onSelect(result.data.id, 'custom_plan');
       } else {
-        throw new Error(result.error?.message || "Error creating plan");
+        const errorMessage = result?.error?.message || "Error creating plan";
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Error creating custom plan:', error);
@@ -118,6 +132,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
 
   // Ensure planTypes is always an array before rendering
   const safePlanTypes = Array.isArray(planTypes) ? planTypes : [];
+  const hasValidPlanTypes = safePlanTypes.length > 0;
 
   return (
     <Card className="max-w-md mx-auto">
@@ -130,7 +145,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="planType">Tipo de Plan</Label>
-          {safePlanTypes.length > 0 ? (
+          {hasValidPlanTypes ? (
             <Select value={selectedPlanType} onValueChange={setSelectedPlanType}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un tipo de plan" />
@@ -148,7 +163,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
               No hay tipos de plan disponibles
             </div>
           )}
-          {selectedPlanType && safePlanTypes.length > 0 && (
+          {selectedPlanType && hasValidPlanTypes && (
             <p className="text-sm text-gray-600">
               {safePlanTypes.find(pt => pt.id === selectedPlanType)?.description || "Sin descripción"}
             </p>
@@ -168,7 +183,7 @@ export function CustomPlanSelector({ onSelect, onCancel }: CustomPlanSelectorPro
         <div className="flex gap-2 pt-4">
           <Button
             onClick={handleCreate}
-            disabled={creating || !selectedPlanType || !title.trim() || safePlanTypes.length === 0}
+            disabled={creating || !selectedPlanType || !title.trim() || !hasValidPlanTypes}
             className="flex-1"
           >
             <Plus className="h-4 w-4 mr-2" />
