@@ -180,16 +180,23 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
     const [open, setOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     
-    // Initialize options with proper validation
-    let options = relationData[field.relation_table];
+    // Defensive data initialization - ensure we always have valid data
+    const relationTableData = relationData[field.relation_table];
+    let options: any[] = [];
     
-    // Ensure options is always an array
-    if (!Array.isArray(options)) {
-      console.warn(`Options for ${field.relation_table} is not an array:`, options);
+    // Triple validation to ensure we have an array
+    if (relationTableData && Array.isArray(relationTableData)) {
+      options = relationTableData;
+    } else if (relationTableData && typeof relationTableData === 'object') {
+      // If it's an object but not an array, log and convert to empty array
+      console.warn(`Expected array for ${field.relation_table}, got:`, relationTableData);
+      options = [];
+    } else {
+      // If undefined, null, or other type, use empty array
       options = [];
     }
     
-    // Filtrar municipios solo para Colombia si es el campo de municipios
+    // Filter municipalities only for Colombia
     if (field.relation_table === 'snies_municipalities') {
       const currentRow = reportData[rowIndex];
       const selectedCountry = currentRow?.country_id || currentRow?.pais_id;
@@ -199,21 +206,27 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
       }
     }
 
-    // Filtrar opciones basado en búsqueda por ID o nombre con validación robusta
-    const filteredOptions = options.filter((option: any) => {
-      // Validate each option thoroughly
-      if (!option || typeof option !== 'object' || !option.id || !option.name) {
-        return false;
-      }
-      
-      const id = String(option.id || '').toLowerCase();
-      const name = String(option.name || '').toLowerCase();
-      const search = String(searchTerm || '').toLowerCase();
-      
-      return id.includes(search) || name.includes(search);
-    });
+    // Filter options based on search with robust validation
+    let filteredOptions: any[] = [];
+    try {
+      filteredOptions = options.filter((option: any) => {
+        // Validate each option thoroughly
+        if (!option || typeof option !== 'object' || !option.id || !option.name) {
+          return false;
+        }
+        
+        const id = String(option.id || '').toLowerCase();
+        const name = String(option.name || '').toLowerCase();
+        const search = String(searchTerm || '').toLowerCase();
+        
+        return id.includes(search) || name.includes(search);
+      });
+    } catch (error) {
+      console.error('Error filtering options:', error);
+      filteredOptions = [];
+    }
 
-    // Ensure we always have a valid array for rendering
+    // Ensure filteredOptions is always an array
     const safeFilteredOptions = Array.isArray(filteredOptions) ? filteredOptions : [];
     
     const selectedOption = options.find((option: any) => 
@@ -247,9 +260,9 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>
             <CommandGroup className="max-h-48 overflow-auto">
               {safeFilteredOptions.length > 0 ? (
-                safeFilteredOptions.map((option: any) => (
+                safeFilteredOptions.map((option: any, index: number) => (
                   <CommandItem
-                    key={`${option.id}-${field.relation_table}`}
+                    key={`${option.id}-${field.relation_table}-${index}`}
                     value={String(option.id)}
                     onSelect={() => {
                       updateCell(rowIndex, field.field_name, String(option.id));
