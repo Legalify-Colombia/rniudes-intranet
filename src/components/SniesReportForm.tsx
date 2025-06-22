@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,13 +193,22 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
       }
     }
 
-    // Filtrar opciones basado en búsqueda por ID o nombre
-    const filteredOptions = options.filter((option: any) => 
-      option.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Validar que options sea un array antes de filtrar
+    if (!Array.isArray(options)) {
+      console.warn(`Options for ${field.relation_table} is not an array:`, options);
+      options = [];
+    }
 
-    const selectedOption = options.find((option: any) => option.id === value);
+    // Filtrar opciones basado en búsqueda por ID o nombre
+    const filteredOptions = options.filter((option: any) => {
+      if (!option || typeof option !== 'object') return false;
+      const id = String(option.id || '');
+      const name = String(option.name || '');
+      return id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    const selectedOption = options.find((option: any) => option && option.id === value);
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -229,9 +239,9 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
               {filteredOptions.map((option: any) => (
                 <CommandItem
                   key={option.id}
-                  value={option.id}
+                  value={String(option.id)}
                   onSelect={() => {
-                    updateCell(rowIndex, field.field_name, option.id);
+                    updateCell(rowIndex, field.field_name, String(option.id));
                     setOpen(false);
                     setSearchTerm("");
                   }}
@@ -285,6 +295,12 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
       // Para otros campos de relación, usar select normal
       let options = relationData[field.relation_table] || [];
       
+      // Validar que options sea un array
+      if (!Array.isArray(options)) {
+        console.warn(`Options for ${field.relation_table} is not an array:`, options);
+        options = [];
+      }
+      
       return (
         <Select
           value={value}
@@ -296,9 +312,11 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           </SelectTrigger>
           <SelectContent>
             {options.map((option: any) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.name}
-              </SelectItem>
+              option && option.id ? (
+                <SelectItem key={option.id} value={String(option.id)}>
+                  {option.name}
+                </SelectItem>
+              ) : null
             ))}
           </SelectContent>
         </Select>

@@ -11,10 +11,7 @@ export function useSnies() {
   const fetchSniesMunicipalities = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("snies_municipalities")
-      .select(`
-        *,
-        department:snies_departments(*)
-      `)
+      .select("*")
       .order("name");
     return { data, error };
   };
