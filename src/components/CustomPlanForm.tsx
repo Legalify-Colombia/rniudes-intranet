@@ -11,8 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useCustomPlans } from "@/hooks/useCustomPlans";
-import { usePlanManagement } from "@/hooks/usePlanManagement";
-import { ArrowLeft, Save, Send, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { usePlanTypes } from "@/hooks/usePlanTypes";
+import { ArrowLeft, Save, Send, AlertTriangle, CheckCircle, Clock, FileText } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StructuredCustomPlanForm } from "./StructuredCustomPlanForm";
 
@@ -20,9 +20,10 @@ interface CustomPlanFormProps {
   planId?: string;
   planTypeId?: string;
   onSave: () => void;
+  embedded?: boolean;
 }
 
-export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormProps) {
+export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }: CustomPlanFormProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { 
@@ -33,7 +34,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormPro
     upsertCustomPlanResponse,
     createCustomPlan
   } = useCustomPlans();
-  const { fetchPlanTypes } = usePlanManagement();
+  const { fetchPlanTypes } = usePlanTypes();
 
   const [plan, setPlan] = useState<any>(null);
   const [planType, setPlanType] = useState<any>(null);
@@ -385,20 +386,22 @@ export function CustomPlanForm({ planId, planTypeId, onSave }: CustomPlanFormPro
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">
-            {plan ? 'Editar Plan' : 'Crear Plan'}
-          </h1>
-          <p className="text-gray-600">
-            {planType?.name} - {planType?.description}
-          </p>
+      {!embedded && (
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => window.history.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {plan ? 'Editar Plan' : 'Crear Plan'}
+            </h1>
+            <p className="text-gray-600">
+              {planType?.name} - {planType?.description}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <Card>
         <CardHeader>

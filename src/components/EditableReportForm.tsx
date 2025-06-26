@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useReportManagement } from "@/hooks/useReportManagement";
 import { useToast } from "@/hooks/use-toast";
@@ -277,9 +278,9 @@ export function EditableReportForm({
       case 'draft':
         return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Borrador</Badge>;
       case 'submitted':
-        return <Badge variant="default"><Send className="w-3 h-3 mr-1" />Enviado</Badge>;
+        return <Badge variant="outline"><Send className="w-3 h-3 mr-1" />Enviado</Badge>;
       case 'reviewed':
-        return <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Revisado</Badge>;
+        return <Badge variant="outline" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Revisado</Badge>;
       default:
         return <Badge variant="outline">Sin estado</Badge>;
     }
