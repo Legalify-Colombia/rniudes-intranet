@@ -145,6 +145,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
         planId={planId}
         planTypeId={planTypeId}
         onSave={onSave}
+        onCancel={onSave}
       />
     );
   }

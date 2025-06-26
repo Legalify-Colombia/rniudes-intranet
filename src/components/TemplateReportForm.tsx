@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useReportTemplates } from "@/hooks/useReportTemplates";
-import { useReportManagement } from "@/hooks/useReportManagement";
+import { useTemplateReportManagement } from "@/hooks/useTemplateReportManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Save, Send, FileText, Upload, Trash2, Globe } from "lucide-react";
 
@@ -28,7 +28,7 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
     updateTemplateBasedReport,
     submitTemplateBasedReport,
     uploadFile
-  } = useReportManagement();
+  } = useTemplateReportManagement();
 
   const { fetchReportTemplates } = useReportTemplates();
   const {

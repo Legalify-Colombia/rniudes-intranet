@@ -2,48 +2,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
-export interface DocumentTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_content: string;
-  template_type: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  file_url?: string;
-  file_name?: string;
-}
-
-export interface ReportTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  strategic_axis_id?: string;
-  action_id?: string;
-  product_id?: string;
-  strategic_axes_ids?: string[];
-  actions_ids?: string[];
-  products_ids?: string[];
-  max_versions: number;
-  is_active: boolean;
-  sharepoint_base_url?: string;
-  created_by?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface ManagerReportVersion {
   id: string;
   manager_report_id: string;
   template_id: string;
   version_number: number;
   progress_percentage: number;
-  observations?: string;
-  evidence_links?: string[];
   sharepoint_folder_url?: string;
-  submitted_at?: string;
+  evidence_links: string[];
+  observations?: string;
   created_at: string;
   updated_at: string;
 }
@@ -61,7 +28,6 @@ export function useReportSystem() {
     const { data, error } = await supabase
       .from("report_system_config")
       .update(updates)
-      .eq("id", updates.id)
       .select()
       .single();
     return { data, error };
@@ -95,11 +61,168 @@ export function useReportSystem() {
     return { data, error };
   };
 
+  const fetchReportPeriods = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .select("*")
+      .order("start_date", { ascending: false });
+    return { data, error };
+  };
+
+  const createReportPeriod = async (period: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .insert(period)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateReportPeriod = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteReportPeriod = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const createTemplateBasedReport = async (report: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .insert(report)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchTemplateBasedReportDetails = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        report_periods:report_period_id(*)
+      `)
+      .eq("id", reportId)
+      .single();
+    return { data, error };
+  };
+
+  const updateTemplateBasedReport = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const submitTemplateBasedReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("template_based_reports")
+      .update({ 
+        status: 'submitted',
+        submitted_date: new Date().toISOString()
+      })
+      .eq("id", reportId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchWorkPlanDetails = async (planId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("work_plans")
+      .select(`
+        *,
+        profiles:manager_id(*)
+      `)
+      .eq("id", planId)
+      .single();
+    return { data, error };
+  };
+
+  const updateWorkPlan = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("work_plans")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchIndicatorReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .select(`
+        *,
+        profiles:manager_id(*)
+      `)
+      .eq("id", reportId)
+      .single();
+    return { data, error };
+  };
+
+  const updateIndicatorReport = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const submitIndicatorReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .update({ 
+        status: 'submitted',
+        submitted_date: new Date().toISOString()
+      })
+      .eq("id", reportId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const checkPeriodActive = async (periodId: string): Promise<boolean> => {
+    const { data } = await supabase
+      .rpc('is_period_active', { period_id: periodId });
+    return data || false;
+  };
+
   return {
     fetchReportSystemConfig,
     updateReportSystemConfig,
     createManagerReportVersion,
     fetchManagerReportVersions,
-    updateManagerReportVersion
+    updateManagerReportVersion,
+    fetchReportPeriods,
+    createReportPeriod,
+    updateReportPeriod,
+    deleteReportPeriod,
+    createTemplateBasedReport,
+    fetchTemplateBasedReportDetails,
+    updateTemplateBasedReport,
+    submitTemplateBasedReport,
+    fetchWorkPlanDetails,
+    updateWorkPlan,
+    fetchIndicatorReport,
+    updateIndicatorReport,
+    submitIndicatorReport,
+    checkPeriodActive
   };
 }
