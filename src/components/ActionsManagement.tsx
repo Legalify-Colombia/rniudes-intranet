@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useActions } from "@/hooks/useActions";
 import { useManagers } from "@/hooks/useManagers";
 import { Plus, Edit, Trash2, Save, X, Clock, CheckCircle } from "lucide-react";
 import { Action, StrategicAxis } from "@/types";
@@ -17,13 +18,8 @@ import { useAuth } from "@/hooks/useAuth";
 export function ActionsManagement() {
   const { toast } = useToast();
   const { profile } = useAuth();
-  const { 
-    fetchActions, 
-    createAction, 
-    updateAction, 
-    deleteAction,
-    fetchStrategicAxes 
-  } = useSupabaseData();
+  const { fetchStrategicAxes } = useSupabaseData();
+  const { fetchActions, createAction, updateAction, deleteAction } = useActions();
   const { fetchAvailablePlanTypes } = useManagers();
 
   const [actions, setActions] = useState<Action[]>([]);

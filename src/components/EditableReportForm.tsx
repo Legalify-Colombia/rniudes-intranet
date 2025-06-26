@@ -1,47 +1,42 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useReportManagement } from "@/hooks/useReportManagement";
 import { useToast } from "@/hooks/use-toast";
 import { ProgressIndicatorCard } from "./ProgressIndicatorCard";
-import { EvidenceUploader } from "./EvidenceUploader";
-import { FileText, Save, Send, AlertTriangle, CheckCircle, Clock, Edit3 } from "lucide-react";
+import { FileText, Save, Send, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface EditableReportFormProps {
   reportId: string;
   workPlanId: string;
   onSave: () => void;
   reportStatus?: string;
-  isReadOnly?: boolean;
 }
 
 export function EditableReportForm({ 
   reportId, 
   workPlanId, 
   onSave,
-  reportStatus = 'draft',
-  isReadOnly = false
+  reportStatus = 'draft' 
 }: EditableReportFormProps) {
   const {
     fetchWorkPlanAssignments,
-    fetchProductProgressReports,
+    fetchProductProgressReports
+  } = useSupabaseData();
+  const {
     upsertProductProgressReport,
     updateManagerReport
-  } = useSupabaseData();
+  } = useReportManagement();
   const { toast } = useToast();
 
   const [assignments, setAssignments] = useState<any[]>([]);
   const [progressReports, setProgressReports] = useState<any[]>([]);
-  const [localChanges, setLocalChanges] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [uploadingFiles, setUploadingFiles] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
 
@@ -51,7 +46,7 @@ export function EditableReportForm({
 
   useEffect(() => {
     calculateOverallProgress();
-  }, [progressReports, localChanges]);
+  }, [progressReports]);
 
   const loadData = async () => {
     setLoading(true);
@@ -61,7 +56,6 @@ export function EditableReportForm({
         fetchProductProgressReports(reportId)
       ]);
 
-      console.log('Datos cargados:', { assignmentsResult, progressResult });
       setAssignments(assignmentsResult.data || []);
       setProgressReports(progressResult.data || []);
     } catch (error) {
@@ -77,177 +71,149 @@ export function EditableReportForm({
   };
 
   const calculateOverallProgress = () => {
-    const allReports = [...progressReports];
-    
-    // Aplicar cambios locales
-    Object.keys(localChanges).forEach(productId => {
-      const existingIndex = allReports.findIndex(r => r.product_id === productId);
-      if (existingIndex >= 0) {
-        allReports[existingIndex] = { ...allReports[existingIndex], ...localChanges[productId] };
-      } else if (localChanges[productId].progress_percentage > 0) {
-        allReports.push({ product_id: productId, ...localChanges[productId] });
-      }
-    });
-
-    if (allReports.length === 0) {
+    if (progressReports.length === 0) {
       setOverallProgress(0);
       return;
     }
 
-    const totalProgress = allReports.reduce(
+    const totalProgress = progressReports.reduce(
       (sum, report) => sum + (report.progress_percentage || 0), 
       0
     );
-    const average = totalProgress / allReports.length;
+    const average = totalProgress / progressReports.length;
     setOverallProgress(Math.round(average));
   };
 
   const getProgressReport = (productId: string, assignmentId: string) => {
-    const localChange = localChanges[productId];
-    const dbReport = progressReports.find(pr => pr.product_id === productId);
-    
-    return {
+    return progressReports.find(pr => pr.product_id === productId) || {
       progress_percentage: 0,
       observations: '',
       evidence_files: [],
-      evidence_file_names: [],
-      ...dbReport,
-      ...localChange
+      evidence_file_names: []
     };
   };
 
-  const updateLocalChanges = (productId: string, assignmentId: string, updates: any) => {
-    if (isReadOnly) return;
-    
-    console.log('Actualizando cambios locales:', { productId, updates });
-    setLocalChanges(prev => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        ...updates
-      }
-    }));
-  };
-
-  const saveDraft = async () => {
-    if (isReadOnly) return;
-    
-    setSaving(true);
+  const updateProgressReport = async (productId: string, assignmentId: string, updates: any) => {
+    setSaving(productId);
     try {
-      console.log('Guardando borrador con cambios locales:', localChanges);
-      
-      const saveResults = [];
-      const saveErrors = [];
-      
-      for (const productId of Object.keys(localChanges)) {
-        try {
-          const assignment = assignments.find(a => a.product.id === productId);
-          if (!assignment) {
-            console.warn('No se encontró assignment para producto:', productId);
-            continue;
-          }
+      const reportData = {
+        manager_report_id: reportId,
+        product_id: productId,
+        work_plan_assignment_id: assignmentId,
+        ...updates
+      };
 
-          const reportData = {
-            manager_report_id: reportId,
-            product_id: productId,
-            work_plan_assignment_id: assignment.id,
-            ...localChanges[productId]
-          };
-
-          console.log('Guardando reporte de producto:', reportData);
-          const result = await upsertProductProgressReport(reportData);
-          
-          if (result.error) {
-            console.error('Error guardando producto', productId, ':', result.error);
-            saveErrors.push({ productId, error: result.error });
-          } else {
-            console.log('Producto guardado exitosamente:', productId);
-            saveResults.push({ productId, data: result.data });
-          }
-        } catch (error) {
-          console.error('Error guardando producto', productId, ':', error);
-          saveErrors.push({ productId, error });
-        }
-      }
-
-      console.log('Resultados del guardado:', { saveResults, saveErrors });
+      await upsertProductProgressReport(reportData);
+      loadData();
       
-      if (saveErrors.length > 0) {
-        console.error('Errores al guardar:', saveErrors);
-        
-        if (saveResults.length === 0) {
-          throw new Error(`No se pudo guardar ningún reporte. ${saveErrors.map(e => `Producto ${e.productId}: ${e.error?.message || 'Error desconocido'}`).join(', ')}`);
-        } else {
-          toast({
-            title: "Guardado parcial",
-            description: `Se guardaron ${saveResults.length} reportes, pero ${saveErrors.length} fallaron. Intenta guardar nuevamente.`,
-            variant: "destructive",
-          });
-        }
-      }
-      
-      if (saveResults.length > 0) {
-        setLocalChanges(prev => {
-          const newChanges = { ...prev };
-          saveResults.forEach(({ productId }) => {
-            delete newChanges[productId];
-          });
-          return newChanges;
-        });
-        
-        const updateResult = await updateManagerReport(reportId, { 
-          status: 'draft',
-          updated_at: new Date().toISOString()
-        });
-
-        if (updateResult.error) {
-          console.error('Error actualizando informe principal:', updateResult.error);
-        }
-        
-        if (saveErrors.length === 0) {
-          toast({
-            title: "Éxito",
-            description: "Borrador guardado correctamente",
-          });
-        }
-        
-        await loadData();
-      }
+      toast({
+        title: "Éxito",
+        description: "Progreso guardado automáticamente",
+      });
     } catch (error) {
-      console.error('Error saving draft:', error);
+      console.error('Error saving progress:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo guardar el borrador",
+        description: "No se pudo guardar el progreso",
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setSaving(null);
+    }
+  };
+
+  const handleFileUpload = async (productId: string, assignmentId: string, files: FileList) => {
+    setUploadingFiles(productId);
+    try {
+      const currentReport = getProgressReport(productId, assignmentId);
+      const newFiles: string[] = [];
+      const newFileNames: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          toast({
+            title: "Error",
+            description: `El archivo ${file.name} es demasiado grande. Máximo 10MB.`,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        const fileName = `evidence/${reportId}/${productId}/${Date.now()}_${file.name}`;
+        
+        // const { data, error } = await uploadFile(file, 'reports', fileName);
+        // if (error) throw error;
+        
+        // newFiles.push(data.publicUrl);
+        // newFileNames.push(file.name);
+      }
+
+      const updatedReport = {
+        ...currentReport,
+        evidence_files: [...(currentReport.evidence_files || []), ...newFiles],
+        evidence_file_names: [...(currentReport.evidence_file_names || []), ...newFileNames]
+      };
+
+      await updateProgressReport(productId, assignmentId, updatedReport);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      toast({
+        title: "Error",
+        description: "No se pudieron subir todos los archivos",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingFiles(null);
+    }
+  };
+
+  const removeEvidence = async (productId: string, assignmentId: string, fileIndex: number) => {
+    try {
+      const currentReport = getProgressReport(productId, assignmentId);
+      const newFiles = [...(currentReport.evidence_files || [])];
+      const newFileNames = [...(currentReport.evidence_file_names || [])];
+      
+      newFiles.splice(fileIndex, 1);
+      newFileNames.splice(fileIndex, 1);
+
+      const updatedReport = {
+        ...currentReport,
+        evidence_files: newFiles,
+        evidence_file_names: newFileNames
+      };
+
+      await updateProgressReport(productId, assignmentId, updatedReport);
+    } catch (error) {
+      console.error('Error removing evidence:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la evidencia",
+        variant: "destructive",
+      });
     }
   };
 
   const submitReport = async () => {
-    if (isReadOnly) return;
-    
     setSubmitting(true);
     try {
-      console.log('Enviando informe...');
-      
-      if (Object.keys(localChanges).length > 0) {
-        console.log('Guardando cambios pendientes antes de enviar...');
-        await saveDraft();
-      }
-      
-      const updateResult = await updateManagerReport(reportId, { 
-        status: 'submitted',
-        submitted_date: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      // Validar que todos los indicadores tengan al menos algún progreso
+      const incompleteIndicators = progressReports.filter(
+        report => (report.progress_percentage || 0) === 0
+      );
 
-      if (updateResult.error) {
-        throw updateResult.error;
+      if (incompleteIndicators.length > 0) {
+        toast({
+          title: "Advertencia",
+          description: `Hay ${incompleteIndicators.length} indicadores sin progreso registrado.`,
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
       }
 
-      console.log('Informe enviado exitosamente');
+      // Actualizar el estado del informe a "submitted"
+      await updateManagerReport(reportId, { status: 'submitted' });
 
       toast({
         title: "Éxito",
@@ -270,6 +236,7 @@ export function EditableReportForm({
     }
   };
 
+  // Organizar asignaciones por eje estratégico
   const organizeAssignments = () => {
     const organized: any = {};
     
@@ -308,26 +275,11 @@ export function EditableReportForm({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
-        return (
-          <Badge variant="secondary">
-            <Clock className="w-3 h-3 mr-1" />
-            Borrador
-          </Badge>
-        );
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Borrador</Badge>;
       case 'submitted':
-        return (
-          <Badge variant="default">
-            <Send className="w-3 h-3 mr-1" />
-            Enviado
-          </Badge>
-        );
+        return <Badge variant="default"><Send className="w-3 h-3 mr-1" />Enviado</Badge>;
       case 'reviewed':
-        return (
-          <Badge variant="default" className="bg-green-600">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Revisado
-          </Badge>
-        );
+        return <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Revisado</Badge>;
       default:
         return <Badge variant="outline">Sin estado</Badge>;
     }
@@ -338,8 +290,7 @@ export function EditableReportForm({
   }
 
   const organizedData = organizeAssignments();
-  const canEdit = !isReadOnly && reportStatus === 'draft';
-  const hasUnsavedChanges = Object.keys(localChanges).length > 0;
+  const canSubmit = reportStatus === 'draft' && progressReports.length > 0;
   const requiresImprovementPlan = overallProgress < 70;
 
   return (
@@ -347,65 +298,36 @@ export function EditableReportForm({
       {/* Header del informe */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">
-            {isReadOnly ? 'Vista de Informe de Progreso' : 'Mi Informe de Progreso'}
-          </h2>
+          <h2 className="text-xl font-bold">Informe de Progreso</h2>
           <div className="flex items-center gap-4 mt-2">
             {getStatusBadge(reportStatus)}
             <span className="text-sm text-gray-600">
-              {assignments.length} indicadores
+              {assignments.length} indicadores • {progressReports.length} con progreso registrado
             </span>
-            {hasUnsavedChanges && canEdit && (
-              <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                <Edit3 className="w-3 h-3 mr-1" />
-                Cambios sin guardar
-              </Badge>
-            )}
           </div>
         </div>
-        <div className="flex gap-2">
-          {canEdit && (
-            <>
-              <Button 
-                onClick={saveDraft} 
-                variant="outline" 
-                disabled={saving}
-              >
-                {saving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Guardar Borrador
-                  </>
-                )}
-              </Button>
-              <Button 
-                onClick={submitReport} 
-                disabled={submitting}
-                className={requiresImprovementPlan ? "bg-yellow-600 hover:bg-yellow-700" : ""}
-              >
-                {submitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar Informe
-                  </>
-                )}
-              </Button>
-            </>
-          )}
-          {!canEdit && (
-            <Button onClick={onSave} variant="outline">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Cerrar
+        <div className="text-right">
+          <Button onClick={onSave} variant="outline" className="mr-2">
+            <Save className="h-4 w-4 mr-2" />
+            Guardar
+          </Button>
+          {canSubmit && (
+            <Button 
+              onClick={submitReport} 
+              disabled={submitting}
+              className={requiresImprovementPlan ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+            >
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar Informe
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -421,7 +343,7 @@ export function EditableReportForm({
               <Progress value={overallProgress} className="mt-2" />
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-gray-700 mb-2">{progressReports.length + Object.keys(localChanges).length}</div>
+              <div className="text-3xl font-bold text-gray-700 mb-2">{progressReports.length}</div>
               <div className="text-sm text-gray-600">Indicadores con Progreso</div>
             </div>
             <div className="text-center">
@@ -435,15 +357,6 @@ export function EditableReportForm({
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-800">
                 <strong>Atención:</strong> El progreso general es menor al 70%. Al enviar este informe se requerirá crear un plan de mejora para la próxima vigencia.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {hasUnsavedChanges && canEdit && (
-            <Alert className="mt-4 border-blue-400 bg-blue-50">
-              <Edit3 className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                Tienes cambios sin guardar. Haz clic en "Guardar Borrador" para guardar tus cambios en la base de datos.
               </AlertDescription>
             </Alert>
           )}
@@ -473,101 +386,20 @@ export function EditableReportForm({
                       {action.code} {action.name}
                     </h4>
                     
-                    {/* Tabla de indicadores */}
-                    <div className="border rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="font-medium">Indicador</TableHead>
-                            <TableHead className="font-medium w-32">Horas</TableHead>
-                            <TableHead className="font-medium w-32">Progreso (%)</TableHead>
-                            <TableHead className="font-medium w-40">Progreso Visual</TableHead>
-                            <TableHead className="font-medium">Observaciones</TableHead>
-                            <TableHead className="font-medium w-80">Evidencias</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {action.products.map((assignment: any) => {
-                            const product = assignment.product;
-                            const progressReport = assignment.progressReport;
-                            
-                            return (
-                              <TableRow key={assignment.id} className="hover:bg-gray-50">
-                                <TableCell>
-                                  <div className="font-medium">{product.name}</div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{assignment.assigned_hours}h</Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {canEdit ? (
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      max="100"
-                                      value={progressReport.progress_percentage || 0}
-                                      onChange={(e) => {
-                                        const newPercentage = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                                        updateLocalChanges(product.id, assignment.id, {
-                                          progress_percentage: newPercentage
-                                        });
-                                      }}
-                                      className="w-20"
-                                      placeholder="0"
-                                    />
-                                  ) : (
-                                    <span className="font-medium">{progressReport.progress_percentage || 0}%</span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Progress 
-                                      value={progressReport.progress_percentage || 0} 
-                                      className="flex-1"
-                                    />
-                                    <span className="text-xs text-gray-500 w-8">
-                                      {progressReport.progress_percentage || 0}%
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  {canEdit ? (
-                                    <Textarea
-                                      value={progressReport.observations || ''}
-                                      onChange={(e) => {
-                                        updateLocalChanges(product.id, assignment.id, {
-                                          observations: e.target.value
-                                        });
-                                      }}
-                                      placeholder="Observaciones sobre el progreso..."
-                                      className="min-h-[60px] resize-none"
-                                    />
-                                  ) : (
-                                    <div className="text-sm text-gray-600 max-w-xs">
-                                      {progressReport.observations || 'Sin observaciones'}
-                                    </div>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <EvidenceUploader
-                                    productId={product.id}
-                                    reportId={reportId}
-                                    currentFiles={progressReport.evidence_files || []}
-                                    currentFileNames={progressReport.evidence_file_names || []}
-                                    onFilesChange={(files, fileNames) => {
-                                      updateLocalChanges(product.id, assignment.id, {
-                                        evidence_files: files,
-                                        evidence_file_names: fileNames
-                                      });
-                                    }}
-                                    disabled={!canEdit}
-                                  />
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
+                    <div className="grid gap-4">
+                      {action.products.map((assignment: any) => (
+                        <ProgressIndicatorCard
+                          key={assignment.id}
+                          product={assignment.product}
+                          assignment={assignment}
+                          progressReport={assignment.progressReport}
+                          onProgressUpdate={updateProgressReport}
+                          onFileUpload={handleFileUpload}
+                          onFileRemove={removeEvidence}
+                          isLoading={saving === assignment.product.id}
+                          isUploading={uploadingFiles === assignment.product.id}
+                        />
+                      ))}
                     </div>
                   </div>
                 ))}

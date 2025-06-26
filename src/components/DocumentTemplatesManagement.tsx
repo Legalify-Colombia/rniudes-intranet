@@ -1,289 +1,176 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useDocumentTemplates } from "@/hooks/useDocumentTemplates";
 import { useAuth } from "@/hooks/useAuth";
-import { DocumentTemplate } from "@/types/supabase";
-import { Plus, Edit, Trash2, FileText, Eye } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus, Edit, Trash2, FileText, Settings } from "lucide-react";
 
 export function DocumentTemplatesManagement() {
-  const { toast } = useToast();
-  const { profile } = useAuth();
-  const {
+  const { 
     fetchDocumentTemplates,
     createDocumentTemplate,
     updateDocumentTemplate,
-    deleteDocumentTemplate,
-  } = useSupabaseData();
+    deleteDocumentTemplate
+  } = useDocumentTemplates();
+  const { profile } = useAuth();
+  const { toast } = useToast();
 
-  const [documentTemplates, setDocumentTemplates] = useState<DocumentTemplate[]>([]);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    template_type: "pdf" as "pdf" | "doc",
-    template_content: "",
+    name: '',
+    description: '',
+    content: ''
   });
 
   useEffect(() => {
-    loadDocumentTemplates();
+    loadData();
   }, []);
 
-  const loadDocumentTemplates = async () => {
-    const { data, error } = await fetchDocumentTemplates();
-    if (error) {
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await fetchDocumentTemplates();
+      if (error) {
+        throw error;
+      }
+      setTemplates(data || []);
+    } catch (error) {
+      console.error('Error loading templates:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar las plantillas de documentos",
+        description: "No se pudieron cargar las plantillas",
         variant: "destructive",
       });
-    } else {
-      setDocumentTemplates(data || []);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!profile?.id) {
+    try {
+      if (editingTemplate) {
+        await updateDocumentTemplate(editingTemplate.id, formData);
+        toast({
+          title: "Éxito",
+          description: "Plantilla actualizada correctamente",
+        });
+      } else {
+        await createDocumentTemplate(formData);
+        toast({
+          title: "Éxito",
+          description: "Plantilla creada correctamente",
+        });
+      }
+      setDialogOpen(false);
+      setEditingTemplate(null);
+      setFormData({ name: '', description: '', content: '' });
+      loadData();
+    } catch (error) {
+      console.error('Error saving template:', error);
       toast({
         title: "Error",
-        description: "No se pudo identificar el usuario",
+        description: "No se pudo guardar la plantilla",
         variant: "destructive",
       });
-      return;
-    }
-
-    const templateData = {
-      ...formData,
-      created_by: profile.id,
-      is_active: true
-    };
-
-    const { data, error } = await createDocumentTemplate(templateData);
-    
-    if (error) {
-      console.error('Error creating document template:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo crear la plantilla de documento",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Éxito",
-        description: "Plantilla de documento creada correctamente",
-      });
-      setFormData({ name: "", description: "", template_type: "pdf", template_content: "" });
-      setIsCreateDialogOpen(false);
-      loadDocumentTemplates();
     }
   };
 
-  const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTemplate) return;
-
-    const { data, error } = await updateDocumentTemplate(selectedTemplate.id, formData);
-    
-    if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la plantilla de documento",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Éxito",
-        description: "Plantilla de documento actualizada correctamente",
-      });
-      setIsEditDialogOpen(false);
-      setSelectedTemplate(null);
-      loadDocumentTemplates();
-    }
+  const handleEdit = (template: any) => {
+    setEditingTemplate(template);
+    setFormData({
+      name: template.name,
+      description: template.description || '',
+      content: template.content || ''
+    });
+    setDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar esta plantilla?")) {
-      const { error } = await deleteDocumentTemplate(id);
-      
-      if (error) {
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar la plantilla de documento",
-          variant: "destructive",
-        });
-      } else {
+    if (confirm('¿Está seguro de que desea eliminar esta plantilla?')) {
+      try {
+        await deleteDocumentTemplate(id);
         toast({
           title: "Éxito",
-          description: "Plantilla de documento eliminada correctamente",
+          description: "Plantilla eliminada correctamente",
         });
-        loadDocumentTemplates();
+        loadData();
+      } catch (error) {
+        console.error('Error deleting template:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar la plantilla",
+          variant: "destructive",
+        });
       }
     }
   };
 
-  const openEditDialog = (template: DocumentTemplate) => {
-    setSelectedTemplate(template);
-    setFormData({
-      name: template.name,
-      description: template.description || "",
-      template_type: template.template_type as "pdf" | "doc",
-      template_content: template.template_content,
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const openPreviewDialog = (template: DocumentTemplate) => {
-    setSelectedTemplate(template);
-    setPreviewDialogOpen(true);
-  };
-
-  const getPlaceholderExamples = () => {
-    return `
-Campos disponibles para usar en las plantillas (usar formato <>):
-
-DATOS DEL GESTOR:
-<manager_name> - Nombre completo del gestor
-<manager_email> - Email del gestor
-<manager_position> - Cargo del gestor
-<manager_weekly_hours> - Horas semanales asignadas
-<manager_total_hours> - Total de horas asignadas
-
-DATOS DEL PROGRAMA:
-<program_name> - Nombre del programa académico
-<campus_name> - Nombre del campus
-<faculty_name> - Nombre de la facultad
-<director_name> - Nombre del director
-<director_email> - Email del director
-
-DATOS DEL PLAN DE TRABAJO:
-<work_plan_objectives> - Objetivos del plan de trabajo
-<work_plan_total_hours> - Total de horas del plan
-<work_plan_status> - Estado del plan
-<work_plan_submitted_date> - Fecha de envío
-<work_plan_approved_date> - Fecha de aprobación
-
-DATOS DEL INFORME:
-<report_title> - Título del informe
-<report_period> - Período del informe
-<report_total_progress> - Progreso total del informe
-<report_submitted_date> - Fecha de envío del informe
-
-DATOS DE PRODUCTOS:
-<products_list> - Lista de productos con progreso
-<products_total_count> - Número total de productos
-<products_completed_count> - Número de productos completados
-
-FECHAS:
-<current_date> - Fecha actual
-<current_year> - Año actual
-<current_month> - Mes actual
-
-Ejemplo de uso:
-"El gestor <manager_name> del programa <program_name> presenta su informe de progreso correspondiente al período <report_period> con un avance del <report_total_progress>%."
-    `;
-  };
+  if (loading) {
+    return <div className="flex justify-center p-8">Cargando...</div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Plantillas de Documentos PDF/DOC</h3>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <h1 className="text-2xl font-bold">Gestión de Plantillas de Documentos</h1>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="institutional-gradient text-white">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
               Nueva Plantilla
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Crear Plantilla de Documento</DialogTitle>
+              <DialogTitle>
+                {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla de Documento'}
+              </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Nombre de la Plantilla</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Nombre de la plantilla"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="template_type">Tipo de Documento</Label>
-                  <Select 
-                    value={formData.template_type} 
-                    onValueChange={(value: "pdf" | "doc") => 
-                      setFormData(prev => ({ ...prev, template_type: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pdf">PDF</SelectItem>
-                      <SelectItem value="doc">DOC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
               </div>
-              
               <div>
                 <Label htmlFor="description">Descripción</Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción de la plantilla"
-                  rows={3}
                 />
               </div>
-
               <div>
-                <Label htmlFor="template_content">Contenido de la Plantilla</Label>
+                <Label htmlFor="content">Contenido</Label>
                 <Textarea
-                  id="template_content"
-                  value={formData.template_content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, template_content: e.target.value }))}
-                  placeholder="Contenido de la plantilla con campos dinámicos..."
-                  rows={10}
-                  className="font-mono text-sm"
+                  id="content"
+                  value={formData.content}
+                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                  rows={8}
                   required
                 />
               </div>
-
-              <Alert>
-                <FileText className="h-4 w-4" />
-                <AlertDescription>
-                  <details>
-                    <summary className="cursor-pointer font-medium">Ver campos disponibles</summary>
-                    <pre className="text-xs mt-2 whitespace-pre-wrap">{getPlaceholderExamples()}</pre>
-                  </details>
-                </AlertDescription>
-              </Alert>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancelar
+              <div className="flex gap-2">
+                <Button type="submit">
+                  {editingTemplate ? 'Actualizar' : 'Crear'}
                 </Button>
-                <Button type="submit" className="institutional-gradient text-white">
-                  Crear Plantilla
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancelar
                 </Button>
               </div>
             </form>
@@ -299,190 +186,41 @@ Ejemplo de uso:
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Creado</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {documentTemplates.map((template) => (
-                <TableRow key={template.id}>
-                  <TableCell className="font-medium">{template.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={template.template_type === 'pdf' ? 'default' : 'secondary'}>
-                      {template.template_type.toUpperCase()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {template.description || 'Sin descripción'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={template.is_active ? "default" : "secondary"}>
-                      {template.is_active ? "Activa" : "Inactiva"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(template.created_at).toLocaleDateString('es-ES')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => openPreviewDialog(template)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => openEditDialog(template)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleDelete(template.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {documentTemplates.length === 0 && (
+          {templates.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No hay plantillas de documentos registradas.
+              No hay plantillas de documentos configuradas.
             </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {templates.map((template) => (
+                  <TableRow key={template.id}>
+                    <TableCell className="font-medium">{template.name}</TableCell>
+                    <TableCell>{template.description || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(template)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDelete(template.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Plantilla de Documento</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_name">Nombre de la Plantilla</Label>
-                <Input
-                  id="edit_name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Nombre de la plantilla"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_template_type">Tipo de Documento</Label>
-                <Select 
-                  value={formData.template_type} 
-                  onValueChange={(value: "pdf" | "doc") => 
-                    setFormData(prev => ({ ...prev, template_type: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                    <SelectItem value="doc">DOC</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_description">Descripción</Label>
-              <Textarea
-                id="edit_description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Descripción de la plantilla"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="edit_template_content">Contenido de la Plantilla</Label>
-              <Textarea
-                id="edit_template_content"
-                value={formData.template_content}
-                onChange={(e) => setFormData(prev => ({ ...prev, template_content: e.target.value }))}
-                placeholder="Contenido de la plantilla con campos dinámicos..."
-                rows={10}
-                className="font-mono text-sm"
-                required
-              />
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="institutional-gradient text-white">
-                Actualizar Plantilla
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Vista Previa: {selectedTemplate?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Tipo de Documento</Label>
-              <Badge variant={selectedTemplate?.template_type === 'pdf' ? 'default' : 'secondary'}>
-                {selectedTemplate?.template_type?.toUpperCase()}
-              </Badge>
-            </div>
-            
-            {selectedTemplate?.description && (
-              <div>
-                <Label>Descripción</Label>
-                <p className="text-sm text-gray-600">{selectedTemplate.description}</p>
-              </div>
-            )}
-
-            <div>
-              <Label>Contenido de la Plantilla</Label>
-              <div className="bg-gray-50 p-4 rounded border max-h-96 overflow-auto">
-                <pre className="text-sm whitespace-pre-wrap font-mono">
-                  {selectedTemplate?.template_content}
-                </pre>
-              </div>
-            </div>
-
-            <Alert>
-              <FileText className="h-4 w-4" />
-              <AlertDescription>
-                <details>
-                  <summary className="cursor-pointer font-medium">Ver campos disponibles</summary>
-                  <pre className="text-xs mt-2 whitespace-pre-wrap">{getPlaceholderExamples()}</pre>
-                </details>
-              </AlertDescription>
-            </Alert>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

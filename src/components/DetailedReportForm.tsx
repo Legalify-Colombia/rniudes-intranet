@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useReportManagement } from "@/hooks/useReportManagement";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Upload, Trash2, Save } from "lucide-react";
 
@@ -20,12 +22,14 @@ interface DetailedReportFormProps {
 export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedReportFormProps) {
   const {
     fetchWorkPlanAssignments,
-    fetchProductProgressReports,
+    fetchProductProgressReports
+  } = useSupabaseData();
+  const {
     upsertProductProgressReport,
     deleteProductProgressReport,
     uploadFile,
     updateManagerReport
-  } = useSupabaseData();
+  } = useReportManagement();
   const { toast } = useToast();
 
   const [assignments, setAssignments] = useState<any[]>([]);
