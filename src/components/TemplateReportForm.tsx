@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useReportTemplates } from "@/hooks/useReportTemplates";
+import { useReportManagement } from "@/hooks/useReportManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Save, Send, FileText, Upload, Trash2, Globe } from "lucide-react";
 
@@ -21,10 +24,13 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
   const { toast } = useToast();
   const {
     fetchTemplateBasedReportDetails,
-    fetchReportTemplates,
     updateTemplateBasedReport,
     submitTemplateBasedReport,
-    uploadFile,
+    uploadFile
+  } = useReportManagement();
+
+  const { fetchReportTemplates } = useReportTemplates();
+  const {
     fetchStrategicAxes,
     fetchActions,
     fetchProducts

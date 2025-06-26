@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,9 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { usePlanTypes } from "@/hooks/usePlanTypes";
 import { useCustomPlans } from "@/hooks/useCustomPlans";
+import { useInternationalization } from "@/hooks/useInternationalization";
 import { Eye, Edit, Plus, FileText, Globe } from "lucide-react";
 
 export function InternationalizationManagers() {
@@ -19,7 +20,7 @@ export function InternationalizationManagers() {
   const { toast } = useToast();
   const { fetchPlanTypes } = usePlanTypes();
   const { createCustomPlan } = useCustomPlans();
-  const { fetchInternationalizationProjects, fetchInternationalizationReports } = useSupabaseData();
+  const { fetchInternationalizationProjects, fetchInternationalizationReports } = useInternationalization();
 
   useEffect(() => {
     loadData();

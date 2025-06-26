@@ -1,410 +1,221 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { FileText, Download, FileSpreadsheet } from "lucide-react";
-import * as XLSX from 'xlsx';
+import { useReportPeriods } from "@/hooks/useReportPeriods";
+import { useSniesManagement } from "@/hooks/useSniesManagement";
+import { FileSpreadsheet, Download, TrendingUp, Calendar } from "lucide-react";
 
 export function SniesConsolidatedReports() {
   const [templates, setTemplates] = useState<any[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | undefined>(undefined);
-  const [consolidatedReports, setConsolidatedReports] = useState<any[]>([]);
+  const [periods, setPeriods] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [reportData, setReportData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isConsolidating, setIsConsolidating] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-
+  const [templateFields, setTemplateFields] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { 
-    fetchSniesReportTemplates, 
-    consolidateSniesReports, 
+
+  const { fetchReportPeriods } = useReportPeriods();
+  const {
+    fetchSniesReportTemplates,
+    consolidateSniesReports,
     fetchSniesReports,
     fetchSniesReportData,
-    fetchSniesTemplateFields 
-  } = useSupabaseData();
+    fetchSniesTemplateFields
+  } = useSniesManagement();
 
   useEffect(() => {
-    loadTemplates();
-    loadConsolidatedReports();
+    loadInitialData();
   }, []);
 
-  const loadTemplates = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    if (selectedTemplate && selectedPeriod) {
+      loadReports();
+    } else {
+      setReports([]);
+      setReportData([]);
+      setTemplateFields([]);
+    }
+  }, [selectedTemplate, selectedPeriod]);
+
+  const loadInitialData = async () => {
     try {
-      const result = await fetchSniesReportTemplates();
-      if (result.error) {
-        throw result.error;
-      }
-      setTemplates(result.data || []);
+      setLoading(true);
+      const [templatesResult, periodsResult] = await Promise.all([
+        fetchSniesReportTemplates(),
+        fetchReportPeriods()
+      ]);
+      if (templatesResult.data) setTemplates(templatesResult.data);
+      if (periodsResult.data) setPeriods(periodsResult.data);
     } catch (error) {
-      console.error('Error loading templates:', error);
+      console.error("Error loading initial data:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar las plantillas",
+        description: "No se pudieron cargar las plantillas o períodos",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const loadConsolidatedReports = async () => {
-    setIsLoading(true);
+  const loadReports = async () => {
     try {
-      const result = await fetchSniesReports();
-      if (result.error) {
-        throw result.error;
-      }
-      setConsolidatedReports(result.data || []);
-    } catch (error) {
-      console.error('Error loading consolidated reports:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los informes consolidados",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadConsolidatedData = async (templateId: string) => {
-    try {
-      setIsLoading(true);
-      
-      // Obtener todos los reportes de la plantilla seleccionada
+      setLoading(true);
       const reportsResult = await fetchSniesReports();
-      if (reportsResult.error) throw reportsResult.error;
-      
-      const templateReports = (reportsResult.data || []).filter(
-        report => report.template_id === templateId
-      );
+      if (reportsResult.data) {
+        const filteredReports = reportsResult.data.filter(
+          (r) => r.template_id === selectedTemplate && r.period_id === selectedPeriod
+        );
+        setReports(filteredReports);
 
-      // Obtener los datos de cada reporte
-      const allData: any[] = [];
-      for (const report of templateReports) {
-        const dataResult = await fetchSniesReportData(report.id);
-        if (dataResult.data) {
-          dataResult.data.forEach((item: any) => {
-            allData.push({
-              ...item.field_data,
-              report_id: report.id,
-              report_title: report.title,
-              created_at: report.created_at
-            });
-          });
+        if (filteredReports.length > 0) {
+          const reportId = filteredReports[0].id;
+          const reportDataResult = await fetchSniesReportData(reportId);
+          if (reportDataResult.data) setReportData(reportDataResult.data);
+        } else {
+          setReportData([]);
         }
+
+        const templateFieldsResult = await fetchSniesTemplateFields(selectedTemplate);
+        if (templateFieldsResult.data) setTemplateFields(templateFieldsResult.data);
       }
-      
-      setReportData(allData);
     } catch (error) {
-      console.error('Error loading consolidated data:', error);
+      console.error("Error loading reports:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos consolidados",
+        description: "No se pudieron cargar los reportes o datos",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleConsolidation = async () => {
-    setIsConsolidating(true);
-    try {
-      if (!selectedTemplate) {
-        toast({
-          title: "Error",
-          description: "Selecciona una plantilla para consolidar",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const result = await consolidateSniesReports(selectedTemplate);
-      if (result.error) {
-        throw result.error;
-      }
-
-      toast({
-        title: "Éxito",
-        description: "Informes consolidados exitosamente",
-      });
-      
-      await loadConsolidatedReports();
-    } catch (error) {
-      console.error('Error consolidating reports:', error);
+  const handleConsolidate = async () => {
+    if (!selectedTemplate || !selectedPeriod) {
       toast({
         title: "Error",
-        description: "Error al consolidar los informes",
-        variant: "destructive",
-      });
-    } finally {
-      setIsConsolidating(false);
-    }
-  };
-
-  const exportToExcel = async () => {
-    if (!selectedTemplate || reportData.length === 0) {
-      toast({
-        title: "Error",
-        description: "Selecciona una plantilla y consolida los datos primero",
+        description: "Por favor selecciona una plantilla y un período",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      setIsExporting(true);
-      
-      // Obtener los campos de la plantilla para los headers
-      const fieldsResult = await fetchSniesTemplateFields(selectedTemplate);
-      const templateFields = fieldsResult.data || [];
-      
-      // Crear headers
-      const headers = [
-        'ID Reporte',
-        'Título Reporte',
-        'Fecha Creación',
-        ...templateFields.map(field => field.field_label)
-      ];
-      
-      // Preparar los datos
-      const exportData = reportData.map(row => {
-        const rowData = [
-          row.report_id,
-          row.report_title,
-          new Date(row.created_at).toLocaleDateString('es-ES')
-        ];
-        
-        templateFields.forEach(field => {
-          rowData.push(row[field.field_name] || '');
-        });
-        
-        return rowData;
-      });
-      
-      // Crear el workbook
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
-      
-      // Configurar el ancho de las columnas
-      const colWidths = headers.map(() => ({ width: 20 }));
-      ws['!cols'] = colWidths;
-      
-      XLSX.utils.book_append_sheet(wb, ws, 'Datos Consolidados');
-      
-      // Obtener el nombre de la plantilla para el archivo
-      const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
-      const fileName = `SNIES_${selectedTemplateData?.name || 'Consolidado'}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      
-      XLSX.writeFile(wb, fileName);
-      
+      setLoading(true);
+      const { error } = await consolidateSniesReports(selectedTemplate, selectedPeriod);
+      if (error) throw error;
+
       toast({
         title: "Éxito",
-        description: "Archivo Excel exportado correctamente",
+        description: "Consolidación completada correctamente",
       });
+
+      loadReports();
     } catch (error) {
-      console.error('Error exporting to Excel:', error);
+      console.error("Error consolidating reports:", error);
       toast({
         title: "Error",
-        description: "Error al exportar a Excel",
+        description: "No se pudo consolidar los reportes",
         variant: "destructive",
       });
     } finally {
-      setIsExporting(false);
+      setLoading(false);
     }
   };
 
-  const exportToCSV = async () => {
-    if (!selectedTemplate || reportData.length === 0) {
-      toast({
-        title: "Error",
-        description: "Selecciona una plantilla y consolida los datos primero",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsExporting(true);
-      
-      // Obtener los campos de la plantilla para los headers
-      const fieldsResult = await fetchSniesTemplateFields(selectedTemplate);
-      const templateFields = fieldsResult.data || [];
-      
-      // Crear headers
-      const headers = [
-        'ID Reporte',
-        'Título Reporte', 
-        'Fecha Creación',
-        ...templateFields.map(field => field.field_label)
-      ];
-      
-      // Preparar los datos
-      const csvRows = [headers];
-      
-      reportData.forEach(row => {
-        const rowData = [
-          row.report_id,
-          `"${row.report_title}"`, // Escapar comillas para CSV
-          new Date(row.created_at).toLocaleDateString('es-ES')
-        ];
-        
-        templateFields.forEach(field => {
-          const value = row[field.field_name] || '';
-          // Escapar comillas y comas en CSV
-          rowData.push(`"${String(value).replace(/"/g, '""')}"`);
-        });
-        
-        csvRows.push(rowData);
-      });
-      
-      // Convertir a CSV
-      const csvContent = csvRows.map(row => row.join(',')).join('\n');
-      
-      // Crear y descargar el archivo
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
-      const fileName = `SNIES_${selectedTemplateData?.name || 'Consolidado'}_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', fileName);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        title: "Éxito",
-        description: "Archivo CSV exportado correctamente",
-      });
-    } catch (error) {
-      console.error('Error exporting to CSV:', error);
-      toast({
-        title: "Error",
-        description: "Error al exportar a CSV",
-        variant: "destructive",
-      });
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleTemplateChange = (templateId: string) => {
-    setSelectedTemplate(templateId);
-    loadConsolidatedData(templateId);
-  };
+  if (loading) {
+    return <div className="flex justify-center p-8">Cargando consolidado SNIES...</div>;
+  }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Consolidación de Informes SNIES</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <Select onValueChange={handleTemplateChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Seleccionar Plantilla" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Button onClick={handleConsolidation} disabled={isConsolidating}>
-              {isConsolidating ? "Consolidando..." : "Consolidar Informes"}
-            </Button>
-            
-            {reportData.length > 0 && (
-              <div className="flex gap-2">
-                <Button 
-                  onClick={exportToExcel} 
-                  disabled={isExporting}
-                  variant="outline"
-                  size="sm"
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  {isExporting ? "Exportando..." : "Exportar Excel"}
-                </Button>
-                
-                <Button 
-                  onClick={exportToCSV} 
-                  disabled={isExporting}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  {isExporting ? "Exportando..." : "Exportar CSV"}
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <FileSpreadsheet className="h-6 w-6" />
+          Consolidados SNIES
+        </h1>
+        <div className="flex gap-2">
+          <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Selecciona una plantilla" />
+            </SelectTrigger>
+            <SelectContent>
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Selecciona un período" />
+            </SelectTrigger>
+            <SelectContent>
+              {periods.map((period) => (
+                <SelectItem key={period.id} value={period.id}>
+                  {period.name} ({new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button onClick={handleConsolidate} disabled={!selectedTemplate || !selectedPeriod}>
+            <TrendingUp className="w-4 h-4 mr-1" />
+            Consolidar
+          </Button>
+        </div>
+      </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            Datos Consolidados
-            {reportData.length > 0 && (
-              <span className="text-sm font-normal text-gray-500 ml-2">
-                ({reportData.length} registros)
-              </span>
-            )}
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Reportes Consolidados
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p>Cargando datos consolidados...</p>
-          ) : reportData.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="mx-auto h-6 w-6 text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">
-                {selectedTemplate 
-                  ? "No hay datos consolidados para esta plantilla."
-                  : "Selecciona una plantilla para ver los datos consolidados."
-                }
-              </p>
+          {reports.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No hay reportes consolidados para la plantilla y período seleccionados.
             </div>
           ) : (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="overflow-auto max-h-[60vh]" style={{ maxWidth: '100%' }}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Reporte</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Registros</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID Reporte</TableHead>
+                  {templateFields.map((field) => (
+                    <TableHead key={field.id}>{field.field_name}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reports.map((report) => {
+                  const dataForReport = reportData.filter(d => d.report_id === report.id);
+                  return (
+                    <TableRow key={report.id}>
+                      <TableCell>{report.id}</TableCell>
+                      {templateFields.map((field) => {
+                        const fieldData = dataForReport.find(d => d.field_id === field.id);
+                        return (
+                          <TableCell key={field.id}>
+                            {fieldData ? fieldData.value : "-"}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {consolidatedReports.map((report) => (
-                      <TableRow key={report.id}>
-                        <TableCell>{report.title}</TableCell>
-                        <TableCell>
-                          {new Date(report.created_at).toLocaleDateString('es-ES')}
-                        </TableCell>
-                        <TableCell>
-                          {reportData.filter(data => data.report_id === report.id).length}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
