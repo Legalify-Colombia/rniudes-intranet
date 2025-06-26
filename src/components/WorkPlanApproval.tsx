@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useWorkPlans } from "@/hooks/useWorkPlans";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,8 @@ import { WorkPlanPreview } from "./WorkPlanPreview";
 import { useAuth } from "@/hooks/useAuth";
 
 export function WorkPlanApproval() {
-  const { fetchPendingWorkPlans, approveWorkPlan } = useSupabaseData();
+  const { fetchCustomPlans } = useSupabaseData();
+  const { approveWorkPlan } = useWorkPlans();
   const { profile } = useAuth();
   const [workPlans, setWorkPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,15 +25,12 @@ export function WorkPlanApproval() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Verificar que el usuario tenga permisos de coordinador o administrador
     if (!profile) {
-      console.log('No hay perfil de usuario');
       setLoading(false);
       return;
     }
 
     if (!['Coordinador', 'Administrador'].includes(profile.role)) {
-      console.log('Usuario sin permisos para aprobar planes:', profile.role);
       setLoading(false);
       return;
     }
@@ -41,16 +40,23 @@ export function WorkPlanApproval() {
 
   const loadPendingWorkPlans = async () => {
     try {
-      console.log('Cargando planes pendientes...');
-      const { data, error } = await fetchPendingWorkPlans();
+      console.log('Cargando planes pendientes para aprobación...');
+      const { data, error } = await fetchCustomPlans();
       
       if (error) {
-        console.error('Error al cargar planes pendientes:', error);
+        console.error('Error al cargar planes:', error);
         throw error;
       }
       
-      console.log('Planes pendientes cargados:', data);
-      setWorkPlans(data || []);
+      console.log('Todos los planes cargados:', data);
+      
+      // Filtrar solo los planes que están enviados (submitted) y pendientes de aprobación
+      const pendingPlans = (data || []).filter(plan => 
+        plan.status === 'submitted'
+      );
+      
+      console.log('Planes pendientes de aprobación:', pendingPlans);
+      setWorkPlans(pendingPlans);
     } catch (error) {
       console.error('Error loading pending work plans:', error);
       toast({
@@ -63,7 +69,7 @@ export function WorkPlanApproval() {
     }
   };
 
-  const handleApproval = async (workPlanId: string, status: 'approved' | 'rejected') => {
+  const handleApproval = async (workPlanId: string, newStatus: 'approved' | 'rejected') => {
     if (!profile) {
       toast({
         title: "Error",
@@ -77,13 +83,16 @@ export function WorkPlanApproval() {
     try {
       console.log('Iniciando aprobación:', { 
         workPlanId, 
-        status, 
+        newStatus, 
         comments: comments[workPlanId],
-        userProfile: profile.id,
-        userRole: profile.role
+        approvedBy: profile.id
       });
       
-      const { data, error } = await approveWorkPlan(workPlanId, status, comments[workPlanId]);
+      const { data, error } = await approveWorkPlan(
+        workPlanId, 
+        profile.id, 
+        comments[workPlanId]
+      );
       
       if (error) {
         console.error('Error en aprobación:', error);
@@ -94,7 +103,7 @@ export function WorkPlanApproval() {
 
       toast({
         title: "Éxito",
-        description: `Plan de trabajo ${status === 'approved' ? 'aprobado' : 'rechazado'} correctamente`,
+        description: `Plan de trabajo ${newStatus === 'approved' ? 'aprobado' : 'rechazado'} correctamente`,
       });
 
       // Recargar la lista
@@ -110,7 +119,7 @@ export function WorkPlanApproval() {
       console.error('Error approving work plan:', error);
       toast({
         title: "Error",
-        description: `No se pudo ${status === 'approved' ? 'aprobar' : 'rechazar'} el plan de trabajo. Verifique los permisos.`,
+        description: `No se pudo ${newStatus === 'approved' ? 'aprobar' : 'rechazar'} el plan de trabajo`,
         variant: "destructive",
       });
     } finally {
@@ -171,7 +180,7 @@ export function WorkPlanApproval() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">
-                  Plan de Trabajo - {plan.manager_name}
+                  Plan de Trabajo - {plan.title}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Dialog open={previewOpen === plan.id} onOpenChange={(open) => setPreviewOpen(open ? plan.id : null)}>
@@ -190,31 +199,17 @@ export function WorkPlanApproval() {
                   </Dialog>
                   <Badge variant="secondary">
                     <Clock className="h-3 w-3 mr-1" />
-                    {plan.status === 'pending' ? 'Pendiente' : plan.status === 'submitted' ? 'Enviado' : 'Pendiente'}
+                    Enviado
                   </Badge>
                 </div>
               </div>
               <div className="text-sm text-gray-600">
-                <p><strong>Gestor:</strong> {plan.manager_name}</p>
-                <p><strong>Email:</strong> {plan.manager_email}</p>
-                <p><strong>Cargo:</strong> {plan.manager_position}</p>
-                <p><strong>Programa:</strong> {plan.program_name}</p>
-                <p><strong>Campus:</strong> {plan.campus_name}</p>
-                <p><strong>Facultad:</strong> {plan.faculty_name}</p>
-                <p><strong>Fecha de envío:</strong> {plan.submitted_date ? new Date(plan.submitted_date).toLocaleDateString() : 'No disponible'}</p>
+                <p><strong>Título:</strong> {plan.title}</p>
+                <p><strong>Fecha de envío:</strong> {plan.submitted_date ? new Date(plan.submitted_date).toLocaleDateString('es-ES') : 'No disponible'}</p>
+                <p><strong>Estado actual:</strong> {plan.status}</p>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Objetivos:</h4>
-                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{plan.objectives || 'No se han definido objetivos'}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Horas totales asignadas:</h4>
-                <p className="text-sm">{plan.total_hours_assigned} horas</p>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Comentarios de aprobación:

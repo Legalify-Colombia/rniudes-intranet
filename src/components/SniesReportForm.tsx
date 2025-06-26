@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 interface SniesReportFormProps {
   report: any;
@@ -177,13 +176,11 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
 
   const SearchableSelect = ({ field, rowIndex, value }: { field: any, rowIndex: number, value: string }) => {
     const [open, setOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchValue, setSearchValue] = useState("");
     
-    // Get relation data with safe initialization
-    const relationTableData = relationData[field.relation_table];
+    const relationTableData = relationData[field.relation_table] || [];
     
-    // Early return if data is not ready
-    if (!relationTableData) {
+    if (!Array.isArray(relationTableData)) {
       return (
         <Button
           variant="outline"
@@ -196,14 +193,7 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
       );
     }
     
-    // Ensure we have a valid array
-    let options: any[] = [];
-    if (Array.isArray(relationTableData)) {
-      options = relationTableData;
-    } else {
-      console.warn(`Expected array for ${field.relation_table}, got:`, relationTableData);
-      options = [];
-    }
+    let options = [...relationTableData];
     
     // Filter municipalities only for Colombia
     if (field.relation_table === 'snies_municipalities') {
@@ -215,21 +205,19 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
       }
     }
 
-    // Filter options based on search with validation
+    // Filter options based on search
     const filteredOptions = options.filter((option: any) => {
-      if (!option || typeof option !== 'object' || !option.id || !option.name) {
-        return false;
-      }
+      if (!option || !option.id || !option.name) return false;
       
-      const id = String(option.id || '').toLowerCase();
-      const name = String(option.name || '').toLowerCase();
-      const search = String(searchTerm || '').toLowerCase();
+      const searchTerm = searchValue.toLowerCase();
+      const id = String(option.id).toLowerCase();
+      const name = String(option.name).toLowerCase();
       
-      return id.includes(search) || name.includes(search);
+      return id.includes(searchTerm) || name.includes(searchTerm);
     });
     
     const selectedOption = options.find((option: any) => 
-      option && option.id && String(option.id) === String(value)
+      option && String(option.id) === String(value)
     );
 
     return (
@@ -250,39 +238,32 @@ export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0">
-          <Command shouldFilter={false}>
+          <Command>
             <CommandInput 
-              placeholder={`Buscar por código o nombre...`} 
-              value={searchTerm}
-              onValueChange={setSearchTerm}
+              placeholder="Buscar por código o nombre..." 
+              value={searchValue}
+              onValueChange={setSearchValue}
             />
-            <CommandEmpty>No se encontraron resultados.</CommandEmpty>
-            <CommandGroup className="max-h-48 overflow-auto">
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((option: any, index: number) => (
+            <CommandList>
+              <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+              <CommandGroup className="max-h-48 overflow-auto">
+                {filteredOptions.map((option: any) => (
                   <CommandItem
-                    key={`${option.id}-${field.relation_table}-${index}`}
-                    value={String(option.id)}
+                    key={`${option.id}-${field.relation_table}`}
+                    value={`${option.id}-${option.name}`}
                     onSelect={() => {
                       updateCell(rowIndex, field.field_name, String(option.id));
                       setOpen(false);
-                      setSearchTerm("");
+                      setSearchValue("");
                     }}
-                    className="text-xs"
+                    className="text-xs cursor-pointer"
                   >
-                    <span className="font-mono mr-2">{option.id}</span>
+                    <span className="font-mono mr-2 text-blue-600">{option.id}</span>
                     <span>{option.name}</span>
                   </CommandItem>
-                ))
-              ) : (
-                <div className="py-6 text-center text-sm">
-                  {field.relation_table === 'snies_municipalities' && options.length === 0
-                    ? "Seleccione Colombia primero"
-                    : "No se encontraron resultados"
-                  }
-                </div>
-              )}
-            </CommandGroup>
+                ))}
+              </CommandGroup>
+            </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
