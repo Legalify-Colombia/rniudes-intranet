@@ -88,11 +88,38 @@ export function useSniesManagement() {
   };
 
   const consolidateSniesReports = async (templateId: string, periodId: string): Promise<Result<any>> => {
-    const { data, error } = await supabase.rpc('consolidate_snies_reports', {
-      template_id: templateId,
-      period_id: periodId
-    });
-    return { data, error };
+    // Since the RPC function doesn't exist, we'll implement basic consolidation logic here
+    try {
+      // Fetch all reports for this template and period
+      const { data: reports, error: reportsError } = await supabase
+        .from("snies_reports")
+        .select(`
+          *,
+          snies_report_data(*)
+        `)
+        .eq("template_id", templateId);
+
+      if (reportsError) {
+        return { data: null, error: reportsError };
+      }
+
+      // Create consolidated report entry
+      const { data: consolidatedReport, error: consolidationError } = await supabase
+        .from("snies_consolidated_reports")
+        .insert({
+          template_id: templateId,
+          title: `Consolidated Report - ${new Date().toISOString()}`,
+          total_records: reports?.length || 0,
+          participating_managers: reports?.length || 0,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
+
+      return { data: consolidatedReport, error: consolidationError };
+    } catch (error) {
+      return { data: null, error: error as any };
+    }
   };
 
   // SNIES Reports

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
+import { useCustomPlans } from "@/hooks/useCustomPlans";
 
 interface WorkPlanFormProps {
   manager: any;
@@ -20,13 +21,14 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const { 
     fetchStrategicAxes, 
     fetchActions, 
-    fetchProducts, 
-    fetchCustomPlans,
-    fetchWorkPlanAssignments,
+    fetchProducts
+  } = useSupabaseData();
+  const {
+    fetchCustomPlansByManager,
     createCustomPlan,
     updateCustomPlan,
-    upsertWorkPlanAssignment 
-  } = useSupabaseData();
+    upsertCustomPlanAssignment
+  } = useCustomPlans();
   const { toast } = useToast();
 
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
@@ -73,7 +75,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       setProducts(validProducts);
 
       // Buscar plan de trabajo existente usando custom_plans
-      const { data: customPlansData } = await fetchCustomPlans();
+      const { data: customPlansData } = await fetchCustomPlansByManager(manager.id);
       const existingPlan = customPlansData?.find(
         (plan: any) => plan.manager_id === manager.id
       );
@@ -84,7 +86,10 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         setObjectives(planObjectives);
         
         // Cargar asignaciones usando custom_plan_assignments
-        const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
+        const { data: assignmentsData } = await supabase
+          .from("custom_plan_assignments")
+          .select("*")
+          .eq("custom_plan_id", existingPlan.id);
         console.log('Loaded assignments:', assignmentsData);
         setAssignments(assignmentsData || []);
         
@@ -151,7 +156,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       assigned_hours: hours
     };
 
-    const { error } = await upsertWorkPlanAssignment(assignment);
+    const { error } = await upsertCustomPlanAssignment(assignment);
     if (error) {
       console.error('Error updating assignment:', error);
       toast({ title: "Error", description: "No se pudo actualizar la asignación", variant: "destructive" });

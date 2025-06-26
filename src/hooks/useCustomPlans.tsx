@@ -92,6 +92,17 @@ export function useCustomPlans() {
     return { data, error };
   };
 
+  const fetchCustomPlanAssignments = async (planId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments")
+      .select("*")
+      .eq("custom_plan_id", planId);
+    return { data, error };
+  };
+
+  // Alias for compatibility with WorkPlanForm
+  const upsertWorkPlanAssignment = upsertCustomPlanAssignment;
+
   return {
     fetchCustomPlanDetails,
     fetchPlanFields,
@@ -101,6 +112,8 @@ export function useCustomPlans() {
     createCustomPlan,
     fetchCustomPlansByManager,
     upsertCustomPlanAssignment,
-    deleteCustomPlanAssignment
+    deleteCustomPlanAssignment,
+    fetchCustomPlanAssignments,
+    upsertWorkPlanAssignment
   };
 }

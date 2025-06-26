@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useCustomPlans } from "@/hooks/useCustomPlans";
 import { usePlanTypes } from "@/hooks/usePlanTypes";
+import { useReportSystem } from "@/hooks/useReportSystem";
 import { ArrowLeft, Save, Send, Plus, Edit, Trash2, FileText, Users, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -36,10 +37,10 @@ export function MyReport() {
   } = useCustomPlans();
   const { fetchPlanTypes } = usePlanTypes();
   const {
-    fetchWorkPlansByManager,
-    fetchTemplateBasedReportsByManager,
-    fetchIndicatorReportsByManager
-  } = useSupabaseData();
+    fetchWorkPlanDetails,
+    fetchTemplateBasedReportDetails,
+    fetchIndicatorReport
+  } = useReportSystem();
 
   const [reports, setReports] = useState<UnifiedReport[]>([]);
   const [planTypes, setPlanTypes] = useState<any[]>([]);
@@ -58,14 +59,11 @@ export function MyReport() {
 
     setIsLoading(true);
     try {
-      const [workPlansResult, templateReportsResult, indicatorReportsResult, customPlansResult] = await Promise.all([
-        fetchWorkPlansByManager(profile.id),
-        fetchTemplateBasedReportsByManager(profile.id),
-        fetchIndicatorReportsByManager(profile.id),
-        fetchCustomPlansByManager(profile.id)
-      ]);
-
-      const workPlans = workPlansResult.data ? workPlansResult.data.map((wp: any) => ({
+      // Fetch work plans (using custom_plans table)
+      const { data: customPlansData } = await fetchCustomPlansByManager(profile.id);
+      const workPlans = customPlansData ? customPlansData.filter((cp: any) => 
+        cp.plan_type_id === 'work_plan' || !cp.plan_type_id
+      ).map((wp: any) => ({
         id: wp.id,
         title: wp.title || 'Plan de Trabajo',
         type: 'work_plan',
@@ -73,7 +71,14 @@ export function MyReport() {
         created_at: wp.created_at
       })) : [];
 
-      const templateReports = templateReportsResult.data ? templateReportsResult.data.map((tr: any) => ({
+      // Fetch template-based reports
+      const { data: templateReportsData } = await supabase
+        .from("template_based_reports")
+        .select("*")
+        .eq("manager_id", profile.id)
+        .order("created_at", { ascending: false });
+
+      const templateReports = templateReportsData ? templateReportsData.map((tr: any) => ({
         id: tr.id,
         title: tr.title || 'Informe por Plantilla',
         type: 'template',
@@ -81,7 +86,14 @@ export function MyReport() {
         created_at: tr.created_at
       })) : [];
 
-      const indicatorReports = indicatorReportsResult.data ? indicatorReportsResult.data.map((ir: any) => ({
+      // Fetch indicator reports
+      const { data: indicatorReportsData } = await supabase
+        .from("indicator_reports")
+        .select("*")
+        .eq("manager_id", profile.id)
+        .order("created_at", { ascending: false });
+
+      const indicatorReports = indicatorReportsData ? indicatorReportsData.map((ir: any) => ({
         id: ir.id,
         title: ir.title || 'Informe de Indicadores',
         type: 'indicators',
@@ -89,7 +101,10 @@ export function MyReport() {
         created_at: ir.created_at
       })) : [];
 
-      const customPlans = customPlansResult.data ? customPlansResult.data.map((cp: any) => ({
+      // Fetch custom plans
+      const customPlans = customPlansData ? customPlansData.filter((cp: any) => 
+        cp.plan_type_id !== 'work_plan' && cp.plan_type_id
+      ).map((cp: any) => ({
         id: cp.id,
         title: cp.title || 'Plan Personalizado',
         type: 'custom_plan',
