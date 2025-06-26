@@ -1,166 +1,253 @@
-
-import { useStrategicAxes } from "./useStrategicAxes";
-import { useActions } from "./useActions";
-import { useProducts } from "./useProducts";
-import { useCampus } from "./useCampus";
-import { useFaculties } from "./useFaculties";
-import { useManagers } from "./useManagers";
-import { useReports } from "./useReports";
-import { useWorkPlans } from "./useWorkPlans";
-import { useWorkPlanAssignments } from "./useWorkPlanAssignments";
-import { useAcademicPrograms } from "./useAcademicPrograms";
-import { usePlanTypes } from "./usePlanTypes";
-import { useCustomPlans } from "./useCustomPlans";
-import { useIndicators } from "./useIndicators";
-import { useDocumentTemplates } from "./useDocumentTemplates";
-import { useTemplateReports } from "./useTemplateReports";
-import { useReportPeriods } from "./useReportPeriods";
-import { useUsers } from "./useUsers";
-import { useFileUpload } from "./useFileUpload";
-import { useSnies } from "./useSnies";
-import type { StrategicAxis, Action, Product, Result } from "@/types/supabase";
-
-// Re-export types that components need
-export type { StrategicAxis, Action, Product };
-
-export interface DocumentTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_content: string;
-  template_type: string;
-  file_name?: string;
-  file_url?: string;
-  is_active: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  strategic_axes_ids?: string[];
-  actions_ids?: string[];
-  products_ids?: string[];
-  sharepoint_base_url?: string;
-  max_versions?: number;
-}
-
-export interface ReportTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_content: string;
-  is_active: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  strategic_axes_ids?: string[];
-  actions_ids?: string[];
-  products_ids?: string[];
-  sharepoint_base_url?: string;
-  max_versions?: number;
-}
-
-export interface ManagerReportVersion {
-  id: string;
-  manager_report_id: string;
-  template_id: string;
-  version_number: number;
-  content: any;
-  created_at: string;
-  progress_percentage?: number;
-  sharepoint_folder_url?: string;
-  evidence_links?: string[];
-  observations?: string;
-  submitted_at?: string;
-}
-
-export interface SniesReportTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_structure: any;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { supabase } from "@/integrations/supabase/client";
+import type { Result } from "@/types/supabase";
 
 export function useSupabaseData() {
-  // Import all the specialized hooks
-  const strategicAxes = useStrategicAxes();
-  const actions = useActions();
-  const products = useProducts();
-  const campus = useCampus();
-  const faculties = useFaculties();
-  const managers = useManagers();
-  const reports = useReports();
-  const workPlans = useWorkPlans();
-  const workPlanAssignments = useWorkPlanAssignments();
-  const academicPrograms = useAcademicPrograms();
-  const planTypes = usePlanTypes();
-  const customPlans = useCustomPlans();
-  const indicators = useIndicators();
-  const documentTemplates = useDocumentTemplates();
-  const templateReports = useTemplateReports();
-  const reportPeriods = useReportPeriods();
-  const users = useUsers();
-  const fileUpload = useFileUpload();
-  const snies = useSnies();
+  const fetchStrategicAxes = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("strategic_axes")
+      .select("*")
+      .order("created_at");
+    return { data, error };
+  };
 
-  // Return all functions from specialized hooks
+  const fetchActions = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("actions")
+      .select("*")
+      .order("created_at");
+    return { data, error };
+  };
+
+  const fetchProducts = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at");
+    return { data, error };
+  };
+
+  const fetchCustomPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        plan_type:plan_type_id(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const fetchManagerReports = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .select(`
+        *,
+        manager:profiles!manager_reports_manager_id_fkey(*),
+        report_period:report_periods(*),
+        work_plan:custom_plans!manager_reports_work_plan_id_fkey(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const fetchManagers = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("role", "Gestor")
+      .order("full_name");
+    return { data, error };
+  };
+
+  const fetchAcademicPrograms = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("academic_programs")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchCampus = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("campus")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const createCustomPlan = async (plan: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .insert(plan)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateCustomPlan = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const createManagerReport = async (report: any): Promise<Result<any>> => {
+    // First, check if the work plan exists in custom_plans table
+    const { data: workPlan, error: workPlanError } = await supabase
+      .from("custom_plans")
+      .select("id")
+      .eq("id", report.work_plan_id)
+      .single();
+
+    if (workPlanError || !workPlan) {
+      console.error('Work plan not found:', workPlanError);
+      return { 
+        data: null, 
+        error: { 
+          message: 'Plan de trabajo no encontrado. Debe crear un plan antes de crear el informe.' 
+        } 
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .insert(report)
+      .select(`
+        *,
+        manager:profiles!manager_reports_manager_id_fkey(*),
+        work_plan:custom_plans!manager_reports_work_plan_id_fkey(*)
+      `)
+      .single();
+    return { data, error };
+  };
+
+  const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments")
+      .select(`
+        *,
+        strategic_axis:strategic_axes(*),
+        action:actions(*),
+        product:products(*)
+      `)
+      .eq("custom_plan_id", workPlanId)
+      .order("created_at");
+    return { data, error };
+  };
+
+  const upsertWorkPlanAssignment = async (assignment: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments")
+      .upsert(assignment)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchSniesReports = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_reports")
+      .select(`
+        *,
+        template:snies_report_templates(*),
+        manager:profiles(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const fetchSniesReportTemplates = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_report_templates")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const createSniesReport = async (report: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("snies_reports")
+      .insert(report)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateSniesReport = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("snies_reports")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchSniesReportData = async (reportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_report_data")
+      .select("*")
+      .eq("report_id", reportId)
+      .order("row_index");
+    return { data, error };
+  };
+
+  const upsertSniesReportData = async (reportData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("snies_report_data")
+      .upsert(reportData)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchSniesTemplateFields = async (templateId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("snies_template_fields")
+      .select("*")
+      .eq("template_id", templateId)
+      .order("field_order");
+    return { data, error };
+  };
+
+  const fetchProductProgressReports = async (reportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .select(`
+        *,
+        product:products(*),
+        work_plan_assignment:work_plan_assignments(*)
+      `)
+      .eq("manager_report_id", reportId)
+      .order("created_at");
+    return { data, error };
+  };
+
   return {
-    // Strategic Axes
-    ...strategicAxes,
-    
-    // Actions
-    ...actions,
-    
-    // Products
-    ...products,
-    
-    // Campus
-    ...campus,
-    
-    // Faculties
-    ...faculties,
-    
-    // Managers
-    ...managers,
-    
-    // Reports
-    ...reports,
-    
-    // Work Plans
-    ...workPlans,
-    
-    // Work Plan Assignments
-    ...workPlanAssignments,
-    
-    // Academic Programs
-    ...academicPrograms,
-    
-    // Plan Types
-    ...planTypes,
-    
-    // Custom Plans
-    ...customPlans,
-    
-    // Indicators
-    ...indicators,
-    
-    // Document Templates
-    ...documentTemplates,
-    
-    // Template Reports
-    ...templateReports,
-    
-    // Report Periods
-    ...reportPeriods,
-    
-    // Users
-    ...users,
-    
-    // File Upload
-    ...fileUpload,
-    
-    // SNIES
-    ...snies,
+    fetchStrategicAxes,
+    fetchActions,
+    fetchProducts,
+    fetchCustomPlans,
+    fetchManagerReports,
+    fetchManagers,
+    fetchAcademicPrograms,
+    fetchCampus,
+    createCustomPlan,
+    updateCustomPlan,
+    createManagerReport,
+    fetchWorkPlanAssignments,
+    upsertWorkPlanAssignment,
+    fetchSniesReports,
+    fetchSniesReportTemplates,
+    createSniesReport,
+    updateSniesReport,
+    fetchSniesReportData,
+    upsertSniesReportData,
+    fetchSniesTemplateFields,
+    fetchProductProgressReports
   };
 }

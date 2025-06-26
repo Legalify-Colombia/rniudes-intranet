@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +72,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       );
       setProducts(validProducts);
 
-      // Buscar plan de trabajo existente (custom plans)
+      // Buscar plan de trabajo existente usando custom_plans
       const { data: customPlansData } = await fetchCustomPlans();
       const existingPlan = customPlansData?.find(
         (plan: any) => plan.manager_id === manager.id
@@ -83,15 +82,22 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         setWorkPlan(existingPlan);
         const planObjectives = existingPlan.title || existingPlan.description || '';
         setObjectives(planObjectives);
-        // Cargar asignaciones existentes
+        
+        // Cargar asignaciones usando custom_plan_assignments
         const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
+        console.log('Loaded assignments:', assignmentsData);
         setAssignments(assignmentsData || []);
         
-        // Inicializar valores de input
+        // Inicializar valores de input con las horas asignadas
         const initialValues: {[key: string]: number} = {};
-        assignmentsData?.forEach((assignment: any) => {
-          initialValues[assignment.product_id] = assignment.assigned_hours;
-        });
+        if (assignmentsData && assignmentsData.length > 0) {
+          assignmentsData.forEach((assignment: any) => {
+            if (assignment.product_id && assignment.assigned_hours) {
+              initialValues[assignment.product_id] = assignment.assigned_hours;
+            }
+          });
+        }
+        console.log('Initial input values:', initialValues);
         setInputValues(initialValues);
       }
     } catch (error) {
@@ -138,14 +144,16 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       setWorkPlan(createdPlan);
     }
 
+    // Use custom_plan_id instead of work_plan_id for custom_plan_assignments
     const assignment = {
-      work_plan_id: currentWorkPlan.id,
+      custom_plan_id: currentWorkPlan.id,
       product_id: productId,
       assigned_hours: hours
     };
 
     const { error } = await upsertWorkPlanAssignment(assignment);
     if (error) {
+      console.error('Error updating assignment:', error);
       toast({ title: "Error", description: "No se pudo actualizar la asignación", variant: "destructive" });
       return;
     }
@@ -160,10 +168,11 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
             : a
         );
       } else {
-        return [...prev, { ...assignment, id: Date.now().toString() }];
+        return [...prev, { ...assignment, id: Date.now().toString(), product_id: productId, assigned_hours: hours }];
       }
     });
 
+    // Calculate total hours from current assignments
     const updatedAssignments = assignments.map(a => 
       a.product_id === productId ? { ...a, assigned_hours: hours } : a
     );
@@ -171,28 +180,35 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       updatedAssignments.push({ product_id: productId, assigned_hours: hours });
     }
 
-    const totalHours = updatedAssignments.reduce((sum, a) => sum + a.assigned_hours, 0);
+    const totalHours = Object.values(inputValues).reduce((sum, hours) => sum + hours, 0);
+    console.log('Total hours calculated:', totalHours);
 
     if (currentWorkPlan) {
-      await updateCustomPlan(currentWorkPlan.id, { title: objectives });
+      await updateCustomPlan(currentWorkPlan.id, { 
+        title: objectives,
+        total_hours_assigned: totalHours 
+      });
       setWorkPlan(prev => ({ ...prev, total_hours_assigned: totalHours }));
     }
   };
 
   const getAssignedHours = (productId: string) => {
-    return inputValues[productId] || 0;
+    const hours = inputValues[productId] || 0;
+    console.log(`Getting assigned hours for product ${productId}:`, hours);
+    return hours;
   };
 
   const getTotalAssignedHours = () => {
-    return Object.values(inputValues).reduce((sum, hours) => sum + hours, 0);
+    const total = Object.values(inputValues).reduce((sum, hours) => sum + hours, 0);
+    console.log('Total assigned hours:', total);
+    return total;
   };
 
   const getAvailableHours = () => {
-    // CORREGIDO: Usar total_hours en lugar de weekly_hours
     const totalHours = manager.total_hours || 0;
-    console.log("Manager total_hours:", totalHours);
-    console.log("Total assigned hours:", getTotalAssignedHours());
-    return totalHours - getTotalAssignedHours();
+    const assignedHours = getTotalAssignedHours();
+    console.log("Manager total_hours:", totalHours, "Assigned:", assignedHours);
+    return totalHours - assignedHours;
   };
 
   const submitForApproval = async () => {
