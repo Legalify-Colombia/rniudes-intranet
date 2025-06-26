@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useUnifiedReports } from "@/hooks/useUnifiedReports";
+import { useIndicators } from "@/hooks/useIndicators";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { EditableReportForm } from "./EditableReportForm";
@@ -21,16 +22,22 @@ export function MyReport() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const {
-    fetchManagerReportsByManager,
     fetchWorkPlans,
     createManagerReport,
-    fetchUnifiedReports,
-    deleteTemplateBasedReport,
-    deleteIndicatorReport,
-    checkPeriodActive,
-    submitIndicatorReport,
-    submitTemplateBasedReport,
   } = useSupabaseData();
+
+  const {
+    fetchUnifiedReports,
+    fetchManagerReportsByManager,
+    deleteTemplateBasedReport,
+    checkPeriodActive,
+    submitTemplateBasedReport,
+  } = useUnifiedReports();
+
+  const {
+    deleteIndicatorReport,
+    submitIndicatorReport,
+  } = useIndicators();
 
   const [unifiedReports, setUnifiedReports] = useState<UnifiedReport[]>([]);
   const [workPlans, setWorkPlans] = useState<any[]>([]);

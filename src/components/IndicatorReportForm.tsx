@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useIndicators } from "@/hooks/useIndicators";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Save, Send, FileText } from "lucide-react";
 import { Indicator, IndicatorReport, IndicatorResponse } from "@/types";
@@ -22,7 +21,12 @@ interface IndicatorReportFormProps {
 export function IndicatorReportForm({ reportId, reportPeriodId, onSave }: IndicatorReportFormProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchIndicators, fetchIndicatorReport, updateIndicatorReport, submitIndicatorReport } = useSupabaseData();
+  const { 
+    fetchIndicators, 
+    fetchIndicatorReport, 
+    updateIndicatorReport, 
+    submitIndicatorReport 
+  } = useIndicators();
 
   const [report, setReport] = useState<IndicatorReport | null>(null);
   const [indicators, setIndicators] = useState<Indicator[]>([]);

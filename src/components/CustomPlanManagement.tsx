@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { usePlanTypes } from "@/hooks/usePlanTypes";
 import { Eye, Edit, Plus, Settings } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CustomPlanForm } from "./CustomPlanForm";
@@ -25,7 +23,7 @@ export function CustomPlanManagement() {
   
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchWorkPlans } = useSupabaseData();
+  const { fetchCustomPlans } = useSupabaseData();
 
   useEffect(() => {
     loadPlans();
@@ -34,7 +32,7 @@ export function CustomPlanManagement() {
   const loadPlans = async () => {
     try {
       setIsLoading(true);
-      const result = await fetchWorkPlans();
+      const result = await fetchCustomPlans();
       if (result.error) {
         console.error("Error loading plans:", result.error);
         toast({
@@ -172,7 +170,7 @@ export function CustomPlanManagement() {
                   <TableRow key={plan.id}>
                     <TableCell className="font-medium">{plan.title}</TableCell>
                     <TableCell>{plan.plan_type?.name || 'No asignado'}</TableCell>
-                    <TableCell>{plan.manager?.full_name || 'No asignado'}</TableCell>
+                    <TableCell>{plan.profiles?.full_name || 'No asignado'}</TableCell>
                     <TableCell>{getStatusBadge(plan.status)}</TableCell>
                     <TableCell>
                       {new Date(plan.created_at).toLocaleDateString()}

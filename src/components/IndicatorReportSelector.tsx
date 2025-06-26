@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useReportPeriods } from "@/hooks/useReportPeriods";
+import { useIndicators } from "@/hooks/useIndicators";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, BarChart3 } from "lucide-react";
 
@@ -15,7 +16,8 @@ interface IndicatorReportSelectorProps {
 export function IndicatorReportSelector({ onReportCreated, existingReports }: IndicatorReportSelectorProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchReportPeriods, createIndicatorReport } = useSupabaseData();
+  const { fetchReportPeriods } = useReportPeriods();
+  const { createIndicatorReport } = useIndicators();
 
   const [periods, setPeriods] = useState<any[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
