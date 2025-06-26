@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,7 +66,7 @@ export function MyReport() {
       ).map((wp: any) => ({
         id: wp.id,
         title: wp.title || 'Plan de Trabajo',
-        type: 'work_plan',
+        type: 'work_plan' as const,
         status: wp.status,
         created_at: wp.created_at
       })) : [];
@@ -82,7 +81,7 @@ export function MyReport() {
       const templateReports = templateReportsData ? templateReportsData.map((tr: any) => ({
         id: tr.id,
         title: tr.title || 'Informe por Plantilla',
-        type: 'template',
+        type: 'template' as const,
         status: tr.status,
         created_at: tr.created_at
       })) : [];
@@ -97,7 +96,7 @@ export function MyReport() {
       const indicatorReports = indicatorReportsData ? indicatorReportsData.map((ir: any) => ({
         id: ir.id,
         title: ir.title || 'Informe de Indicadores',
-        type: 'indicators',
+        type: 'indicators' as const,
         status: ir.status,
         created_at: ir.created_at
       })) : [];
@@ -108,7 +107,7 @@ export function MyReport() {
       ).map((cp: any) => ({
         id: cp.id,
         title: cp.title || 'Plan Personalizado',
-        type: 'custom_plan',
+        type: 'custom_plan' as const,
         status: cp.status,
         created_at: cp.created_at
       })) : [];
