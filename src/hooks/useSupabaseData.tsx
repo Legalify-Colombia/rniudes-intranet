@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 
@@ -76,6 +77,90 @@ export function useSupabaseData() {
     return { data, error };
   };
 
+  const fetchFaculties = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("faculties")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchReportPeriods = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("report_periods")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const fetchIndicators = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("indicators")
+      .select("*")
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchIndicatorReport = async (reportId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("indicator_reports")
+      .select("*")
+      .eq("id", reportId)
+      .single();
+    return { data, error };
+  };
+
+  const fetchWorkPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        plan_type:plan_type_id(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        plan_type:plan_type_id(*)
+      `)
+      .eq("id", planId)
+      .single();
+    return { data, error };
+  };
+
+  const fetchPlanFields = async (planTypeId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("plan_fields")
+      .select("*")
+      .eq("plan_type_id", planTypeId)
+      .order("field_order");
+    return { data, error };
+  };
+
+  const fetchPlanTypes = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("plan_types")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
+    return { data, error };
+  };
+
+  const fetchDocumentTemplates = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
   const createCustomPlan = async (plan: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("custom_plans")
@@ -95,22 +180,141 @@ export function useSupabaseData() {
     return { data, error };
   };
 
-  const createManagerReport = async (report: any): Promise<Result<any>> => {
-    // First, check if the work plan exists in custom_plans table
-    const { data: workPlan, error: workPlanError } = await supabase
-      .from("custom_plans")
-      .select("id")
-      .eq("id", report.work_plan_id)
+  const createAction = async (action: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("actions")
+      .insert(action)
+      .select()
       .single();
+    return { data, error };
+  };
 
-    if (workPlanError || !workPlan) {
-      console.error('Work plan not found:', workPlanError);
-      return { 
-        data: null, 
-        error: { 
-          message: 'Plan de trabajo no encontrado. Debe crear un plan antes de crear el informe.' 
-        } 
-      };
+  const updateAction = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("actions")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteAction = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("actions")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const createDocumentTemplate = async (template: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .insert(template)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateDocumentTemplate = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteDocumentTemplate = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("document_templates")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const submitCustomPlan = async (planId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .update({ 
+        status: 'submitted',
+        submitted_date: new Date().toISOString()
+      })
+      .eq("id", planId)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const upsertCustomPlanResponse = async (response: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_responses")
+      .upsert(response)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const updateManagerReport = async (id: string, updates: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("manager_reports")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const upsertProductProgressReport = async (report: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .upsert(report)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deleteProductProgressReport = async (id: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .delete()
+      .eq("id", id);
+    return { data, error };
+  };
+
+  const uploadFile = async (file: File, bucket: string, fileName: string): Promise<Result<any>> => {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, file);
+    
+    if (error) return { data: null, error };
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(fileName);
+    
+    return { data: { publicUrl }, error: null };
+  };
+
+  const createManagerReport = async (report: any): Promise<Result<any>> => {
+    // Validate work plan exists
+    if (report.work_plan_id) {
+      const { data: workPlan, error: workPlanError } = await supabase
+        .from("custom_plans")
+        .select("id")
+        .eq("id", report.work_plan_id)
+        .single();
+
+      if (workPlanError || !workPlan) {
+        console.error('Work plan validation failed:', workPlanError);
+        return { 
+          data: null, 
+          error: { 
+            message: 'Plan de trabajo no encontrado. Debe crear un plan antes de crear el informe.' 
+          } 
+        };
+      }
     }
 
     const { data, error } = await supabase
@@ -220,7 +424,7 @@ export function useSupabaseData() {
       .select(`
         *,
         product:products(*),
-        work_plan_assignment:work_plan_assignments(*)
+        work_plan_assignment:custom_plan_assignments(*)
       `)
       .eq("manager_report_id", reportId)
       .order("created_at");
@@ -236,8 +440,29 @@ export function useSupabaseData() {
     fetchManagers,
     fetchAcademicPrograms,
     fetchCampus,
+    fetchFaculties,
+    fetchReportPeriods,
+    fetchIndicators,
+    fetchIndicatorReport,
+    fetchWorkPlans,
+    fetchCustomPlanDetails,
+    fetchPlanFields,
+    fetchPlanTypes,
+    fetchDocumentTemplates,
     createCustomPlan,
     updateCustomPlan,
+    createAction,
+    updateAction,
+    deleteAction,
+    createDocumentTemplate,
+    updateDocumentTemplate,
+    deleteDocumentTemplate,
+    submitCustomPlan,
+    upsertCustomPlanResponse,
+    updateManagerReport,
+    upsertProductProgressReport,
+    deleteProductProgressReport,
+    uploadFile,
     createManagerReport,
     fetchWorkPlanAssignments,
     upsertWorkPlanAssignment,
