@@ -10,6 +10,7 @@ import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
 import { useCustomPlans } from "@/hooks/useCustomPlans";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WorkPlanFormProps {
   manager: any;

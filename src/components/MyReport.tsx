@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useCustomPlans } from "@/hooks/useCustomPlans";
 import { usePlanTypes } from "@/hooks/usePlanTypes";
 import { useReportSystem } from "@/hooks/useReportSystem";
+import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Save, Send, Plus, Edit, Trash2, FileText, Users, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
