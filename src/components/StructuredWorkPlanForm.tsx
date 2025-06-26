@@ -1,67 +1,79 @@
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, XCircle, ArrowLeft } from "lucide-react";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Plus, Edit, Trash2, FileText, Eye, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calendar } from "@/components/ui/calendar"
+import { CalendarIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+import { useCustomPlans } from "@/hooks/useCustomPlans";
+import { usePlanTypes } from "@/hooks/usePlanTypes";
 
 interface StructuredWorkPlanFormProps {
-  planType: any;
-  manager: any;
-  onClose: () => void;
   onSave: () => void;
+  onCancel: () => void;
 }
 
-export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: StructuredWorkPlanFormProps) {
-  const { 
-    fetchPlanTypeElements, 
+export function StructuredWorkPlanForm({ onSave, onCancel }: StructuredWorkPlanFormProps) {
+  const [elements, setElements] = useState<any[]>([]);
+  const [formData, setFormData] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date())
+  const { toast } = useToast();
+  const { profile } = useAuth();
+
+  const {
     createCustomPlan,
     updateCustomPlan,
     fetchCustomPlansByManager,
     upsertCustomPlanAssignment
-  } = useSupabaseData();
-  const { toast } = useToast();
+  } = useCustomPlans();
 
-  const [planElements, setPlanElements] = useState<any>({ strategicAxes: [], actions: [], products: [] });
-  const [workPlan, setWorkPlan] = useState<any>(null);
-  const [assignments, setAssignments] = useState<{[key: string]: number}>({});
-  const [objectives, setObjectives] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const { fetchPlanTypeElements } = usePlanTypes();
 
   useEffect(() => {
     loadData();
-  }, [planType, manager]);
+  }, []);
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      // Cargar elementos configurados para este tipo de plan
-      const { data: elementsData } = await fetchPlanTypeElements(planType.id);
-      if (elementsData) {
-        setPlanElements(elementsData);
-      }
+      setLoading(true);
+      // Assuming a fixed plan type ID for work plans
+      const planTypeId = "0a5b9c8d-4e2f-4b1a-9c3e-5a7b8d9f1c23"; // Replace with actual ID
+      const elementsResult = await fetchPlanTypeElements(planTypeId);
 
-      // Buscar plan existente
-      const { data: existingPlans } = await fetchCustomPlansByManager(manager.id);
-      const existingPlan = existingPlans?.find((plan: any) => plan.plan_type_id === planType.id);
-
-      if (existingPlan) {
-        setWorkPlan(existingPlan);
-        setObjectives(existingPlan.title || '');
-        
-        // Cargar asignaciones existentes
-        setAssignments({});
+      if (elementsResult.error) {
+        console.error('Error loading plan type elements:', elementsResult.error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los elementos del plan",
+          variant: "destructive",
+        });
+      } else {
+        setElements(elementsResult.data || []);
+        // Initialize form data with empty values for each element
+        const initialFormData: any = {};
+        elementsResult.data?.forEach(element => {
+          initialFormData[element.id] = ''; // Or a more appropriate default value
+        });
+        setFormData(initialFormData);
       }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos",
+        description: "Error inesperado al cargar los datos",
         variant: "destructive",
       });
     } finally {
@@ -69,292 +81,206 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
     }
   };
 
-  const handleHoursChange = (productId: string, hours: string) => {
-    const numericHours = parseInt(hours) || 0;
-    setAssignments(prev => ({ ...prev, [productId]: numericHours }));
+  const handleInputChange = (elementId: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [elementId]: value
+    }));
   };
 
-  const handleHoursBlur = async (productId: string, hours: string) => {
-    const numericHours = parseInt(hours) || 0;
-    await updateAssignment(productId, numericHours);
-  };
+  const handleSubmit = async () => {
+    try {
+      setIsCreating(true);
 
-  const updateAssignment = async (productId: string, hours: number) => {
-    let currentWorkPlan = workPlan;
+      // Validate required fields
+      for (const element of elements) {
+        if (element.is_required && !formData[element.id]) {
+          toast({
+            title: "Error de validación",
+            description: `El campo "${element.element_label}" es obligatorio`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
-    if (!currentWorkPlan) {
-      // Crear plan si no existe
-      const newPlan = {
-        manager_id: manager.id,
-        plan_type_id: planType.id,
-        title: objectives,
-        status: 'draft' as const
+      // Prepare data for custom_plans table
+      const planData = {
+        plan_type_id: "0a5b9c8d-4e2f-4b1a-9c3e-5a7b8d9f1c23", // Fixed plan type ID
+        title: 'Plan de Trabajo', // Or get from user input
+        description: 'Plan de Trabajo Detallado', // Or get from user input
+        start_date: selectedDate?.toISOString(),
+        end_date: selectedDate?.toISOString(),
+        is_active: true,
+        progress_percentage: 0,
+        status: 'draft'
       };
-      
-      const { data: createdPlan, error } = await createCustomPlan(newPlan);
-      if (error) {
-        toast({ title: "Error", description: "No se pudo crear el plan", variant: "destructive" });
+
+      // Create the custom plan
+      const createResult = await createCustomPlan(planData);
+      if (createResult.error) {
+        console.error('Error creating custom plan:', createResult.error);
+        toast({
+          title: "Error",
+          description: "Error al crear el plan de trabajo",
+          variant: "destructive",
+        });
         return;
       }
-      currentWorkPlan = createdPlan;
-      setWorkPlan(createdPlan);
-    }
 
-    const assignment = {
-      custom_plan_id: currentWorkPlan.id,
-      product_id: productId,
-      assigned_hours: hours
-    };
+      const newPlanId = createResult.data?.id;
 
-    const { error } = await upsertCustomPlanAssignment(assignment);
-    if (error) {
-      toast({ title: "Error", description: "No se pudo actualizar la asignación", variant: "destructive" });
-    }
-  };
+      // Create assignments for each element
+      for (const element of elements) {
+        const assignmentData = {
+          custom_plan_id: newPlanId,
+          plan_type_element_id: element.id,
+          element_value: formData[element.id]
+        };
+        const assignmentResult = await upsertCustomPlanAssignment(assignmentData);
+        if (assignmentResult.error) {
+          console.error(`Error creating assignment for element ${element.id}:`, assignmentResult.error);
+          toast({
+            title: "Error",
+            description: `Error al guardar el campo "${element.element_label}"`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
-  const getTotalAssignedHours = () => {
-    return Object.values(assignments).reduce((sum, hours) => sum + hours, 0);
-  };
-
-  const getAvailableHours = () => {
-    // CORREGIDO: Usar total_hours en lugar de weekly_hours
-    const totalHours = manager.total_hours || 0;
-    console.log("Manager total_hours:", totalHours);
-    console.log("Total assigned hours:", getTotalAssignedHours());
-    return totalHours - getTotalAssignedHours();
-  };
-
-  const submitForApproval = async () => {
-    if (!workPlan) {
-      toast({ title: "Error", description: "No hay plan para enviar", variant: "destructive" });
-      return;
-    }
-
-    if (!objectives.trim()) {
-      toast({ title: "Error", description: "Debe agregar objetivos antes de enviar", variant: "destructive" });
-      return;
-    }
-
-    const { error } = await updateCustomPlan(workPlan.id, { 
-      status: 'submitted',
-      submitted_date: new Date().toISOString(),
-      title: objectives
-    });
-    
-    if (error) {
-      toast({ title: "Error", description: "No se pudo enviar para aprobación", variant: "destructive" });
-      return;
-    }
-
-    toast({ title: "Éxito", description: "Plan enviado para aprobación" });
-    setWorkPlan(prev => ({ ...prev, status: 'submitted', submitted_date: new Date().toISOString() }));
-    onSave();
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Borrador</Badge>;
-      case 'submitted':
-        return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
-      case 'approved':
-        return <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Aprobado</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rechazado</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+      toast({
+        title: "Éxito",
+        description: "Plan de trabajo creado correctamente",
+      });
+      onSave();
+    } catch (error) {
+      console.error('Unexpected error creating plan:', error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al crear el plan de trabajo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8">Cargando...</div>;
+    return <div className="flex justify-center p-8">Cargando formulario...</div>;
   }
-
-  const isReadOnly = workPlan?.status === 'submitted' || workPlan?.status === 'approved';
-
-  // Organizar productos por eje estratégico y acción
-  const organizedData = planElements.strategicAxes?.map((axisConfig: any) => {
-    const axis = axisConfig.strategic_axes;
-    const axisActions = planElements.actions?.filter((actionConfig: any) => 
-      actionConfig.actions?.strategic_axis_id === axis.id
-    ) || [];
-    
-    return {
-      ...axis,
-      actions: axisActions.map((actionConfig: any) => {
-        const action = actionConfig.actions;
-        const actionProducts = planElements.products?.filter((productConfig: any) => 
-          productConfig.products?.action_id === action.id
-        ) || [];
-        
-        return {
-          ...action,
-          products: actionProducts.map((productConfig: any) => productConfig.products)
-        };
-      }).filter(action => action.products.length > 0)
-    };
-  }).filter((axis: any) => axis.actions.length > 0) || [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Plan de Trabajo Estructurado</h1>
-          <p className="text-gray-600">{planType.name} - {manager.full_name}</p>
-        </div>
-        <Button variant="outline" onClick={onClose}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver
-        </Button>
-      </div>
-
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Plan de Trabajo - {manager.full_name}</CardTitle>
-            {workPlan?.status && getStatusBadge(workPlan.status)}
-          </div>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p>Tipo de Plan: {planType.name}</p>
-            <p>Horas Totales Disponibles: <span className="font-bold text-blue-600">{manager.total_hours || 0}</span></p>
-            <p>Horas Asignadas: <span className="font-bold text-green-600">{getTotalAssignedHours()}</span></p>
-            <p>Balance: <span className={`font-bold ${getAvailableHours() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {getAvailableHours()}
-            </span></p>
-            <p className="text-xs text-gray-500">
-              (Cálculo: {manager.weekly_hours || 0} horas semanales × {manager.number_of_weeks || 16} semanas = {manager.total_hours || 0} horas totales)
-            </p>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Formulario de Plan de Trabajo
+          </CardTitle>
         </CardHeader>
-        
-        <CardContent className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Objetivos del Plan de Trabajo:
-            </label>
-            <Textarea
-              value={objectives}
-              onChange={(e) => setObjectives(e.target.value)}
-              placeholder="Describe los objetivos principales de tu plan de trabajo..."
-              className="min-h-[100px]"
-              disabled={isReadOnly}
-            />
+        <CardContent>
+
+        <div className="grid gap-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title">Fecha</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[240px] justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    disabled={(date) =>
+                      date > new Date()
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
-          {organizedData.length > 0 ? (
-            <Table className="border">
-              <TableHeader>
-                <TableRow className="bg-blue-600">
-                  <TableHead className="text-white font-bold border border-gray-300 text-center">
-                    EJE ESTRATÉGICO
-                  </TableHead>
-                  <TableHead className="text-white font-bold border border-gray-300 text-center">
-                    ACCIÓN
-                  </TableHead>
-                  <TableHead className="text-white font-bold border border-gray-300 text-center">
-                    PRODUCTO
-                  </TableHead>
-                  <TableHead className="text-white font-bold border border-gray-300 text-center w-24">
-                    HORAS
-                  </TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campo</TableHead>
+                <TableHead>Valor</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {elements.map((element) => (
+                <TableRow key={element.id}>
+                  <TableCell className="font-medium">{element.element_label}</TableCell>
+                  <TableCell>
+                    {element.element_type === "text" && (
+                      <Input
+                        type="text"
+                        value={formData[element.id] || ""}
+                        onChange={(e) => handleInputChange(element.id, e.target.value)}
+                      />
+                    )}
+                    {element.element_type === "textarea" && (
+                      <Textarea
+                        value={formData[element.id] || ""}
+                        onChange={(e) => handleInputChange(element.id, e.target.value)}
+                      />
+                    )}
+                    {element.element_type === "number" && (
+                      <Input
+                        type="number"
+                        value={formData[element.id] || ""}
+                        onChange={(e) => handleInputChange(element.id, e.target.value)}
+                      />
+                    )}
+                    {element.element_type === "select" && (
+                      <Select
+                        value={formData[element.id] || ""}
+                        onValueChange={(value) => handleInputChange(element.id, value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {element.element_options?.split(",").map((option: string) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {organizedData.map(axis => 
-                  axis.actions.map((action: any, actionIndex: number) => 
-                    action.products.map((product: any, productIndex: number) => {
-                      const isFirstActionRow = productIndex === 0;
-                      const isFirstAxisRow = actionIndex === 0 && productIndex === 0;
-                      const axisRowspan = axis.actions.reduce((sum: number, a: any) => sum + a.products.length, 0);
-                      const actionRowspan = action.products.length;
-
-                      return (
-                        <TableRow key={product.id} className="border">
-                          {isFirstAxisRow && (
-                            <TableCell 
-                              rowSpan={axisRowspan}
-                              className="border border-gray-300 text-center font-medium bg-blue-50 align-middle"
-                            >
-                              <div className="writing-vertical text-sm font-bold">
-                                {axis.code} - {axis.name}
-                              </div>
-                            </TableCell>
-                          )}
-                          {isFirstActionRow && (
-                            <TableCell 
-                              rowSpan={actionRowspan}
-                              className="border border-gray-300 text-sm p-2 align-middle"
-                            >
-                              <div className="font-medium text-gray-800">
-                                {action.code} {action.name}
-                              </div>
-                            </TableCell>
-                          )}
-                          <TableCell className="border border-gray-300 text-sm p-2">
-                            {product.name}
-                          </TableCell>
-                          <TableCell className="border border-gray-300 text-center p-1">
-                            <Input
-                              type="number"
-                              min="0"
-                              value={assignments[product.id] || 0}
-                              onChange={(e) => handleHoursChange(product.id, e.target.value)}
-                              onBlur={(e) => handleHoursBlur(product.id, e.target.value)}
-                              className="w-16 h-8 text-center"
-                              disabled={isReadOnly}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )
-                )}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No hay elementos configurados para este tipo de plan.
-              <br />
-              Contacte al administrador para configurar los ejes, acciones y productos.
-            </div>
-          )}
-
-          <div className="flex justify-between items-center mt-6 p-4 bg-gray-50 rounded">
-            <div className="space-x-4">
-              <span className="text-sm">
-                <strong>Total Horas:</strong> {getTotalAssignedHours()} / {manager.total_hours || 0}
-              </span>
-              <span className={`text-sm font-bold ${getAvailableHours() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                Balance: {getAvailableHours()}
-              </span>
-            </div>
-            
-            <div className="space-x-2">
-              <Button variant="outline" onClick={onClose}>
-                Cerrar
-              </Button>
-              {(workPlan?.status === 'draft' || !workPlan) && (
-                <Button 
-                  onClick={submitForApproval}
-                  disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Enviar para Aprobación
-                </Button>
-              )}
-              {workPlan?.status === 'rejected' && (
-                <Button 
-                  onClick={submitForApproval}
-                  disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Reenviar para Aprobación
-                </Button>
-              )}
-            </div>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button
+          className="institutional-gradient text-white"
+          onClick={handleSubmit}
+          disabled={isCreating}
+        >
+          {isCreating ? 'Creando...' : 'Guardar Plan de Trabajo'}
+        </Button>
+      </div>
     </div>
   );
 }

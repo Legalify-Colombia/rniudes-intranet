@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,6 +23,8 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
   const { toast } = useToast();
   const {
     fetchTemplateBasedReportDetails,
+    upsertTemplateReportResponse,
+    deleteTemplateReportResponse,
     updateTemplateBasedReport,
     submitTemplateBasedReport,
     uploadFile

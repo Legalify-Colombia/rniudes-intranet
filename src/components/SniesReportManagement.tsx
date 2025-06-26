@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -398,7 +397,8 @@ export function SniesReportManagement() {
           </DialogHeader>
           {selectedReport && (
             <SniesReportForm 
-              report={selectedReport}
+              reportId={selectedReport.id}
+              templateId={selectedReport.template_id}
               onSave={() => {
                 setIsReportFormOpen(false);
                 loadData();

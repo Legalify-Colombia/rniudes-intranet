@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useSnies } from "@/hooks/useSnies";
+import { useSniesReports } from "@/hooks/useSniesReports";
 import { useSniesManagement } from "@/hooks/useSniesManagement";
 import { Save, Send, Plus, Trash2, FileSpreadsheet, Users } from "lucide-react";
 
@@ -27,16 +28,9 @@ export function SniesReportForm({ reportId, templateId, onSave }: SniesReportFor
   const { profile } = useAuth();
 
   const {
-    fetchSniesReports,
-    fetchSniesReportTemplates,
     fetchSniesTemplateFields,
-    createSniesReport,
-    updateSniesReport,
-    submitSniesReport,
-    createSniesReportData,
-    updateSniesReportData,
-    deleteSniesReportData
-  } = useSnies();
+    updateSniesReport
+  } = useSniesReports();
 
   const { fetchSniesReportData, upsertSniesReportData } = useSniesManagement();
 
@@ -101,7 +95,10 @@ export function SniesReportForm({ reportId, templateId, onSave }: SniesReportFor
 
   const handleSubmit = async () => {
     try {
-      await submitSniesReport(reportId);
+      await updateSniesReport(reportId, {
+        status: 'submitted',
+        submitted_date: new Date().toISOString()
+      });
       toast({
         title: "Éxito",
         description: "Informe enviado correctamente",
