@@ -206,7 +206,7 @@ export function Dashboard() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard de Gestión</h1>
         <p className="text-gray-600 mb-4">Seguimiento de Ejes Estratégicos y Avances</p>
         
-        {(profile?.role === 'Coordinador' || profile?.role === 'Administrador') && campusList.length > 0 && (
+        {(['Coordinador', 'Administrador'].includes(profile?.role || '')) && campusList.length > 0 && (
           <div className="flex justify-center">
             <div className="w-64">
               <Select value={selectedCampus} onValueChange={setSelectedCampus}>
