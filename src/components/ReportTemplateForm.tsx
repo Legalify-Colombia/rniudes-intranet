@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Globe, FileText, Clock, CheckCircle, Edit, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useReportTemplates, ReportTemplate, ManagerReportVersion } from "@/hooks/useReportTemplates";
+import { useSupabaseData, ReportTemplate, ManagerReportVersion } from "@/hooks/useSupabaseData";
 
 interface ReportTemplateFormProps {
   reportId: string;
@@ -29,7 +29,7 @@ export function ReportTemplateForm({ reportId, template, existingVersions, onVer
     createManagerReportVersion,
     updateManagerReportVersion,
     getNextVersionNumber,
-  } = useReportTemplates();
+  } = useSupabaseData();
 
   const [versionForm, setVersionForm] = useState({
     progress_percentage: 0,

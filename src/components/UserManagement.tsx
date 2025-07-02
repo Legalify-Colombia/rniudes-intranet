@@ -9,10 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Plus, Edit, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserManagement } from "@/hooks/useUserManagement";
-import { useCampus } from "@/hooks/useCampus";
 
 export function UserManagement() {
   const [users, setUsers] = useState<any[]>([]);
@@ -23,8 +22,7 @@ export function UserManagement() {
   
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchUsersByCampus, updateUserProfile } = useUserManagement();
-  const { fetchCampus } = useCampus();
+  const { fetchUsersByCampus, fetchCampus, updateUserProfile } = useSupabaseData();
 
   const [userForm, setUserForm] = useState({
     email: '',

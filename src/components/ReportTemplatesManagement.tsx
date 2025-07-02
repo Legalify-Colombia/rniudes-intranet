@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Edit, Trash2, FileText, Globe, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useReportTemplates, ReportTemplate, StrategicAxis, Action, Product } from "@/hooks/useReportTemplates";
+import { useSupabaseData, ReportTemplate, StrategicAxis, Action, Product } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ReportTemplatesManagement() {
@@ -30,9 +28,6 @@ export function ReportTemplatesManagement() {
     createReportTemplate,
     updateReportTemplate,
     deleteReportTemplate,
-  } = useReportTemplates();
-
-  const {
     fetchStrategicAxes,
     fetchActions,
     fetchProducts,

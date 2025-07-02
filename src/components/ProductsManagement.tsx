@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useProductsManagement } from "@/hooks/useProductsManagement";
 import { Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { Product, Action, StrategicAxis } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,15 +15,13 @@ export function ProductsManagement() {
   const { toast } = useToast();
   const { profile } = useAuth();
   const { 
-    fetchActions,
-    fetchStrategicAxes 
-  } = useSupabaseData();
-  const { 
     fetchProducts, 
     createProduct, 
     updateProduct, 
-    deleteProduct
-  } = useProductsManagement();
+    deleteProduct,
+    fetchActions,
+    fetchStrategicAxes 
+  } = useSupabaseData();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [actions, setActions] = useState<Action[]>([]);

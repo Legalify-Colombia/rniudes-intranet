@@ -8,8 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useReportTemplates } from "@/hooks/useReportTemplates";
-import { useTemplateReportManagement } from "@/hooks/useTemplateReportManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Save, Send, FileText, Upload, Trash2, Globe } from "lucide-react";
 
@@ -23,15 +21,10 @@ export function TemplateReportForm({ reportId, onSave }: TemplateReportFormProps
   const { toast } = useToast();
   const {
     fetchTemplateBasedReportDetails,
-    upsertTemplateReportResponse,
-    deleteTemplateReportResponse,
+    fetchReportTemplates,
     updateTemplateBasedReport,
     submitTemplateBasedReport,
-    uploadFile
-  } = useTemplateReportManagement();
-
-  const { fetchReportTemplates } = useReportTemplates();
-  const {
+    uploadFile,
     fetchStrategicAxes,
     fetchActions,
     fetchProducts

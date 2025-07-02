@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
-import { useCustomPlans } from "@/hooks/useCustomPlans";
-import { useReportSystem } from "@/hooks/useReportSystem";
 import { ArrowLeft, Save, Send, FileText, Clock, CheckCircle } from "lucide-react";
 
 interface UnifiedReportFormProps {
@@ -29,22 +29,19 @@ export function UnifiedReportForm({
   const { profile } = useAuth();
   const { toast } = useToast();
   const { 
-    fetchCustomPlanDetails,
-    updateCustomPlan,
-    submitCustomPlan
-  } = useCustomPlans();
-  
-  const {
     fetchWorkPlanDetails,
     fetchTemplateBasedReportDetails,
     fetchIndicatorReport,
+    fetchCustomPlanDetails,
     updateWorkPlan,
     updateTemplateBasedReport,
     updateIndicatorReport,
+    updateCustomPlan,
     submitTemplateBasedReport,
     submitIndicatorReport,
+    submitCustomPlan,
     checkPeriodActive
-  } = useReportSystem();
+  } = useSupabaseData();
 
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);

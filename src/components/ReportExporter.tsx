@@ -5,23 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useDocumentTemplates } from "@/hooks/useDocumentTemplates";
+import { useSupabaseData, DocumentTemplate } from "@/hooks/useSupabaseData";
 import { PDFExporter, ExportData } from "@/utils/pdfExporter";
 import { Download, FileText } from "lucide-react";
-
-interface DocumentTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_content: string;
-  template_type: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-  file_url?: string;
-  file_name?: string;
-}
 
 interface ReportExporterProps {
   report: any;
@@ -37,7 +23,7 @@ export function ReportExporter({ report, workPlan, products, className }: Report
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
-  const { fetchDocumentTemplates } = useDocumentTemplates();
+  const { fetchDocumentTemplates } = useSupabaseData();
 
   useEffect(() => {
     loadDocumentTemplates();

@@ -1,57 +1,79 @@
-import React, { useState, useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
-import { Plus, Edit, Trash2, FileText } from "lucide-react";
-import { useReportTemplates } from "@/hooks/useReportTemplates";
-import { useReportSystem } from "@/hooks/useReportSystem";
+import { useToast } from "@/hooks/use-toast";
+import { FileText, Plus, Calendar, AlertTriangle } from "lucide-react";
 
 interface TemplateBasedReportSelectorProps {
   onReportCreated: () => void;
+  existingReports: any[];
 }
 
-export function TemplateBasedReportSelector({ onReportCreated }: TemplateBasedReportSelectorProps) {
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [periods, setPeriods] = useState<any[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [reportTitle, setReportTitle] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [selectedPeriod, setSelectedPeriod] = useState("");
-  const { toast } = useToast();
+export function TemplateBasedReportSelector({ 
+  onReportCreated, 
+  existingReports 
+}: TemplateBasedReportSelectorProps) {
   const { profile } = useAuth();
-
-  const { fetchReportTemplates } = useReportTemplates();
-  const { 
+  const { toast } = useToast();
+  const {
+    fetchReportTemplates,
     fetchReportPeriods,
     createTemplateBasedReport
-  } = useReportSystem();
+  } = useSupabaseData();
+
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [periods, setPeriods] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const [templatesResult, periodsResult] = await Promise.all([
         fetchReportTemplates(),
         fetchReportPeriods()
       ]);
 
-      if (templatesResult.data) setTemplates(templatesResult.data);
-      if (periodsResult.data) setPeriods(periodsResult.data);
+      // Filter templates with valid IDs
+      if (templatesResult.data) {
+        const validTemplates = templatesResult.data.filter(template => 
+          template.id && 
+          typeof template.id === 'string' && 
+          template.id.trim().length > 0
+        );
+        setTemplates(validTemplates);
+      }
+
+      // Filter periods with valid IDs
+      if (periodsResult.data) {
+        const validPeriods = periodsResult.data.filter(period => 
+          period.id && 
+          typeof period.id === 'string' && 
+          period.id.trim().length > 0
+        );
+        setPeriods(validPeriods);
+      }
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "Failed to load templates and periods",
+        description: "No se pudieron cargar las plantillas y períodos",
         variant: "destructive",
       });
     } finally {
@@ -59,142 +81,244 @@ export function TemplateBasedReportSelector({ onReportCreated }: TemplateBasedRe
     }
   };
 
+  const getAvailableTemplates = () => {
+    if (!selectedPeriod) return templates;
+    
+    return templates.filter(template => {
+      // Verificar si ya existe un informe para esta plantilla en el período seleccionado
+      const existingReport = existingReports.find(report => 
+        report.report_template_id === template.id && 
+        report.report_period_id === selectedPeriod
+      );
+      return !existingReport;
+    });
+  };
+
   const handleCreateReport = async () => {
-    if (!reportTitle || !selectedTemplate || !selectedPeriod) {
+    if (!profile?.id || !selectedTemplate || !selectedPeriod || !title.trim()) {
       toast({
         title: "Error",
-        description: "Please fill all fields",
+        description: "Por favor completa todos los campos requeridos",
         variant: "destructive",
       });
       return;
     }
 
+    setCreating(true);
     try {
-      setLoading(true);
       const reportData = {
-        title: reportTitle,
-        template_id: selectedTemplate,
-        period_id: selectedPeriod,
-        manager_id: profile?.id,
+        manager_id: profile.id,
+        report_template_id: selectedTemplate,
+        report_period_id: selectedPeriod,
+        title: title.trim(),
+        description: description.trim() || undefined
       };
-      const { data, error } = await createTemplateBasedReport(reportData);
 
-      if (error) {
-        console.error("Error creating report:", error);
+      const result = await createTemplateBasedReport(reportData);
+      
+      if (result.error) {
+        throw result.error;
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Informe basado en plantilla creado correctamente",
+      });
+
+      // Limpiar formulario
+      setSelectedTemplate("");
+      setSelectedPeriod("");
+      setTitle("");
+      setDescription("");
+      
+      onReportCreated();
+    } catch (error: any) {
+      console.error('Error creating template-based report:', error);
+      
+      if (error.code === '23505') {
         toast({
           title: "Error",
-          description: "Failed to create report",
+          description: "Ya existe un informe para esta plantilla en el período seleccionado",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
-          description: "Report created successfully",
+          title: "Error",
+          description: "No se pudo crear el informe",
+          variant: "destructive",
         });
-        onReportCreated();
-        setIsDialogOpen(false);
       }
-    } catch (error) {
-      console.error("Error creating report:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create report",
-        variant: "destructive",
-      });
     } finally {
-      setLoading(false);
+      setCreating(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const availableTemplates = getAvailableTemplates();
+  const selectedTemplateData = templates.find(t => t.id === selectedTemplate);
+  const selectedPeriodData = periods.find(p => p.id === selectedPeriod);
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Template Based Reports
-            </CardTitle>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="institutional-gradient text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Report
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Report</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div>
-                    <Label htmlFor="reportTitle">Report Title</Label>
-                    <Input
-                      id="reportTitle"
-                      placeholder="Report Title"
-                      value={reportTitle}
-                      onChange={(e) => setReportTitle(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="template">Template</Label>
-                    <Select onValueChange={setSelectedTemplate}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a template" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {templates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="period">Period</Label>
-                    <Select onValueChange={setSelectedPeriod}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a period" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {periods.map((period) => (
-                          <SelectItem key={period.id} value={period.id}>
-                            {period.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button onClick={handleCreateReport}>Create</Button>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Template</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>Report 1</TableCell>
-                <TableCell>Template 1</TableCell>
-                <TableCell>Period 1</TableCell>
-                <TableCell>
-                  <Button variant="outline">Edit</Button>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Plus className="h-5 w-5" />
+          Crear Informe Basado en Plantilla
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {templates.length === 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              No hay plantillas de informes disponibles. Contacta con el administrador para crear plantillas.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {periods.length === 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              No hay períodos de reporte activos. Contacta con el administrador para configurar períodos.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {templates.length > 0 && periods.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Período de Reporte *
+                </label>
+                <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periods
+                      .filter(period => 
+                        period.id && 
+                        typeof period.id === 'string' && 
+                        period.id.trim().length > 0
+                      )
+                      .map((period) => (
+                        <SelectItem key={period.id} value={period.id}>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>{period.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {new Date(period.start_date).toLocaleDateString()} - {new Date(period.end_date).toLocaleDateString()}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Plantilla de Informe *
+                </label>
+                <Select 
+                  value={selectedTemplate} 
+                  onValueChange={setSelectedTemplate}
+                  disabled={!selectedPeriod}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar plantilla" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTemplates
+                      .filter(template => 
+                        template.id && 
+                        typeof template.id === 'string' && 
+                        template.id.trim().length > 0
+                      )
+                      .map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>{template.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+                {selectedPeriod && availableTemplates.length === 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    No hay plantillas disponibles para este período (ya tienes informes creados para todas las plantillas)
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {selectedTemplateData && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <FileText className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <strong>Plantilla seleccionada:</strong> {selectedTemplateData.description || selectedTemplateData.name}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Título del Informe *
+              </label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título descriptivo para el informe"
+                disabled={!selectedTemplate}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Descripción (opcional)
+              </label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descripción adicional del informe"
+                disabled={!selectedTemplate}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={handleCreateReport}
+                disabled={creating || !selectedTemplate || !selectedPeriod || !title.trim()}
+              >
+                {creating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Informe
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

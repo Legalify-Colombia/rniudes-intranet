@@ -1,203 +1,472 @@
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Trash2, Save, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
-import { useSniesReports } from "@/hooks/useSniesReports";
-import { useSniesManagement } from "@/hooks/useSniesManagement";
-import { Save, Send, Plus, Trash2, FileSpreadsheet, Users } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
 interface SniesReportFormProps {
-  reportId?: string;
-  templateId: string;
+  report: any;
   onSave: () => void;
 }
 
-export function SniesReportForm({ reportId, templateId, onSave }: SniesReportFormProps) {
+export function SniesReportForm({ report, onSave }: SniesReportFormProps) {
+  const [fields, setFields] = useState<any[]>([]);
   const [reportData, setReportData] = useState<any[]>([]);
-  const [templateFields, setTemplateFields] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [relationData, setRelationData] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(false);
+  
   const { profile } = useAuth();
-
+  const { toast } = useToast();
   const {
     fetchSniesTemplateFields,
-    updateSniesReport
-  } = useSniesReports();
-
-  const { fetchSniesReportData, upsertSniesReportData } = useSniesManagement();
+    fetchSniesReportData,
+    saveSniesReportData,
+    fetchSniesDocumentTypes,
+    fetchSniesCountries,
+    fetchSniesMunicipalities,
+    fetchSniesBiologicalSex,
+    fetchSniesMaritalStatus
+  } = useSupabaseData();
 
   useEffect(() => {
-    loadData();
-  }, [templateId, reportId]);
+    loadFieldsAndData();
+  }, [report]);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadFieldsAndData = async () => {
     try {
-      const [templateFieldsResult, reportDataResult] = await Promise.all([
-        fetchSniesTemplateFields(templateId),
-        reportId ? fetchSniesReportData(reportId) : Promise.resolve({ data: [] })
-      ]);
+      setIsLoading(true);
+      
+      // Load template fields
+      const fieldsResult = await fetchSniesTemplateFields(report.template_id);
+      const templateFields = fieldsResult.data || [];
+      setFields(templateFields);
 
-      setTemplateFields(templateFieldsResult.data || []);
-      setReportData(reportDataResult.data || []);
+      // Load existing report data
+      const dataResult = await fetchSniesReportData(report.id);
+      const existingData = dataResult.data || [];
+      
+      if (existingData.length > 0) {
+        setReportData(existingData.map(item => item.field_data));
+      } else {
+        // Initialize with empty row
+        const emptyRow: any = {};
+        templateFields.forEach(field => {
+          emptyRow[field.field_name] = '';
+        });
+        setReportData([emptyRow]);
+      }
+
+      // Load relation data for dropdowns
+      await loadRelationData(templateFields);
+      
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos",
+        description: "No se pudieron cargar los datos del reporte",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleFieldChange = async (fieldId: string, value: any) => {
-    try {
-      const existingData = reportData.find(item => item.field_id === fieldId);
+  const loadRelationData = async (templateFields: any[]) => {
+    const relationTables = [...new Set(
+      templateFields
+        .filter(field => field.field_type === 'relation' && field.relation_table)
+        .map(field => field.relation_table!)
+    )];
 
-      if (existingData) {
-        // Update existing data
-        await upsertSniesReportData({
-          id: existingData.id,
-          report_id: reportId,
-          field_id: fieldId,
-          field_value: value,
-        });
-      } else {
-        // Create new data
-        await upsertSniesReportData({
-          report_id: reportId,
-          field_id: fieldId,
-          field_value: value,
-        });
+    const relationDataMap: any = {};
+
+    for (const table of relationTables) {
+      try {
+        let result;
+        switch (table) {
+          case 'snies_document_types':
+            result = await fetchSniesDocumentTypes();
+            break;
+          case 'snies_countries':
+            result = await fetchSniesCountries();
+            break;
+          case 'snies_municipalities':
+            result = await fetchSniesMunicipalities();
+            break;
+          case 'snies_biological_sex':
+            result = await fetchSniesBiologicalSex();
+            break;
+          case 'snies_marital_status':
+            result = await fetchSniesMaritalStatus();
+            break;
+          default:
+            continue;
+        }
+        relationDataMap[table] = result.data || [];
+      } catch (error) {
+        console.error(`Error loading ${table}:`, error);
+        relationDataMap[table] = [];
       }
+    }
 
-      // Refresh data
-      loadData();
-    } catch (error) {
-      console.error("Error saving field data:", error);
+    setRelationData(relationDataMap);
+  };
+
+  const addRow = () => {
+    const emptyRow: any = {};
+    fields.forEach(field => {
+      emptyRow[field.field_name] = '';
+    });
+    setReportData(prev => [...prev, emptyRow]);
+  };
+
+  const removeRow = (index: number) => {
+    if (reportData.length === 1) {
       toast({
-        title: "Error",
-        description: "No se pudo guardar el valor del campo",
+        title: "Advertencia",
+        description: "Debe mantener al menos una fila",
         variant: "destructive",
       });
+      return;
     }
+    setReportData(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+  const updateCell = (rowIndex: number, fieldName: string, value: string) => {
+    setReportData(prev => 
+      prev.map((row, index) => 
+        index === rowIndex 
+          ? { ...row, [fieldName]: value }
+          : row
+      )
+    );
+  };
+
+  const handleSave = async () => {
     try {
-      await updateSniesReport(reportId, {
-        status: 'submitted',
-        submitted_date: new Date().toISOString()
-      });
+      setIsLoading(true);
+      
+      const result = await saveSniesReportData(report.id, reportData);
+      if (result.error) throw result.error;
+
       toast({
         title: "Éxito",
-        description: "Informe enviado correctamente",
+        description: "Datos del reporte guardados correctamente",
       });
+      
       onSave();
     } catch (error) {
-      console.error("Error submitting report:", error);
+      console.error('Error saving report data:', error);
       toast({
         title: "Error",
-        description: "No se pudo enviar el informe",
+        description: "Error al guardar los datos del reporte",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (loading) {
-    return <div className="flex justify-center p-8">Cargando formulario...</div>;
+  const SearchableSelect = ({ field, rowIndex, value }: { field: any, rowIndex: number, value: string }) => {
+    const [open, setOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    // Get relation data with safe initialization
+    const relationTableData = relationData[field.relation_table];
+    
+    // Early return if data is not ready
+    if (!relationTableData) {
+      return (
+        <Button
+          variant="outline"
+          className="w-full justify-between h-8 text-xs"
+          disabled={true}
+        >
+          Cargando...
+          <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      );
+    }
+    
+    // Ensure we have a valid array
+    let options: any[] = [];
+    if (Array.isArray(relationTableData)) {
+      options = relationTableData;
+    } else {
+      console.warn(`Expected array for ${field.relation_table}, got:`, relationTableData);
+      options = [];
+    }
+    
+    // Filter municipalities only for Colombia
+    if (field.relation_table === 'snies_municipalities') {
+      const currentRow = reportData[rowIndex];
+      const selectedCountry = currentRow?.country_id || currentRow?.pais_id;
+      
+      if (selectedCountry !== '170') {
+        options = [];
+      }
+    }
+
+    // Filter options based on search with validation
+    const filteredOptions = options.filter((option: any) => {
+      if (!option || typeof option !== 'object' || !option.id || !option.name) {
+        return false;
+      }
+      
+      const id = String(option.id || '').toLowerCase();
+      const name = String(option.name || '').toLowerCase();
+      const search = String(searchTerm || '').toLowerCase();
+      
+      return id.includes(search) || name.includes(search);
+    });
+    
+    const selectedOption = options.find((option: any) => 
+      option && option.id && String(option.id) === String(value)
+    );
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-8 text-xs"
+            disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
+          >
+            {selectedOption ? `${selectedOption.id} - ${selectedOption.name}` : 
+             field.relation_table === 'snies_municipalities' && options.length === 0
+               ? "Seleccione Colombia primero"
+               : "Seleccionar..."}
+            <Search className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0">
+          <Command shouldFilter={false}>
+            <CommandInput 
+              placeholder={`Buscar por código o nombre...`} 
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+            />
+            <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+            <CommandGroup className="max-h-48 overflow-auto">
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((option: any, index: number) => (
+                  <CommandItem
+                    key={`${option.id}-${field.relation_table}-${index}`}
+                    value={String(option.id)}
+                    onSelect={() => {
+                      updateCell(rowIndex, field.field_name, String(option.id));
+                      setOpen(false);
+                      setSearchTerm("");
+                    }}
+                    className="text-xs"
+                  >
+                    <span className="font-mono mr-2">{option.id}</span>
+                    <span>{option.name}</span>
+                  </CommandItem>
+                ))
+              ) : (
+                <div className="py-6 text-center text-sm">
+                  {field.relation_table === 'snies_municipalities' && options.length === 0
+                    ? "Seleccione Colombia primero"
+                    : "No se encontraron resultados"
+                  }
+                </div>
+              )}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  const renderField = (field: any, rowIndex: number, value: string) => {
+    const fieldId = `${field.field_name}_${rowIndex}`;
+    
+    // Campo de fecha manual
+    if (field.field_type === 'date') {
+      return (
+        <Input
+          id={fieldId}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            let inputValue = e.target.value.replace(/\D/g, ''); // Solo números
+            if (inputValue.length >= 2) {
+              inputValue = inputValue.substring(0, 2) + '/' + inputValue.substring(2);
+            }
+            if (inputValue.length >= 5) {
+              inputValue = inputValue.substring(0, 5) + '/' + inputValue.substring(5, 9);
+            }
+            updateCell(rowIndex, field.field_name, inputValue);
+          }}
+          placeholder="DD/MM/AAAA"
+          maxLength={10}
+          disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
+          className="w-full h-8 text-xs border-gray-300 focus:border-blue-500"
+        />
+      );
+    }
+    
+    if (field.field_type === 'relation' && field.relation_table) {
+      // Usar el componente de búsqueda para países y municipios
+      if (field.relation_table === 'snies_countries' || field.relation_table === 'snies_municipalities') {
+        return <SearchableSelect field={field} rowIndex={rowIndex} value={value} />;
+      }
+      
+      // Para otros campos de relación, usar select normal
+      let options = relationData[field.relation_table] || [];
+      
+      // Validar que options sea un array
+      if (!Array.isArray(options)) {
+        console.warn(`Options for ${field.relation_table} is not an array:`, options);
+        options = [];
+      }
+      
+      return (
+        <Select
+          value={value}
+          onValueChange={(newValue) => updateCell(rowIndex, field.field_name, newValue)}
+          disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
+        >
+          <SelectTrigger className="w-full h-8 text-xs">
+            <SelectValue placeholder="Seleccionar..." />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option: any) => (
+              option && option.id ? (
+                <SelectItem key={option.id} value={String(option.id)}>
+                  {option.name}
+                </SelectItem>
+              ) : null
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    return (
+      <Input
+        id={fieldId}
+        type={field.field_type === 'numeric' ? 'number' : 'text'}
+        value={value}
+        onChange={(e) => updateCell(rowIndex, field.field_name, e.target.value)}
+        placeholder={field.field_label}
+        disabled={report.status !== 'draft' || profile?.role !== 'Gestor'}
+        className="w-full h-8 text-xs border-gray-300 focus:border-blue-500"
+      />
+    );
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-8">Cargando datos del reporte...</div>;
   }
 
+  const canEdit = report.status === 'draft' && profile?.role === 'Gestor';
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5" />
-            Formulario de Reporte SNIES
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campo</TableHead>
-                <TableHead>Valor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {templateFields.map((field) => {
-                const reportItem = reportData.find(item => item.field_id === field.id);
-                const fieldValue = reportItem ? reportItem.field_value : "";
-
-                return (
-                  <TableRow key={field.id}>
-                    <TableCell className="font-medium">{field.field_label}</TableCell>
-                    <TableCell>
-                      {field.field_type === "text" && (
-                        <Input
-                          type="text"
-                          value={fieldValue || ""}
-                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        />
-                      )}
-                      {field.field_type === "textarea" && (
-                        <Textarea
-                          value={fieldValue || ""}
-                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        />
-                      )}
-                      {field.field_type === "number" && (
-                        <Input
-                          type="number"
-                          value={fieldValue || ""}
-                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        />
-                      )}
-                      {field.field_type === "select" && (
-                        <Select
-                          value={fieldValue || ""}
-                          onValueChange={(value) => handleFieldChange(field.id, value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {field.field_options.split(",").map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end space-x-2">
-        <Button variant="outline" onClick={onSave}>
-          Cancelar
-        </Button>
-        <Button className="institutional-gradient text-white" onClick={handleSubmit}>
-          Enviar Informe
-        </Button>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">Datos del Reporte</h3>
+          <p className="text-sm text-gray-600">
+            {reportData.length} registro{reportData.length !== 1 ? 's' : ''} • 
+            Estado: <span className="font-medium">{report.status === 'draft' ? 'Borrador' : 'Enviado'}</span>
+          </p>
+        </div>
+        
+        <div className="flex space-x-2">
+          {canEdit && (
+            <>
+              <Button onClick={addRow} variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar Fila
+              </Button>
+              <Button onClick={handleSave} className="institutional-gradient text-white" size="sm">
+                <Save className="w-4 h-4 mr-2" />
+                Guardar
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      {fields.length > 0 && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-auto max-h-[60vh]" style={{ maxWidth: '100%' }}>
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="bg-gray-100">
+                  <TableHead className="w-12 text-center font-semibold border-r">#</TableHead>
+                  {fields.map((field) => (
+                    <TableHead 
+                      key={field.id} 
+                      className="min-w-40 max-w-60 font-semibold border-r text-center bg-gray-50"
+                      style={{ fontSize: '12px' }}
+                    >
+                      <div className="flex flex-col">
+                        <span>{field.field_label}</span>
+                        {field.is_required && <span className="text-red-500 text-xs">*</span>}
+                      </div>
+                    </TableHead>
+                  ))}
+                  {canEdit && <TableHead className="w-16 text-center font-semibold">Acciones</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportData.map((row, rowIndex) => (
+                  <TableRow 
+                    key={rowIndex} 
+                    className={`hover:bg-gray-50 ${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}
+                  >
+                    <TableCell className="text-center font-medium border-r bg-gray-50 text-xs">
+                      {rowIndex + 1}
+                    </TableCell>
+                    {fields.map((field) => (
+                      <TableCell key={field.id} className="p-1 border-r">
+                        {renderField(field, rowIndex, row[field.field_name] || '')}
+                      </TableCell>
+                    ))}
+                    {canEdit && (
+                      <TableCell className="p-1 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeRow(rowIndex)}
+                          className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {reportData.length === 0 && (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <p className="text-gray-500 mb-4">No hay datos en este reporte</p>
+          {canEdit && (
+            <Button onClick={addRow} className="institutional-gradient text-white">
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Primera Fila
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

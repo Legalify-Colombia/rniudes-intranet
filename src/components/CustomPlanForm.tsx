@@ -1,41 +1,27 @@
+
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";  
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useCustomPlans } from "@/hooks/useCustomPlans";
-import { usePlanTypes } from "@/hooks/usePlanTypes";
-import { ArrowLeft, Save, Send, AlertTriangle, CheckCircle, Clock, FileText } from "lucide-react";
+import { ArrowLeft, Save, Send, FileText } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StructuredCustomPlanForm } from "./StructuredCustomPlanForm";
 
 interface CustomPlanFormProps {
   planId?: string;
   planTypeId?: string;
-  onSave: () => void;
+  onSave?: () => void;
   embedded?: boolean;
 }
 
 export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }: CustomPlanFormProps) {
-  const { profile } = useAuth();
-  const { toast } = useToast();
-  const { 
-    fetchCustomPlanDetails,
-    fetchPlanFields,
-    updateCustomPlan,
-    submitCustomPlan,
-    upsertCustomPlanResponse,
-    createCustomPlan
-  } = useCustomPlans();
-  const { fetchPlanTypes } = usePlanTypes();
-
   const [plan, setPlan] = useState<any>(null);
   const [planType, setPlanType] = useState<any>(null);
   const [fields, setFields] = useState<any[]>([]);
@@ -46,10 +32,19 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
   const [isLoading, setIsLoading] = useState(false);
   const [title, setTitle] = useState("");
   
+  const { profile } = useAuth();
+  const { toast } = useToast();
   const { 
+    fetchCustomPlanDetails, 
+    fetchPlanFields, 
+    updateCustomPlan, 
+    submitCustomPlan, 
+    upsertCustomPlanResponse,
     fetchStrategicAxes,
     fetchActions,
     fetchProducts,
+    fetchPlanTypes,
+    createCustomPlan
   } = useSupabaseData();
 
   useEffect(() => {
@@ -145,7 +140,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
         planId={planId}
         planTypeId={planTypeId}
         onSave={onSave}
-        onCancel={onSave}
       />
     );
   }
@@ -379,11 +373,57 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !embedded) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
   const isReadOnly = plan?.status === 'submitted' || plan?.status === 'approved';
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        {fields.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campo</TableHead>
+                <TableHead>Valor</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fields.map((field) => {
+                const value = responses[field.id];
+                let displayValue = value || 'Sin especificar';
+                
+                // Format display value based on field type
+                if (field.field_type === 'strategic_axes' && value) {
+                  const axis = strategicAxes.find(a => a.id === value);
+                  displayValue = axis ? `${axis.code} - ${axis.name}` : value;
+                } else if (field.field_type === 'actions' && value) {
+                  const action = actions.find(a => a.id === value);
+                  displayValue = action ? `${action.code} - ${action.name}` : value;
+                } else if (field.field_type === 'products' && value) {
+                  const product = products.find(p => p.id === value);
+                  displayValue = product ? product.name : value;
+                }
+                
+                return (
+                  <TableRow key={field.id}>
+                    <TableCell className="font-medium">{field.field_name}</TableCell>
+                    <TableCell>{displayValue}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            No hay campos configurados para este tipo de plan
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -444,7 +484,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
             </div>
           )}
 
-          {!isReadOnly && (
+          {!embedded && !isReadOnly && (
             <div className="flex gap-4 pt-6">
               <Button onClick={handleSave} disabled={isLoading}>
                 <Save className="h-4 w-4 mr-2" />

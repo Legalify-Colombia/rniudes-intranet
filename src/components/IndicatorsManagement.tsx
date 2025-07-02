@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useIndicators } from "@/hooks/useIndicators";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { Plus, Edit, Trash2, BarChart3 } from "lucide-react";
 
@@ -29,7 +30,7 @@ export function IndicatorsManagement() {
   const { toast } = useToast();
   const { profile } = useAuth();
 
-  const { fetchIndicators, createIndicator, updateIndicator, deleteIndicator } = useIndicators();
+  const { fetchIndicators, createIndicator, updateIndicator, deleteIndicator } = useSupabaseData();
 
   const [formData, setFormData] = useState({
     name: "",

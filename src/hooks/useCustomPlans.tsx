@@ -1,119 +1,250 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
+import type { Database } from "@/integrations/supabase/types";
 
 export function useCustomPlans() {
-  const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .select(`
-        *,
-        profiles:manager_id(*),
-        plan_type:plan_type_id(*)
-      `)
-      .eq("id", planId)
-      .single();
-    return { data, error };
-  };
-
-  const fetchPlanFields = async (planTypeId: string): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("plan_fields")
-      .select("*")
-      .eq("plan_type_id", planTypeId)
-      .order("field_order");
-    return { data, error };
-  };
-
-  const updateCustomPlan = async (id: string, updates: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const submitCustomPlan = async (planId: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .update({ 
-        status: 'submitted',
-        submitted_date: new Date().toISOString()
-      })
-      .eq("id", planId)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const upsertCustomPlanResponse = async (response: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plan_responses")
-      .upsert(response)
-      .select()
-      .single();
-    return { data, error };
-  };
-
-  const createCustomPlan = async (plan: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .insert(plan)
-      .select()
-      .single();
-    return { data, error };
+  const fetchCustomPlans = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("custom_plans")
+        .select(`
+          *,
+          plan_type:plan_types(*),
+          profiles:manager_id(*)
+        `)
+        .order("created_at", { ascending: false });
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching custom plans:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
   };
 
   const fetchCustomPlansByManager = async (managerId: string): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .select("*")
-      .eq("manager_id", managerId)
-      .order("created_at", { ascending: false });
-    return { data, error };
+    try {
+      if (!managerId) {
+        return { data: [], error: null };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plans")
+        .select(`
+          *,
+          plan_type:plan_types(*)
+        `)
+        .eq("manager_id", managerId)
+        .order("created_at", { ascending: false });
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching custom plans by manager:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
   };
 
-  const upsertCustomPlanAssignment = async (assignment: any): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plan_assignments")
-      .upsert(assignment)
-      .select()
-      .single();
-    return { data, error };
+  const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
+    try {
+      if (!planId) {
+        return { data: null, error: new Error("Plan ID is required") };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plans")
+        .select(`
+          *,
+          plan_type:plan_types(*),
+          responses:custom_plan_responses(*),
+          assignments:custom_plan_assignments(*)
+        `)
+        .eq("id", planId)
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error fetching custom plan details:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
   };
 
-  const deleteCustomPlanAssignment = async (id: string): Promise<Result<any>> => {
-    const { data, error } = await supabase
-      .from("custom_plan_assignments")
-      .delete()
-      .eq("id", id);
-    return { data, error };
+  const createCustomPlan = async (plan: Database["public"]["Tables"]["custom_plans"]["Insert"]): Promise<Result<any>> => {
+    try {
+      if (!plan.manager_id || !plan.plan_type_id) {
+        return { 
+          data: null, 
+          error: new Error("Manager ID and Plan Type ID are required") 
+        };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plans")
+        .insert(plan)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error creating custom plan:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
   };
 
-  const fetchCustomPlanAssignments = async (planId: string): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("custom_plan_assignments")
-      .select("*")
-      .eq("custom_plan_id", planId);
-    return { data, error };
+  const updateCustomPlan = async (id: string, updates: Database["public"]["Tables"]["custom_plans"]["Update"]): Promise<Result<any>> => {
+    try {
+      if (!id) {
+        return { data: null, error: new Error("Plan ID is required") };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plans")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error updating custom plan:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
   };
 
-  // Alias for compatibility with WorkPlanForm
-  const upsertWorkPlanAssignment = upsertCustomPlanAssignment;
+  const submitCustomPlan = async (id: string): Promise<Result<any>> => {
+    try {
+      if (!id) {
+        return { data: null, error: new Error("Plan ID is required") };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plans")
+        .update({ 
+          status: "submitted",
+          submitted_date: new Date().toISOString()
+        })
+        .eq("id", id)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error submitting custom plan:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
+
+  const upsertCustomPlanResponse = async (response: Database["public"]["Tables"]["custom_plan_responses"]["Insert"]): Promise<Result<any>> => {
+    try {
+      if (!response.custom_plan_id || !response.plan_field_id) {
+        return { 
+          data: null, 
+          error: new Error("Custom plan ID and plan field ID are required") 
+        };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plan_responses")
+        .upsert(response, {
+          onConflict: "custom_plan_id,plan_field_id"
+        })
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error upserting custom plan response:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
+
+  const upsertCustomPlanAssignment = async (assignment: Database["public"]["Tables"]["custom_plan_assignments"]["Insert"]): Promise<Result<any>> => {
+    try {
+      if (!assignment.custom_plan_id || !assignment.product_id) {
+        return { 
+          data: null, 
+          error: new Error("Custom plan ID and product ID are required") 
+        };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plan_assignments")
+        .upsert(assignment, {
+          onConflict: "custom_plan_id,product_id"
+        })
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error upserting custom plan assignment:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
+
+  const deleteCustomPlanAssignment = async (customPlanId: string, productId: string): Promise<Result<any>> => {
+    try {
+      if (!customPlanId || !productId) {
+        return { 
+          data: null, 
+          error: new Error("Custom plan ID and product ID are required") 
+        };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plan_assignments")
+        .delete()
+        .eq("custom_plan_id", customPlanId)
+        .eq("product_id", productId);
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error deleting custom plan assignment:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
 
   return {
+    fetchCustomPlans,
+    fetchCustomPlansByManager,
     fetchCustomPlanDetails,
-    fetchPlanFields,
+    createCustomPlan,
     updateCustomPlan,
     submitCustomPlan,
     upsertCustomPlanResponse,
-    createCustomPlan,
-    fetchCustomPlansByManager,
     upsertCustomPlanAssignment,
     deleteCustomPlanAssignment,
-    fetchCustomPlanAssignments,
-    upsertWorkPlanAssignment
   };
 }

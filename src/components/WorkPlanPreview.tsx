@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -5,18 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
-import { useReportSystem } from "@/hooks/useReportSystem";
-import { useCustomPlans } from "@/hooks/useCustomPlans";
 
 interface WorkPlanPreviewProps {
   workPlanId: string;
 }
 
 export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
-  const { fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
-  const { fetchWorkPlanDetails } = useReportSystem();
-  const { fetchCustomPlanAssignments } = useCustomPlans();
-  
+  const { fetchWorkPlanDetails, fetchWorkPlanAssignments, fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
   const [workPlan, setWorkPlan] = useState<any>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
@@ -37,7 +33,7 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
       setWorkPlan(planData);
 
       // Cargar asignaciones
-      const { data: assignmentsData, error: assignmentsError } = await fetchCustomPlanAssignments(workPlanId);
+      const { data: assignmentsData, error: assignmentsError } = await fetchWorkPlanAssignments(workPlanId);
       if (assignmentsError) throw assignmentsError;
       setAssignments(assignmentsData || []);
 

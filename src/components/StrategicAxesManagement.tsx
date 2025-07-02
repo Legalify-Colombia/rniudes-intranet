@@ -3,56 +3,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { StrategicAxis } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { Plus, Edit, Trash2, FileText, Eye, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useStrategicAxes } from "@/hooks/useStrategicAxes";
 
 export function StrategicAxesManagement() {
-  const [axes, setAxes] = useState<any[]>([]);
-  const [selectedAxes, setSelectedAxes] = useState<string[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [newAxis, setNewAxis] = useState({ code: "", name: "" });
-  const [editingAxis, setEditingAxis] = useState<any>(null);
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { fetchStrategicAxes, createStrategicAxis, updateStrategicAxis, deleteStrategicAxis } = useSupabaseData();
 
-  const {
-    fetchStrategicAxes,
-    createStrategicAxis,
-    updateStrategicAxis,
-    deleteStrategicAxis
-  } = useStrategicAxes();
+  const [axes, setAxes] = useState<StrategicAxis[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingAxis, setEditingAxis] = useState<StrategicAxis | null>(null);
+  const [formData, setFormData] = useState({ name: "", code: "", description: "" });
 
   useEffect(() => {
-    loadData();
+    loadAxes();
   }, []);
 
-  const loadData = async () => {
+  const loadAxes = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const { data, error } = await fetchStrategicAxes();
-      if (data) setAxes(data);
-      if (error) {
-        console.error("Error fetching strategic axes:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load strategic axes",
-          variant: "destructive",
-        });
+      const result = await fetchStrategicAxes();
+      if (result.data) {
+        setAxes(result.data);
       }
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error('Error loading axes:', error);
       toast({
         title: "Error",
-        description: "Failed to load strategic axes",
+        description: "No se pudieron cargar los ejes estratégicos",
         variant: "destructive",
       });
     } finally {
@@ -60,240 +44,180 @@ export function StrategicAxesManagement() {
     }
   };
 
-  const handleAxisSelection = (axisId: string, isSelected: boolean) => {
-    setSelectedAxes((prevSelected) =>
-      isSelected
-        ? [...prevSelected, axisId]
-        : prevSelected.filter((id) => id !== axisId)
-    );
-  };
-
-  const handleCreateAxis = async () => {
-    if (!newAxis.code || !newAxis.name) {
-      toast({
-        title: "Error",
-        description: "Please fill all fields",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleCreate = async () => {
+    if (!formData.name.trim() || !formData.code.trim() || !profile?.id) return;
 
     try {
-      setLoading(true);
-      const { data, error } = await createStrategicAxis(newAxis);
-
-      if (error) {
-        console.error("Error creating strategic axis:", error);
+      const result = await createStrategicAxis({
+        ...formData,
+        created_by: profile.id
+      });
+      if (result.data) {
+        setAxes([...axes, result.data]);
+        setFormData({ name: "", code: "", description: "" });
+        setIsCreating(false);
         toast({
-          title: "Error",
-          description: "Failed to create strategic axis",
-          variant: "destructive",
+          title: "Éxito",
+          description: "Eje estratégico creado correctamente",
         });
-      } else {
-        toast({
-          title: "Success",
-          description: "Strategic axis created successfully",
-        });
-        loadData();
-        setNewAxis({ code: "", name: "" });
-        setIsDialogOpen(false);
       }
     } catch (error) {
-      console.error("Error creating strategic axis:", error);
+      console.error('Error creating axis:', error);
       toast({
         title: "Error",
-        description: "Failed to create strategic axis",
+        description: "No se pudo crear el eje estratégico",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleUpdateAxis = async () => {
-    if (!editingAxis.code || !editingAxis.name) {
-      toast({
-        title: "Error",
-        description: "Please fill all fields",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleEdit = (axis: StrategicAxis) => {
+    setEditingAxis(axis);
+    setFormData({ name: axis.name, code: axis.code, description: axis.description || "" });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingAxis || !formData.name.trim() || !formData.code.trim()) return;
 
     try {
-      setLoading(true);
-      const { data, error } = await updateStrategicAxis(editingAxis.id, editingAxis);
-
-      if (error) {
-        console.error("Error updating strategic axis:", error);
-        toast({
-          title: "Error",
-          description: "Failed to update strategic axis",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Strategic axis updated successfully",
-        });
-        loadData();
+      const result = await updateStrategicAxis(editingAxis.id, formData);
+      if (result.data) {
+        setAxes(axes.map(axis => axis.id === editingAxis.id ? result.data : axis));
         setEditingAxis(null);
-        setIsDialogOpen(false);
-        setIsEditMode(false);
+        setFormData({ name: "", code: "", description: "" });
+        toast({
+          title: "Éxito",
+          description: "Eje estratégico actualizado correctamente",
+        });
       }
     } catch (error) {
-      console.error("Error updating strategic axis:", error);
+      console.error('Error updating axis:', error);
       toast({
         title: "Error",
-        description: "Failed to update strategic axis",
+        description: "No se pudo actualizar el eje estratégico",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleDeleteAxis = async (id: string) => {
+  const handleDelete = async (axis: StrategicAxis) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este eje estratégico?")) return;
+
     try {
-      setLoading(true);
-      const { data, error } = await deleteStrategicAxis(id);
-
-      if (error) {
-        console.error("Error deleting strategic axis:", error);
-        toast({
-          title: "Error",
-          description: "Failed to delete strategic axis",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Strategic axis deleted successfully",
-        });
-        loadData();
-      }
+      await deleteStrategicAxis(axis.id);
+      setAxes(axes.filter(a => a.id !== axis.id));
+      toast({
+        title: "Éxito",
+        description: "Eje estratégico eliminado correctamente",
+      });
     } catch (error) {
-      console.error("Error deleting strategic axis:", error);
+      console.error('Error deleting axis:', error);
       toast({
         title: "Error",
-        description: "Failed to delete strategic axis",
+        description: "No se pudo eliminar el eje estratégico",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-600">Cargando ejes estratégicos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Strategic Axes
-            </CardTitle>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="institutional-gradient text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  {isEditMode ? "Edit Axis" : "Create Axis"}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{isEditMode ? "Edit Axis" : "Create New Axis"}</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div>
-                    <Label htmlFor="code">Code</Label>
-                    <Input
-                      id="code"
-                      placeholder="Axis Code"
-                      value={isEditMode ? editingAxis?.code || "" : newAxis.code}
-                      onChange={(e) =>
-                        isEditMode
-                          ? setEditingAxis({ ...editingAxis, code: e.target.value })
-                          : setNewAxis({ ...newAxis, code: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="Axis Name"
-                      value={isEditMode ? editingAxis?.name || "" : newAxis.name}
-                      onChange={(e) =>
-                        isEditMode
-                          ? setEditingAxis({ ...editingAxis, name: e.target.value })
-                          : setNewAxis({ ...newAxis, name: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <Button onClick={isEditMode ? handleUpdateAxis : handleCreateAxis}>
-                  {isEditMode ? "Update" : "Create"}
-                </Button>
-              </DialogContent>
-            </Dialog>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Ejes Estratégicos</CardTitle>
+          <Button onClick={() => setIsCreating(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Eje
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {(isCreating || editingAxis) && (
+          <div className="p-4 border rounded-lg space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="code">Código</Label>
+                <Input
+                  id="code"
+                  placeholder="Código del eje"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  id="name"
+                  placeholder="Nombre del eje"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="description">Descripción</Label>
+              <Textarea
+                id="description"
+                placeholder="Descripción del eje"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={editingAxis ? handleUpdate : handleCreate}>
+                <Save className="h-4 w-4 mr-1" />
+                {editingAxis ? "Actualizar" : "Guardar"}
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => {
+                  setIsCreating(false);
+                  setEditingAxis(null);
+                  setFormData({ name: "", code: "", description: "" });
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Cancelar
+              </Button>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Selected</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {axes.map((axis) => (
-                <TableRow key={axis.id}>
-                  <TableCell>{axis.code}</TableCell>
-                  <TableCell>{axis.name}</TableCell>
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      id={`axis-${axis.id}`}
-                      name={`axis-${axis.id}`}
-                      checked={selectedAxes.includes(axis.id)}
-                      onChange={(e) => handleAxisSelection(axis.id, e.target.checked)}
-                      className="rounded border-gray-300"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setIsEditMode(true);
-                          setEditingAxis(axis);
-                          setIsDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteAxis(axis.id)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+
+        <div className="space-y-3">
+          {axes.map((axis) => (
+            <div key={axis.id} className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium">{axis.code} - {axis.name}</h3>
+                  {axis.description && (
+                    <p className="text-sm text-gray-600">{axis.description}</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleEdit(axis)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleDelete(axis)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

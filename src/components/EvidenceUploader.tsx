@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { useReportManagement } from "@/hooks/useReportManagement";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Upload, Link, X, FileText, AlertTriangle } from "lucide-react";
 
 interface EvidenceUploaderProps {
@@ -24,7 +24,7 @@ export function EvidenceUploader({
   onFilesChange,
   disabled = false
 }: EvidenceUploaderProps) {
-  const { uploadFile } = useReportManagement();
+  const { uploadFile } = useSupabaseData();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
