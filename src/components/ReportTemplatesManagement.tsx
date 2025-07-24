@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Edit, Trash2, FileText, Globe, X } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Globe, X, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData, ReportTemplate, StrategicAxis, Action, Product } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +20,7 @@ export function ReportTemplatesManagement() {
   const [strategicAxes, setStrategicAxes] = useState<StrategicAxis[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [planTypes, setPlanTypes] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ReportTemplate | null>(null);
   const { toast } = useToast();
@@ -31,11 +34,15 @@ export function ReportTemplatesManagement() {
     fetchStrategicAxes,
     fetchActions,
     fetchProducts,
+    fetchPlanTypes,
   } = useSupabaseData();
 
   const [templateForm, setTemplateForm] = useState({
     name: "",
     description: "",
+    template_type: "manual",
+    linked_plan_type_id: "",
+    auto_generate_on_approval: false,
     selected_strategic_axes: [] as string[],
     selected_actions: [] as string[],
     selected_products: [] as string[],
@@ -49,17 +56,19 @@ export function ReportTemplatesManagement() {
 
   const loadData = async () => {
     try {
-      const [templatesResult, axesResult, actionsResult, productsResult] = await Promise.all([
+      const [templatesResult, axesResult, actionsResult, productsResult, planTypesResult] = await Promise.all([
         fetchReportTemplates(),
         fetchStrategicAxes(),
         fetchActions(),
         fetchProducts(),
+        fetchPlanTypes(),
       ]);
 
       setTemplates(templatesResult.data || []);
       setStrategicAxes(axesResult.data || []);
       setActions(actionsResult.data || []);
       setProducts(productsResult.data || []);
+      setPlanTypes(planTypesResult.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -74,6 +83,9 @@ export function ReportTemplatesManagement() {
     setTemplateForm({
       name: "",
       description: "",
+      template_type: "manual",
+      linked_plan_type_id: "",
+      auto_generate_on_approval: false,
       selected_strategic_axes: [],
       selected_actions: [],
       selected_products: [],
@@ -164,6 +176,9 @@ export function ReportTemplatesManagement() {
       const templateData = {
         name: templateForm.name,
         description: templateForm.description,
+        template_type: templateForm.template_type,
+        linked_plan_type_id: templateForm.linked_plan_type_id || null,
+        auto_generate_on_approval: templateForm.auto_generate_on_approval,
         strategic_axes_ids: templateForm.selected_strategic_axes,
         actions_ids: templateForm.selected_actions,
         products_ids: templateForm.selected_products,
@@ -202,6 +217,9 @@ export function ReportTemplatesManagement() {
     setTemplateForm({
       name: template.name,
       description: template.description || "",
+      template_type: (template as any).template_type || "manual",
+      linked_plan_type_id: (template as any).linked_plan_type_id || "",
+      auto_generate_on_approval: (template as any).auto_generate_on_approval || false,
       selected_strategic_axes: template.strategic_axes_ids || [],
       selected_actions: template.actions_ids || [],
       selected_products: template.products_ids || [],
@@ -232,13 +250,13 @@ export function ReportTemplatesManagement() {
   };
 
   // Filtrar acciones y productos basado en selecciones
-  const availableActions = actions.filter(action => 
-    templateForm.selected_strategic_axes.includes(action.strategic_axis_id || '')
-  );
+  const availableActions = templateForm.template_type === 'manual' 
+    ? actions.filter(action => templateForm.selected_strategic_axes.includes(action.strategic_axis_id || ''))
+    : actions;
 
-  const availableProducts = products.filter(product => 
-    templateForm.selected_actions.includes(product.action_id || '')
-  );
+  const availableProducts = templateForm.template_type === 'manual'
+    ? products.filter(product => templateForm.selected_actions.includes(product.action_id || ''))
+    : products;
 
   const removeSelectedAxis = (axisId: string) => {
     handleStrategicAxisToggle(axisId);
@@ -296,125 +314,192 @@ export function ReportTemplatesManagement() {
                   />
                 </div>
 
-                {/* Ejes Estratégicos */}
-                <div>
-                  <Label>Ejes Estratégicos</Label>
-                  <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
-                    {strategicAxes.map((axis) => (
-                      <div key={axis.id} className="flex items-center space-x-2 mb-2">
-                        <Checkbox
-                          id={`axis-${axis.id}`}
-                          checked={templateForm.selected_strategic_axes.includes(axis.id)}
-                          onCheckedChange={() => handleStrategicAxisToggle(axis.id)}
-                        />
-                        <label htmlFor={`axis-${axis.id}`} className="text-sm">
-                          {axis.code} - {axis.name}
-                        </label>
-                      </div>
-                    ))}
+                {/* Configuración de tipo de plantilla */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="templateType">Tipo de Plantilla</Label>
+                    <Select 
+                      value={templateForm.template_type} 
+                      onValueChange={(value) => setTemplateForm(prev => ({ ...prev, template_type: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">Manual (Ejes/Acciones/Productos)</SelectItem>
+                        <SelectItem value="plan_based">Basada en Tipo de Plan</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  {templateForm.selected_strategic_axes.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600 mb-2">Ejes seleccionados:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {templateForm.selected_strategic_axes.map((axisId) => {
-                          const axis = strategicAxes.find(a => a.id === axisId);
-                          return (
-                            <Badge key={axisId} variant="outline" className="flex items-center gap-1">
-                              {axis?.code}
-                              <X 
-                                className="w-3 h-3 cursor-pointer" 
-                                onClick={() => removeSelectedAxis(axisId)}
-                              />
-                            </Badge>
-                          );
-                        })}
-                      </div>
+                  
+                  {templateForm.template_type === 'plan_based' && (
+                    <div>
+                      <Label htmlFor="linkedPlanType">Tipo de Plan Asociado</Label>
+                      <Select 
+                        value={templateForm.linked_plan_type_id} 
+                        onValueChange={(value) => setTemplateForm(prev => ({ ...prev, linked_plan_type_id: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un tipo de plan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {planTypes.map((planType) => (
+                            <SelectItem key={planType.id} value={planType.id}>
+                              {planType.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                 </div>
 
-                {/* Acciones */}
-                <div>
-                  <Label>Acciones</Label>
-                  <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
-                    {availableActions.map((action) => (
-                      <div key={action.id} className="flex items-center space-x-2 mb-2">
-                        <Checkbox
-                          id={`action-${action.id}`}
-                          checked={templateForm.selected_actions.includes(action.id)}
-                          onCheckedChange={() => handleActionToggle(action.id)}
-                        />
-                        <label htmlFor={`action-${action.id}`} className="text-sm">
-                          {action.code} - {action.name}
-                        </label>
-                      </div>
-                    ))}
-                    {availableActions.length === 0 && (
-                      <p className="text-sm text-gray-500">Selecciona ejes estratégicos primero</p>
-                    )}
-                  </div>
-                  {templateForm.selected_actions.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600 mb-2">Acciones seleccionadas:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {templateForm.selected_actions.map((actionId) => {
-                          const action = actions.find(a => a.id === actionId);
-                          return (
-                            <Badge key={actionId} variant="secondary" className="flex items-center gap-1">
-                              {action?.code}
-                              <X 
-                                className="w-3 h-3 cursor-pointer" 
-                                onClick={() => removeSelectedAction(actionId)}
-                              />
-                            </Badge>
-                          );
-                        })}
-                      </div>
+                {/* Configuración de auto-generación */}
+                {templateForm.template_type === 'plan_based' && templateForm.linked_plan_type_id && (
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <Label htmlFor="autoGenerate">Generación Automática</Label>
+                      <p className="text-sm text-gray-600">
+                        Generar automáticamente este informe cuando se apruebe un plan del tipo seleccionado
+                      </p>
                     </div>
-                  )}
-                </div>
+                    <Switch
+                      id="autoGenerate"
+                      checked={templateForm.auto_generate_on_approval}
+                      onCheckedChange={(checked) => setTemplateForm(prev => ({ ...prev, auto_generate_on_approval: checked }))}
+                    />
+                  </div>
+                )}
 
-                {/* Productos */}
-                <div>
-                  <Label>Productos</Label>
-                  <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
-                    {availableProducts.map((product) => (
-                      <div key={product.id} className="flex items-center space-x-2 mb-2">
-                        <Checkbox
-                          id={`product-${product.id}`}
-                          checked={templateForm.selected_products.includes(product.id)}
-                          onCheckedChange={() => handleProductToggle(product.id)}
-                        />
-                        <label htmlFor={`product-${product.id}`} className="text-sm">
-                          {product.name}
-                        </label>
-                      </div>
-                    ))}
-                    {availableProducts.length === 0 && (
-                      <p className="text-sm text-gray-500">Selecciona acciones primero</p>
-                    )}
-                  </div>
-                  {templateForm.selected_products.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600 mb-2">Productos seleccionados:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {templateForm.selected_products.map((productId) => {
-                          const product = products.find(p => p.id === productId);
-                          return (
-                            <Badge key={productId} variant="default" className="flex items-center gap-1">
-                              {product?.name}
-                              <X 
-                                className="w-3 h-3 cursor-pointer" 
-                                onClick={() => removeSelectedProduct(productId)}
-                              />
-                            </Badge>
-                          );
-                        })}
-                      </div>
+                {/* Configuración manual de elementos */}
+                {templateForm.template_type === 'manual' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      <h3 className="text-lg font-semibold">Configuración Manual de Elementos</h3>
                     </div>
-                  )}
-                </div>
+
+                    {/* Ejes Estratégicos */}
+                    <div>
+                      <Label>Ejes Estratégicos</Label>
+                      <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
+                        {strategicAxes.map((axis) => (
+                          <div key={axis.id} className="flex items-center space-x-2 mb-2">
+                            <Checkbox
+                              id={`axis-${axis.id}`}
+                              checked={templateForm.selected_strategic_axes.includes(axis.id)}
+                              onCheckedChange={() => handleStrategicAxisToggle(axis.id)}
+                            />
+                            <label htmlFor={`axis-${axis.id}`} className="text-sm">
+                              {axis.code} - {axis.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      {templateForm.selected_strategic_axes.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600 mb-2">Ejes seleccionados:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {templateForm.selected_strategic_axes.map((axisId) => {
+                              const axis = strategicAxes.find(a => a.id === axisId);
+                              return (
+                                <Badge key={axisId} variant="outline" className="flex items-center gap-1">
+                                  {axis?.code}
+                                  <X 
+                                    className="w-3 h-3 cursor-pointer" 
+                                    onClick={() => removeSelectedAxis(axisId)}
+                                  />
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Acciones */}
+                    <div>
+                      <Label>Acciones</Label>
+                      <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
+                        {availableActions.map((action) => (
+                          <div key={action.id} className="flex items-center space-x-2 mb-2">
+                            <Checkbox
+                              id={`action-${action.id}`}
+                              checked={templateForm.selected_actions.includes(action.id)}
+                              onCheckedChange={() => handleActionToggle(action.id)}
+                            />
+                            <label htmlFor={`action-${action.id}`} className="text-sm">
+                              {action.code} - {action.name}
+                            </label>
+                          </div>
+                        ))}
+                        {availableActions.length === 0 && (
+                          <p className="text-sm text-gray-500">Selecciona ejes estratégicos primero</p>
+                        )}
+                      </div>
+                      {templateForm.selected_actions.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600 mb-2">Acciones seleccionadas:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {templateForm.selected_actions.map((actionId) => {
+                              const action = actions.find(a => a.id === actionId);
+                              return (
+                                <Badge key={actionId} variant="secondary" className="flex items-center gap-1">
+                                  {action?.code}
+                                  <X 
+                                    className="w-3 h-3 cursor-pointer" 
+                                    onClick={() => removeSelectedAction(actionId)}
+                                  />
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Productos */}
+                    <div>
+                      <Label>Productos</Label>
+                      <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
+                        {availableProducts.map((product) => (
+                          <div key={product.id} className="flex items-center space-x-2 mb-2">
+                            <Checkbox
+                              id={`product-${product.id}`}
+                              checked={templateForm.selected_products.includes(product.id)}
+                              onCheckedChange={() => handleProductToggle(product.id)}
+                            />
+                            <label htmlFor={`product-${product.id}`} className="text-sm">
+                              {product.name}
+                            </label>
+                          </div>
+                        ))}
+                        {availableProducts.length === 0 && (
+                          <p className="text-sm text-gray-500">Selecciona acciones primero</p>
+                        )}
+                      </div>
+                      {templateForm.selected_products.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-600 mb-2">Productos seleccionados:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {templateForm.selected_products.map((productId) => {
+                              const product = products.find(p => p.id === productId);
+                              return (
+                                <Badge key={productId} variant="default" className="flex items-center gap-1">
+                                  {product?.name}
+                                  <X 
+                                    className="w-3 h-3 cursor-pointer" 
+                                    onClick={() => removeSelectedProduct(productId)}
+                                  />
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="sharepointUrl">URL Base de SharePoint</Label>
@@ -456,75 +541,62 @@ export function ReportTemplatesManagement() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Plantilla</TableHead>
-              <TableHead>Elementos Asignados</TableHead>
-              <TableHead>SharePoint</TableHead>
-              <TableHead>Max. Versiones</TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Descripción</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Plan Asociado</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead>Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {templates.map((template) => (
               <TableRow key={template.id}>
+                <TableCell className="font-medium">{template.name}</TableCell>
+                <TableCell>{template.description || 'Sin descripción'}</TableCell>
                 <TableCell>
-                  <div>
-                    <div className="font-medium">{template.name}</div>
-                    {template.description && (
-                      <div className="text-sm text-gray-500">{template.description}</div>
-                    )}
-                  </div>
+                  <Badge variant={
+                    (template as any).template_type === 'plan_based' 
+                      ? 'default' 
+                      : 'secondary'
+                  }>
+                    {(template as any).template_type === 'plan_based' ? 'Basada en Plan' : 'Manual'}
+                  </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-1">
-                      {template.strategic_axes_ids?.map((axisId) => {
-                        const axis = strategicAxes.find(a => a.id === axisId);
-                        return axis ? (
-                          <Badge key={axisId} variant="outline" className="text-xs">
-                            {axis.code}
-                          </Badge>
-                        ) : null;
-                      })}
+                  {(template as any).linked_plan_type_id ? (
+                    <div className="flex items-center gap-1">
+                      <Link className="h-4 w-4" />
+                      <span className="text-sm">
+                        {planTypes.find(pt => pt.id === (template as any).linked_plan_type_id)?.name || 'Plan no encontrado'}
+                      </span>
+                      {(template as any).auto_generate_on_approval && (
+                        <Badge variant="outline" className="text-xs">Auto</Badge>
+                      )}
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {template.actions_ids?.map((actionId) => {
-                        const action = actions.find(a => a.id === actionId);
-                        return action ? (
-                          <Badge key={actionId} variant="secondary" className="text-xs">
-                            {action.code}
-                          </Badge>
-                        ) : null;
-                      })}
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {template.products_ids?.map((productId) => {
-                        const product = products.find(p => p.id === productId);
-                        return product ? (
-                          <Badge key={productId} variant="default" className="text-xs">
-                            {product.name}
-                          </Badge>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {template.sharepoint_base_url ? (
-                    <Badge variant="outline" className="text-blue-600">
-                      <Globe className="w-3 h-3 mr-1" />
-                      Configurado
-                    </Badge>
                   ) : (
-                    <span className="text-gray-400">No configurado</span>
+                    <span className="text-gray-500">-</span>
                   )}
                 </TableCell>
-                <TableCell>{template.max_versions}</TableCell>
+                <TableCell>
+                  <Badge variant={template.is_active ? 'default' : 'secondary'}>
+                    {template.is_active ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(template)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(template)}
+                    >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDelete(template)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(template)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>

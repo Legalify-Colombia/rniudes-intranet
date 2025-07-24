@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { ArrowLeft, Settings } from "lucide-react";
-import { PlanTypeElementsConfiguration } from "./PlanTypeElementsConfiguration";
+import { HybridPlanTypeConfiguration } from "./HybridPlanTypeConfiguration";
 
 interface PlanTypeConfigurationProps {
   onBack: () => void;
@@ -58,7 +58,7 @@ export function PlanTypeConfiguration({ onBack }: PlanTypeConfigurationProps) {
 
   if (selectedPlanType) {
     return (
-      <PlanTypeElementsConfiguration
+      <HybridPlanTypeConfiguration
         planType={selectedPlanType}
         onBack={handleBackToList}
         onSave={handleBackToList}

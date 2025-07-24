@@ -126,6 +126,71 @@ export type Database = {
           },
         ]
       }
+      auto_generated_reports: {
+        Row: {
+          created_at: string | null
+          custom_plan_id: string
+          due_date: string | null
+          generated_date: string | null
+          id: string
+          manager_id: string
+          report_period_id: string | null
+          status: string | null
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          custom_plan_id: string
+          due_date?: string | null
+          generated_date?: string | null
+          id?: string
+          manager_id: string
+          report_period_id?: string | null
+          status?: string | null
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          custom_plan_id?: string
+          due_date?: string | null
+          generated_date?: string | null
+          id?: string
+          manager_id?: string
+          report_period_id?: string | null
+          status?: string | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_generated_reports_custom_plan_id_fkey"
+            columns: ["custom_plan_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_generated_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_generated_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_generated_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campus: {
         Row: {
           address: string
@@ -149,6 +214,68 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      coordinator_manager_assignments: {
+        Row: {
+          assigned_plan_type_id: string | null
+          assignment_date: string | null
+          campus_id: string | null
+          coordinator_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          manager_id: string
+        }
+        Insert: {
+          assigned_plan_type_id?: string | null
+          assignment_date?: string | null
+          campus_id?: string | null
+          coordinator_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id: string
+        }
+        Update: {
+          assigned_plan_type_id?: string | null
+          assignment_date?: string | null
+          campus_id?: string | null
+          coordinator_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordinator_manager_assignments_assigned_plan_type_id_fkey"
+            columns: ["assigned_plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordinator_manager_assignments_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordinator_manager_assignments_coordinator_id_fkey"
+            columns: ["coordinator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordinator_manager_assignments_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       custom_plan_assignments: {
         Row: {
@@ -1235,8 +1362,61 @@ export type Database = {
           },
         ]
       }
+      plan_type_template_fields: {
+        Row: {
+          created_at: string | null
+          field_config: Json | null
+          field_name: string
+          field_order: number | null
+          field_type: string
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          field_config?: Json | null
+          field_name: string
+          field_order?: number | null
+          field_type: string
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          field_config?: Json | null
+          field_name?: string
+          field_order?: number | null
+          field_type?: string
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_template_fields_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_type_template_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_types: {
         Row: {
+          allow_custom_fields: boolean | null
+          allow_structured_elements: boolean | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -1250,6 +1430,8 @@ export type Database = {
           uses_structured_elements: boolean | null
         }
         Insert: {
+          allow_custom_fields?: boolean | null
+          allow_structured_elements?: boolean | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -1263,6 +1445,8 @@ export type Database = {
           uses_structured_elements?: boolean | null
         }
         Update: {
+          allow_custom_fields?: boolean | null
+          allow_structured_elements?: boolean | null
           created_at?: string | null
           created_by?: string
           description?: string | null
@@ -1722,11 +1906,13 @@ export type Database = {
         Row: {
           action_id: string | null
           actions_ids: string[] | null
+          auto_generate_on_approval: boolean | null
           created_at: string | null
           created_by: string | null
           description: string | null
           id: string
           is_active: boolean | null
+          linked_plan_type_id: string | null
           max_versions: number | null
           name: string
           product_id: string | null
@@ -1734,16 +1920,19 @@ export type Database = {
           sharepoint_base_url: string | null
           strategic_axes_ids: string[] | null
           strategic_axis_id: string | null
+          template_type: string | null
           updated_at: string | null
         }
         Insert: {
           action_id?: string | null
           actions_ids?: string[] | null
+          auto_generate_on_approval?: boolean | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          linked_plan_type_id?: string | null
           max_versions?: number | null
           name: string
           product_id?: string | null
@@ -1751,16 +1940,19 @@ export type Database = {
           sharepoint_base_url?: string | null
           strategic_axes_ids?: string[] | null
           strategic_axis_id?: string | null
+          template_type?: string | null
           updated_at?: string | null
         }
         Update: {
           action_id?: string | null
           actions_ids?: string[] | null
+          auto_generate_on_approval?: boolean | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
+          linked_plan_type_id?: string | null
           max_versions?: number | null
           name?: string
           product_id?: string | null
@@ -1768,6 +1960,7 @@ export type Database = {
           sharepoint_base_url?: string | null
           strategic_axes_ids?: string[] | null
           strategic_axis_id?: string | null
+          template_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1783,6 +1976,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_templates_linked_plan_type_id_fkey"
+            columns: ["linked_plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
             referencedColumns: ["id"]
           },
           {
@@ -2863,6 +3063,16 @@ export type Database = {
           min_weekly_hours: number
           max_weekly_hours: number
           field_count: number
+        }[]
+      }
+      get_managers_by_coordinator_campus: {
+        Args: { coordinator_id: string }
+        Returns: {
+          manager_id: string
+          manager_name: string
+          manager_email: string
+          campus_id: string
+          campus_name: string
         }[]
       }
       get_next_version_number: {

@@ -12,6 +12,8 @@ export function usePlanTypes() {
   const createPlanType = async (planType: Omit<Database["public"]["Tables"]["plan_types"]["Insert"], "created_by"> & { 
     created_by?: string;
     uses_structured_elements?: boolean;
+    allow_custom_fields?: boolean;
+    allow_structured_elements?: boolean;
   }): Promise<Result<any>> => {
     // Get current user ID
     const { data: { user } } = await supabase.auth.getUser();
@@ -30,7 +32,9 @@ export function usePlanTypes() {
   };
 
   const updatePlanType = async (id: string, updates: Database["public"]["Tables"]["plan_types"]["Update"] & { 
-    uses_structured_elements?: boolean; 
+    uses_structured_elements?: boolean;
+    allow_custom_fields?: boolean;
+    allow_structured_elements?: boolean;
   }): Promise<Result<any>> => {
     const { data, error } = await supabase.from("plan_types").update(updates).eq("id", id).select().single();
     return { data, error };
@@ -75,14 +79,14 @@ export function usePlanTypes() {
           .eq("plan_type_id", planTypeId)
       ]);
 
-      return {
-        data: {
-          strategicAxes: axesResult.data || [],
-          actions: actionsResult.data || [],
-          products: productsResult.data || []
-        },
-        error: axesResult.error || actionsResult.error || productsResult.error
-      };
+    return {
+      data: {
+        strategicAxes: axesResult.data || [],
+        actions: actionsResult.data || [],
+        products: productsResult.data || []
+      },
+      error: axesResult.error || actionsResult.error || productsResult.error
+    };
     } catch (error) {
       return { data: null, error };
     }
@@ -144,6 +148,34 @@ export function usePlanTypes() {
     }
   };
 
+  // Nuevas funciones para la configuración híbrida
+  const fetchPlanTypeTemplateFields = async (planTypeId: string, templateId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("plan_type_template_fields")
+      .select("*")
+      .eq("plan_type_id", planTypeId)
+      .eq("template_id", templateId)
+      .order("field_order");
+    return { data, error };
+  };
+
+  const upsertPlanTypeTemplateField = async (field: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_type_template_fields")
+      .upsert(field)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const deletePlanTypeTemplateField = async (fieldId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_type_template_fields")
+      .delete()
+      .eq("id", fieldId);
+    return { data, error };
+  };
+
   return {
     fetchPlanTypes,
     createPlanType,
@@ -155,5 +187,8 @@ export function usePlanTypes() {
     deletePlanField,
     fetchPlanTypeElements,
     configurePlanTypeElements,
+    fetchPlanTypeTemplateFields,
+    upsertPlanTypeTemplateField,
+    deletePlanTypeTemplateField,
   };
 }
