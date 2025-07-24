@@ -14,526 +14,2884 @@ export type Database = {
   }
   public: {
     Tables: {
-      archivos_estudiante: {
+      academic_programs: {
         Row: {
+          campus_id: string
           created_at: string | null
-          estudiante_id: string
-          filename: string
+          description: string | null
+          director_email: string
+          director_name: string
+          faculty_id: string
           id: string
-          path: string
-          tipo: string
+          manager_id: string | null
+          name: string
           updated_at: string | null
         }
         Insert: {
+          campus_id: string
           created_at?: string | null
-          estudiante_id: string
-          filename: string
+          description?: string | null
+          director_email: string
+          director_name: string
+          faculty_id: string
           id?: string
-          path: string
-          tipo: string
+          manager_id?: string | null
+          name: string
           updated_at?: string | null
         }
         Update: {
+          campus_id?: string
           created_at?: string | null
-          estudiante_id?: string
-          filename?: string
+          description?: string | null
+          director_email?: string
+          director_name?: string
+          faculty_id?: string
           id?: string
-          path?: string
-          tipo?: string
+          manager_id?: string | null
+          name?: string
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "archivos_estudiante_estudiante_id_fkey"
-            columns: ["estudiante_id"]
+            foreignKeyName: "academic_programs_campus_id_fkey"
+            columns: ["campus_id"]
             isOneToOne: false
-            referencedRelation: "estudiantes"
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_programs_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_programs_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
       }
-      asignacion_beca: {
+      actions: {
         Row: {
-          calidad_academica: number | null
-          ensayo_motivacion: number | null
-          estudiante_id: string
-          fecha_actualizacion: string | null
-          fecha_creacion: string | null
+          code: string
+          created_at: string | null
+          created_by: string
+          description: string | null
           id: string
-          importancia_paises: number | null
-          nivel_ingles: number | null
-          pertinencia_programa: number | null
-          puntaje_total: number | null
-          semillero_mentorias: number | null
-          valor_beca: string | null
+          name: string
+          strategic_axis_id: string
+          updated_at: string | null
+          usage_type: string[] | null
         }
         Insert: {
-          calidad_academica?: number | null
-          ensayo_motivacion?: number | null
-          estudiante_id: string
-          fecha_actualizacion?: string | null
-          fecha_creacion?: string | null
+          code: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
           id?: string
-          importancia_paises?: number | null
-          nivel_ingles?: number | null
-          pertinencia_programa?: number | null
-          puntaje_total?: number | null
-          semillero_mentorias?: number | null
-          valor_beca?: string | null
+          name: string
+          strategic_axis_id: string
+          updated_at?: string | null
+          usage_type?: string[] | null
         }
         Update: {
-          calidad_academica?: number | null
-          ensayo_motivacion?: number | null
-          estudiante_id?: string
-          fecha_actualizacion?: string | null
-          fecha_creacion?: string | null
+          code?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
           id?: string
-          importancia_paises?: number | null
-          nivel_ingles?: number | null
-          pertinencia_programa?: number | null
-          puntaje_total?: number | null
-          semillero_mentorias?: number | null
-          valor_beca?: string | null
+          name?: string
+          strategic_axis_id?: string
+          updated_at?: string | null
+          usage_type?: string[] | null
         }
         Relationships: [
           {
-            foreignKeyName: "asignacion_beca_estudiante_id_fkey"
-            columns: ["estudiante_id"]
+            foreignKeyName: "actions_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "estudiantes"
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
             referencedColumns: ["id"]
           },
         ]
       }
-      convocatorias: {
+      campus: {
         Row: {
-          codigo: string
+          address: string
           created_at: string | null
-          estado: string
-          fecha_inicio: string
-          fecha_limite_inscripcion: string
           id: string
-          periodo: string
+          name: string
           updated_at: string | null
         }
         Insert: {
-          codigo: string
+          address: string
           created_at?: string | null
-          estado: string
-          fecha_inicio: string
-          fecha_limite_inscripcion: string
           id?: string
-          periodo: string
+          name: string
           updated_at?: string | null
         }
         Update: {
-          codigo?: string
+          address?: string
           created_at?: string | null
-          estado?: string
-          fecha_inicio?: string
-          fecha_limite_inscripcion?: string
           id?: string
-          periodo?: string
+          name?: string
           updated_at?: string | null
         }
         Relationships: []
       }
-      criterios_movilidad: {
+      custom_plan_assignments: {
         Row: {
-          Aceptación_de_terminos: boolean | null
-          Certificado_de_Notas: boolean | null
-          Certificado_Idiomas: boolean | null
-          estudiante_id: string
-          fecha_actualizacion: string
-          fecha_creacion: string
-          HV: boolean | null
-          id: string
-          motivación: boolean | null
-          "Nivel de Ingles": string | null
-          nombre_semillero: string | null
-          Pasaporte: boolean | null
-          semillero_investigacion: boolean
-          validacion_semillero: string
-        }
-        Insert: {
-          Aceptación_de_terminos?: boolean | null
-          Certificado_de_Notas?: boolean | null
-          Certificado_Idiomas?: boolean | null
-          estudiante_id: string
-          fecha_actualizacion?: string
-          fecha_creacion?: string
-          HV?: boolean | null
-          id?: string
-          motivación?: boolean | null
-          "Nivel de Ingles"?: string | null
-          nombre_semillero?: string | null
-          Pasaporte?: boolean | null
-          semillero_investigacion?: boolean
-          validacion_semillero?: string
-        }
-        Update: {
-          Aceptación_de_terminos?: boolean | null
-          Certificado_de_Notas?: boolean | null
-          Certificado_Idiomas?: boolean | null
-          estudiante_id?: string
-          fecha_actualizacion?: string
-          fecha_creacion?: string
-          HV?: boolean | null
-          id?: string
-          motivación?: boolean | null
-          "Nivel de Ingles"?: string | null
-          nombre_semillero?: string | null
-          Pasaporte?: boolean | null
-          semillero_investigacion?: boolean
-          validacion_semillero?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "criterios_movilidad_estudiante_id_fkey"
-            columns: ["estudiante_id"]
-            isOneToOne: false
-            referencedRelation: "estudiantes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      encuestas_seguimiento: {
-        Row: {
-          estado: string
-          fecha: string
-          id: string
-          movilidad_id: string
-          observaciones: string | null
-          respuestas: Json
-          tipo: string
-        }
-        Insert: {
-          estado: string
-          fecha?: string
-          id?: string
-          movilidad_id: string
-          observaciones?: string | null
-          respuestas?: Json
-          tipo: string
-        }
-        Update: {
-          estado?: string
-          fecha?: string
-          id?: string
-          movilidad_id?: string
-          observaciones?: string | null
-          respuestas?: Json
-          tipo?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "encuestas_seguimiento_movilidad_id_fkey"
-            columns: ["movilidad_id"]
-            isOneToOne: false
-            referencedRelation: "movilidades"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      estudiantes: {
-        Row: {
-          acudiente_direccion: string | null
-          acudiente_email: string | null
-          acudiente_nombre: string | null
-          acudiente_parentesco: string | null
-          acudiente_telefono: string | null
-          campus: string
-          celular: string
-          codigo: string
-          email: string
-          facultad: string
-          fecha_registro: string | null
-          id: string
-          motivacion: string | null
-          naturaleza_inscripcion: string | null
-          nombre: string
-          numero_documento: string
-          programa_academico: string
-          promedio: number
-          semestre_actual: number
-          tipo_documento: string
-          tipo_movilidad: string | null
-        }
-        Insert: {
-          acudiente_direccion?: string | null
-          acudiente_email?: string | null
-          acudiente_nombre?: string | null
-          acudiente_parentesco?: string | null
-          acudiente_telefono?: string | null
-          campus: string
-          celular: string
-          codigo: string
-          email: string
-          facultad: string
-          fecha_registro?: string | null
-          id?: string
-          motivacion?: string | null
-          naturaleza_inscripcion?: string | null
-          nombre: string
-          numero_documento: string
-          programa_academico: string
-          promedio: number
-          semestre_actual: number
-          tipo_documento: string
-          tipo_movilidad?: string | null
-        }
-        Update: {
-          acudiente_direccion?: string | null
-          acudiente_email?: string | null
-          acudiente_nombre?: string | null
-          acudiente_parentesco?: string | null
-          acudiente_telefono?: string | null
-          campus?: string
-          celular?: string
-          codigo?: string
-          email?: string
-          facultad?: string
-          fecha_registro?: string | null
-          id?: string
-          motivacion?: string | null
-          naturaleza_inscripcion?: string | null
-          nombre?: string
-          numero_documento?: string
-          programa_academico?: string
-          promedio?: number
-          semestre_actual?: number
-          tipo_documento?: string
-          tipo_movilidad?: string | null
-        }
-        Relationships: []
-      }
-      eventos_timeline: {
-        Row: {
-          estado: string
-          fecha: string
-          id: string
-          observacion: string | null
-          postulacion_id: string
-          usuario_id: string | null
-        }
-        Insert: {
-          estado: string
-          fecha: string
-          id?: string
-          observacion?: string | null
-          postulacion_id: string
-          usuario_id?: string | null
-        }
-        Update: {
-          estado?: string
-          fecha?: string
-          id?: string
-          observacion?: string | null
-          postulacion_id?: string
-          usuario_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "eventos_timeline_postulacion_id_fkey"
-            columns: ["postulacion_id"]
-            isOneToOne: false
-            referencedRelation: "postulaciones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      movilidades: {
-        Row: {
-          aerolinea: string | null
+          action_id: string | null
+          assigned_hours: number | null
           created_at: string | null
-          estado: string
-          estado_visado: string | null
-          fecha_regreso: string | null
-          fecha_viaje: string | null
+          custom_plan_id: string
           id: string
-          numero_vuelo: string | null
-          postulacion_id: string
+          product_id: string | null
+          strategic_axis_id: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          assigned_hours?: number | null
+          created_at?: string | null
+          custom_plan_id: string
+          id?: string
+          product_id?: string | null
+          strategic_axis_id?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          assigned_hours?: number | null
+          created_at?: string | null
+          custom_plan_id?: string
+          id?: string
+          product_id?: string | null
+          strategic_axis_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_plan_assignments_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_assignments_custom_plan_id_fkey"
+            columns: ["custom_plan_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_assignments_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_plan_responses: {
+        Row: {
+          created_at: string | null
+          custom_plan_id: string
+          file_name: string | null
+          file_url: string | null
+          id: string
+          plan_field_id: string
+          response_value: Json | null
           updated_at: string | null
         }
         Insert: {
-          aerolinea?: string | null
           created_at?: string | null
-          estado?: string
-          estado_visado?: string | null
-          fecha_regreso?: string | null
-          fecha_viaje?: string | null
+          custom_plan_id: string
+          file_name?: string | null
+          file_url?: string | null
           id?: string
-          numero_vuelo?: string | null
-          postulacion_id: string
+          plan_field_id: string
+          response_value?: Json | null
           updated_at?: string | null
         }
         Update: {
-          aerolinea?: string | null
           created_at?: string | null
-          estado?: string
-          estado_visado?: string | null
-          fecha_regreso?: string | null
-          fecha_viaje?: string | null
+          custom_plan_id?: string
+          file_name?: string | null
+          file_url?: string | null
           id?: string
-          numero_vuelo?: string | null
-          postulacion_id?: string
+          plan_field_id?: string
+          response_value?: Json | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "movilidades_postulacion_id_fkey"
-            columns: ["postulacion_id"]
+            foreignKeyName: "custom_plan_responses_custom_plan_id_fkey"
+            columns: ["custom_plan_id"]
             isOneToOne: false
-            referencedRelation: "postulaciones"
+            referencedRelation: "custom_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plan_responses_plan_field_id_fkey"
+            columns: ["plan_field_id"]
+            isOneToOne: false
+            referencedRelation: "plan_fields"
             referencedColumns: ["id"]
           },
         ]
       }
-      postulaciones: {
+      custom_plans: {
         Row: {
-          codigo_participacion: string | null
-          convocatoria_id: string | null
-          estado_actual: string
-          estudiante_id: string
-          fecha_actualizacion: string | null
-          fecha_creacion: string | null
-          fecha_fin_movilidad: string | null
-          fecha_inicio_movilidad: string | null
-          id: string
-          naturaleza_inscripcion: string
-          pais_destino: string
-          prioridad: number
-          tipo_beca: string | null
-          tipo_movilidad: string
-          universidad_destino: string
-        }
-        Insert: {
-          codigo_participacion?: string | null
-          convocatoria_id?: string | null
-          estado_actual: string
-          estudiante_id: string
-          fecha_actualizacion?: string | null
-          fecha_creacion?: string | null
-          fecha_fin_movilidad?: string | null
-          fecha_inicio_movilidad?: string | null
-          id?: string
-          naturaleza_inscripcion: string
-          pais_destino: string
-          prioridad: number
-          tipo_beca?: string | null
-          tipo_movilidad: string
-          universidad_destino: string
-        }
-        Update: {
-          codigo_participacion?: string | null
-          convocatoria_id?: string | null
-          estado_actual?: string
-          estudiante_id?: string
-          fecha_actualizacion?: string | null
-          fecha_creacion?: string | null
-          fecha_fin_movilidad?: string | null
-          fecha_inicio_movilidad?: string | null
-          id?: string
-          naturaleza_inscripcion?: string
-          pais_destino?: string
-          prioridad?: number
-          tipo_beca?: string | null
-          tipo_movilidad?: string
-          universidad_destino?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "postulaciones_convocatoria_id_fkey"
-            columns: ["convocatoria_id"]
-            isOneToOne: false
-            referencedRelation: "convocatorias"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "postulaciones_estudiante_id_fkey"
-            columns: ["estudiante_id"]
-            isOneToOne: false
-            referencedRelation: "estudiantes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "postulaciones_universidad_destino_fkey"
-            columns: ["universidad_destino"]
-            isOneToOne: false
-            referencedRelation: "universidades"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      universidades: {
-        Row: {
-          ciudad: string
-          convenio_activo: boolean
+          approval_comments: string | null
+          approved_by: string | null
+          approved_date: string | null
           created_at: string | null
           id: string
-          nombre: string
-          pais: string
-          sitio_web: string | null
+          manager_id: string
+          plan_type_id: string
+          status: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
         }
         Insert: {
-          ciudad: string
-          convenio_activo?: boolean
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
           created_at?: string | null
           id?: string
-          nombre: string
-          pais: string
-          sitio_web?: string | null
+          manager_id: string
+          plan_type_id: string
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          updated_at?: string | null
         }
         Update: {
-          ciudad?: string
-          convenio_activo?: boolean
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
           created_at?: string | null
           id?: string
-          nombre?: string
-          pais?: string
-          sitio_web?: string | null
+          manager_id?: string
+          plan_type_id?: string
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_plans_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          template_content: string
+          template_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          template_content: string
+          template_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          template_content?: string
+          template_type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
-      usuarios: {
+      faculties: {
         Row: {
-          campus: string
+          campus_id: string | null
           created_at: string | null
-          email: string
+          dean_name: string
+          description: string | null
           id: string
-          nombre: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          campus_id?: string | null
+          created_at?: string | null
+          dean_name: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          campus_id?: string | null
+          created_at?: string | null
+          dean_name?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculties_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_campus: {
+        Row: {
+          campus_id: string
+          created_at: string | null
+          faculty_id: string
+          id: string
+        }
+        Insert: {
+          campus_id: string
+          created_at?: string | null
+          faculty_id: string
+          id?: string
+        }
+        Update: {
+          campus_id?: string
+          created_at?: string | null
+          faculty_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_campus_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_campus_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      improvement_plans: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string
+          expected_completion_date: string | null
+          id: string
+          improvement_actions: string[] | null
+          manager_id: string
+          manager_report_id: string
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description: string
+          expected_completion_date?: string | null
+          id?: string
+          improvement_actions?: string[] | null
+          manager_id: string
+          manager_report_id: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string
+          expected_completion_date?: string | null
+          id?: string
+          improvement_actions?: string[] | null
+          manager_id?: string
+          manager_report_id?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "improvement_plans_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "improvement_plans_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
+          },
+        ]
+      }
+      indicator_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          manager_id: string
+          report_period_id: string
+          reviewed_by: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id: string
+          report_period_id: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id?: string
+          report_period_id?: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicator_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicator_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicator_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicator_responses: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          indicator_id: string
+          indicator_report_id: string
+          link_value: string | null
+          numeric_value: number | null
+          observations: string | null
+          text_value: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          indicator_id: string
+          indicator_report_id: string
+          link_value?: string | null
+          numeric_value?: number | null
+          observations?: string | null
+          text_value?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          indicator_id?: string
+          indicator_report_id?: string
+          link_value?: string | null
+          numeric_value?: number | null
+          observations?: string | null
+          text_value?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicator_responses_indicator_id_fkey"
+            columns: ["indicator_id"]
+            isOneToOne: false
+            referencedRelation: "indicators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicator_responses_indicator_report_id_fkey"
+            columns: ["indicator_report_id"]
+            isOneToOne: false
+            referencedRelation: "indicator_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicators: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          data_type: string
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          data_type: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          data_type?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicators_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internationalization_projects: {
+        Row: {
+          activities_schedule: string | null
+          approval_comments: string | null
+          approved_by: string | null
+          approved_date: string | null
+          bibliography: string | null
+          created_at: string | null
+          duration_months: number | null
+          general_objective: string | null
+          id: string
+          impact: string | null
+          indicators_text: string | null
+          introduction: string | null
+          manager_id: string
+          methodology: string | null
+          participation_letter_name: string | null
+          participation_letter_url: string | null
+          program_id: string
+          project_summary: string | null
+          project_title: string
+          results: string | null
+          schedule_description: string | null
+          specific_line_id: string | null
+          specific_objectives: string[] | null
+          status: string | null
+          strategic_axis_id: string | null
+          submitted_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activities_schedule?: string | null
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          bibliography?: string | null
+          created_at?: string | null
+          duration_months?: number | null
+          general_objective?: string | null
+          id?: string
+          impact?: string | null
+          indicators_text?: string | null
+          introduction?: string | null
+          manager_id: string
+          methodology?: string | null
+          participation_letter_name?: string | null
+          participation_letter_url?: string | null
+          program_id: string
+          project_summary?: string | null
+          project_title: string
+          results?: string | null
+          schedule_description?: string | null
+          specific_line_id?: string | null
+          specific_objectives?: string[] | null
+          status?: string | null
+          strategic_axis_id?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activities_schedule?: string | null
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          bibliography?: string | null
+          created_at?: string | null
+          duration_months?: number | null
+          general_objective?: string | null
+          id?: string
+          impact?: string | null
+          indicators_text?: string | null
+          introduction?: string | null
+          manager_id?: string
+          methodology?: string | null
+          participation_letter_name?: string | null
+          participation_letter_url?: string | null
+          program_id?: string
+          project_summary?: string | null
+          project_title?: string
+          results?: string | null
+          schedule_description?: string | null
+          specific_line_id?: string | null
+          specific_objectives?: string[] | null
+          status?: string | null
+          strategic_axis_id?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internationalization_projects_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "academic_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["program_id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_specific_line_id_fkey"
+            columns: ["specific_line_id"]
+            isOneToOne: false
+            referencedRelation: "specific_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_projects_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      internationalization_reports: {
+        Row: {
+          abnormal_reason: string | null
+          activities_executed: string | null
+          activities_in_progress: string | null
+          created_at: string | null
+          difficulties: string[] | null
+          id: string
+          manager_id: string
+          objectives_achieved: string | null
+          project_id: string
+          project_status: string | null
+          project_timing: string | null
+          report_period_id: string
+          reviewed_by: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          abnormal_reason?: string | null
+          activities_executed?: string | null
+          activities_in_progress?: string | null
+          created_at?: string | null
+          difficulties?: string[] | null
+          id?: string
+          manager_id: string
+          objectives_achieved?: string | null
+          project_id: string
+          project_status?: string | null
+          project_timing?: string | null
+          report_period_id: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          abnormal_reason?: string | null
+          activities_executed?: string | null
+          activities_in_progress?: string | null
+          created_at?: string | null
+          difficulties?: string[] | null
+          id?: string
+          manager_id?: string
+          objectives_achieved?: string | null
+          project_id?: string
+          project_status?: string | null
+          project_timing?: string | null
+          report_period_id?: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internationalization_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "internationalization_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "internationalization_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_report_versions: {
+        Row: {
+          created_at: string | null
+          evidence_links: string[] | null
+          id: string
+          manager_report_id: string | null
+          observations: string | null
+          progress_percentage: number | null
+          sharepoint_folder_url: string | null
+          submitted_at: string | null
+          template_id: string | null
+          updated_at: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          evidence_links?: string[] | null
+          id?: string
+          manager_report_id?: string | null
+          observations?: string | null
+          progress_percentage?: number | null
+          sharepoint_folder_url?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          version_number?: number
+        }
+        Update: {
+          created_at?: string | null
+          evidence_links?: string[] | null
+          id?: string
+          manager_report_id?: string | null
+          observations?: string | null
+          progress_percentage?: number | null
+          sharepoint_folder_url?: string | null
+          submitted_at?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_report_versions_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_report_versions_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "manager_report_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_reports: {
+        Row: {
+          can_edit: boolean | null
+          completion_percentage: number | null
+          created_at: string | null
+          description: string | null
+          general_report_file_name: string | null
+          general_report_url: string | null
+          id: string
+          is_final_version: boolean | null
+          manager_id: string
+          report_period_id: string | null
+          requires_improvement_plan: boolean | null
+          status: string | null
+          submitted_date: string | null
+          title: string
+          total_progress_percentage: number | null
+          updated_at: string | null
+          version_number: number | null
+          work_plan_id: string
+        }
+        Insert: {
+          can_edit?: boolean | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          description?: string | null
+          general_report_file_name?: string | null
+          general_report_url?: string | null
+          id?: string
+          is_final_version?: boolean | null
+          manager_id: string
+          report_period_id?: string | null
+          requires_improvement_plan?: boolean | null
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          total_progress_percentage?: number | null
+          updated_at?: string | null
+          version_number?: number | null
+          work_plan_id: string
+        }
+        Update: {
+          can_edit?: boolean | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          description?: string | null
+          general_report_file_name?: string | null
+          general_report_url?: string | null
+          id?: string
+          is_final_version?: boolean | null
+          manager_id?: string
+          report_period_id?: string | null
+          requires_improvement_plan?: boolean | null
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          total_progress_percentage?: number | null
+          updated_at?: string | null
+          version_number?: number | null
+          work_plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reports_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: true
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["work_plan_id"]
+          },
+          {
+            foreignKeyName: "manager_reports_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: true
+            referencedRelation: "work_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_reports_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: true
+            referencedRelation: "work_plans_with_manager"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      plan_fields: {
+        Row: {
+          created_at: string | null
+          dropdown_options: Json | null
+          field_name: string
+          field_order: number | null
+          field_type: string
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dropdown_options?: Json | null
+          field_name: string
+          field_order?: number | null
+          field_type: string
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dropdown_options?: Json | null
+          field_name?: string
+          field_order?: number | null
+          field_type?: string
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_fields_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_type_actions: {
+        Row: {
+          action_id: string
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_actions_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_type_actions_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_type_products: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_products_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_type_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_type_strategic_axes: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          plan_type_id: string
+          strategic_axis_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id: string
+          strategic_axis_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          plan_type_id?: string
+          strategic_axis_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_strategic_axes_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_type_strategic_axes_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_types: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_visible: boolean | null
+          max_weekly_hours: number | null
+          min_weekly_hours: number | null
+          name: string
+          updated_at: string | null
+          uses_structured_elements: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_visible?: boolean | null
+          max_weekly_hours?: number | null
+          min_weekly_hours?: number | null
+          name: string
+          updated_at?: string | null
+          uses_structured_elements?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_visible?: boolean | null
+          max_weekly_hours?: number | null
+          min_weekly_hours?: number | null
+          name?: string
+          updated_at?: string | null
+          uses_structured_elements?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_types_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preliminary_reports: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          delivery_date: string
+          evidence_files: string[] | null
+          id: string
+          observations: string | null
+          progress_percentage: number
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          delivery_date?: string
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          progress_percentage?: number
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          delivery_date?: string
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          progress_percentage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preliminary_reports_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "preliminary_reports_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "work_plan_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_progress_reports: {
+        Row: {
+          created_at: string | null
+          evidence_file_names: string[] | null
+          evidence_files: string[] | null
+          id: string
+          manager_report_id: string
+          observations: string | null
+          product_id: string
+          progress_percentage: number
+          updated_at: string | null
+          work_plan_assignment_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          manager_report_id: string
+          observations?: string | null
+          product_id: string
+          progress_percentage?: number
+          updated_at?: string | null
+          work_plan_assignment_id: string
+        }
+        Update: {
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          manager_report_id?: string
+          observations?: string | null
+          product_id?: string
+          progress_percentage?: number
+          updated_at?: string | null
+          work_plan_assignment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_progress_reports_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_manager_report_id_fkey"
+            columns: ["manager_report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_work_plan_assignment_id_fkey"
+            columns: ["work_plan_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "product_progress_reports_work_plan_assignment_id_fkey"
+            columns: ["work_plan_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "work_plan_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_responses: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          product_id: string
+          report_id: string
+          response_text: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          product_id: string
+          report_id: string
+          response_text?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          product_id?: string
+          report_id?: string
+          response_text?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_responses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_responses_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "manager_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_responses_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["report_id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          action_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          usage_type: string[] | null
+        }
+        Insert: {
+          action_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          usage_type?: string[] | null
+        }
+        Update: {
+          action_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          usage_type?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          campus: string | null
+          campus_id: string | null
+          created_at: string | null
+          document_number: string
+          email: string
+          full_name: string
+          id: string
+          managed_campus_ids: string[] | null
+          number_of_weeks: number | null
+          position: string
           role: string
-          telefono: string | null
+          total_hours: number | null
+          updated_at: string | null
+          weekly_hours: number | null
         }
         Insert: {
-          campus: string
+          campus?: string | null
+          campus_id?: string | null
           created_at?: string | null
+          document_number: string
           email: string
+          full_name: string
           id: string
-          nombre: string
-          role?: string
-          telefono?: string | null
+          managed_campus_ids?: string[] | null
+          number_of_weeks?: number | null
+          position: string
+          role: string
+          total_hours?: number | null
+          updated_at?: string | null
+          weekly_hours?: number | null
         }
         Update: {
-          campus?: string
+          campus?: string | null
+          campus_id?: string | null
           created_at?: string | null
+          document_number?: string
           email?: string
+          full_name?: string
           id?: string
-          nombre?: string
+          managed_campus_ids?: string[] | null
+          number_of_weeks?: number | null
+          position?: string
           role?: string
-          telefono?: string | null
+          total_hours?: number | null
+          updated_at?: string | null
+          weekly_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_partner_institutions: {
+        Row: {
+          contact_professor_email: string
+          contact_professor_name: string
+          country: string
+          created_at: string | null
+          id: string
+          institution_name: string
+          project_id: string
+        }
+        Insert: {
+          contact_professor_email: string
+          contact_professor_name: string
+          country: string
+          created_at?: string | null
+          id?: string
+          institution_name: string
+          project_id: string
+        }
+        Update: {
+          contact_professor_email?: string
+          contact_professor_name?: string
+          country?: string
+          created_at?: string | null
+          id?: string
+          institution_name?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_partner_institutions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "internationalization_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_document_templates: {
+        Row: {
+          created_at: string | null
+          document_template_id: string | null
+          id: string
+          report_template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_template_id?: string | null
+          id?: string
+          report_template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_template_id?: string | null
+          id?: string
+          report_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_document_templates_document_template_id_fkey"
+            columns: ["document_template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_document_templates_report_template_id_fkey"
+            columns: ["report_template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_periods: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          name: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_periods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_system_config: {
+        Row: {
+          auto_calculate_progress: boolean | null
+          created_at: string | null
+          id: string
+          max_reports_per_period: number
+          reports_enabled: boolean | null
+          require_evidence: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_calculate_progress?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_reports_per_period?: number
+          reports_enabled?: boolean | null
+          require_evidence?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_calculate_progress?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_reports_per_period?: number
+          reports_enabled?: boolean | null
+          require_evidence?: boolean | null
+          updated_at?: string | null
         }
         Relationships: []
+      }
+      report_templates: {
+        Row: {
+          action_id: string | null
+          actions_ids: string[] | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_versions: number | null
+          name: string
+          product_id: string | null
+          products_ids: string[] | null
+          sharepoint_base_url: string | null
+          strategic_axes_ids: string[] | null
+          strategic_axis_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          actions_ids?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_versions?: number | null
+          name: string
+          product_id?: string | null
+          products_ids?: string[] | null
+          sharepoint_base_url?: string | null
+          strategic_axes_ids?: string[] | null
+          strategic_axis_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          actions_ids?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_versions?: number | null
+          name?: string
+          product_id?: string | null
+          products_ids?: string[] | null
+          sharepoint_base_url?: string | null
+          strategic_axes_ids?: string[] | null
+          strategic_axis_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_templates_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_templates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_templates_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_biological_sex: {
+        Row: {
+          created_at: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: number
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_consolidated_reports: {
+        Row: {
+          consolidation_date: string | null
+          created_at: string | null
+          created_by: string
+          file_url: string | null
+          id: string
+          participating_managers: number | null
+          template_id: string | null
+          title: string
+          total_records: number | null
+        }
+        Insert: {
+          consolidation_date?: string | null
+          created_at?: string | null
+          created_by: string
+          file_url?: string | null
+          id?: string
+          participating_managers?: number | null
+          template_id?: string | null
+          title: string
+          total_records?: number | null
+        }
+        Update: {
+          consolidation_date?: string | null
+          created_at?: string | null
+          created_by?: string
+          file_url?: string | null
+          id?: string
+          participating_managers?: number | null
+          template_id?: string | null
+          title?: string
+          total_records?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_consolidated_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "snies_report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_countries: {
+        Row: {
+          alpha_2: string | null
+          alpha_3: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          alpha_2?: string | null
+          alpha_3?: string | null
+          created_at?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          alpha_2?: string | null
+          alpha_3?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_document_types: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_education_levels: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_institutions: {
+        Row: {
+          address: string | null
+          code: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          municipality_id: string | null
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          code?: string | null
+          created_at?: string | null
+          id: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name: string
+        }
+        Update: {
+          address?: string | null
+          code?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          municipality_id?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_knowledge_areas: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_area_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+          parent_area_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_area_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_knowledge_areas_parent_area_id_fkey"
+            columns: ["parent_area_id"]
+            isOneToOne: false
+            referencedRelation: "snies_knowledge_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_marital_status: {
+        Row: {
+          created_at: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: number
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_methodologies: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_modalities: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      snies_municipalities: {
+        Row: {
+          country_id: string | null
+          created_at: string | null
+          department_id: string
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          country_id?: string | null
+          created_at?: string | null
+          department_id: string
+          id: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          country_id?: string | null
+          created_at?: string | null
+          department_id?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_municipalities_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "snies_countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_report_data: {
+        Row: {
+          created_at: string | null
+          field_data: Json
+          id: string
+          report_id: string | null
+          row_index: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_data: Json
+          id?: string
+          report_id?: string | null
+          row_index: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_data?: Json
+          id?: string
+          report_id?: string | null
+          row_index?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_report_data_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "snies_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_report_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      snies_reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          manager_id: string
+          status: string | null
+          submitted_date: string | null
+          template_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          status?: string | null
+          submitted_date?: string | null
+          template_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          status?: string | null
+          submitted_date?: string | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "snies_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "snies_report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snies_template_fields: {
+        Row: {
+          created_at: string | null
+          field_label: string
+          field_name: string
+          field_options: Json | null
+          field_order: number | null
+          field_type: string
+          id: string
+          is_required: boolean | null
+          relation_display_field: string | null
+          relation_id_field: string | null
+          relation_table: string | null
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_label: string
+          field_name: string
+          field_options?: Json | null
+          field_order?: number | null
+          field_type: string
+          id?: string
+          is_required?: boolean | null
+          relation_display_field?: string | null
+          relation_id_field?: string | null
+          relation_table?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_label?: string
+          field_name?: string
+          field_options?: Json | null
+          field_order?: number | null
+          field_type?: string
+          id?: string
+          is_required?: boolean | null
+          relation_display_field?: string | null
+          relation_id_field?: string | null
+          relation_table?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snies_template_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "snies_report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specific_lines: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specific_lines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategic_axes: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          usage_type: string[] | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          usage_type?: string[] | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          usage_type?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategic_axes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_based_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          manager_id: string
+          report_period_id: string
+          report_template_id: string
+          reviewed_by: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id: string
+          report_period_id: string
+          report_template_id: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          manager_id?: string
+          report_period_id?: string
+          report_template_id?: string
+          reviewed_by?: string | null
+          reviewed_date?: string | null
+          status?: string | null
+          submitted_date?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_based_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_template_id_fkey"
+            columns: ["report_template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_report_responses: {
+        Row: {
+          action_id: string | null
+          created_at: string | null
+          evidence_file_names: string[] | null
+          evidence_files: string[] | null
+          id: string
+          observations: string | null
+          product_id: string | null
+          progress_percentage: number | null
+          response_text: string | null
+          strategic_axis_id: string | null
+          template_report_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          product_id?: string | null
+          progress_percentage?: number | null
+          response_text?: string | null
+          strategic_axis_id?: string | null
+          template_report_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string | null
+          evidence_file_names?: string[] | null
+          evidence_files?: string[] | null
+          id?: string
+          observations?: string | null
+          product_id?: string | null
+          progress_percentage?: number | null
+          response_text?: string | null
+          strategic_axis_id?: string | null
+          template_report_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_report_responses_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_strategic_axis_id_fkey"
+            columns: ["strategic_axis_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_axes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_template_report_id_fkey"
+            columns: ["template_report_id"]
+            isOneToOne: false
+            referencedRelation: "template_based_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_report_responses_template_report_id_fkey"
+            columns: ["template_report_id"]
+            isOneToOne: false
+            referencedRelation: "template_based_reports_with_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_plan_assignments: {
+        Row: {
+          assigned_hours: number
+          created_at: string | null
+          id: string
+          product_id: string
+          updated_at: string | null
+          work_plan_id: string
+        }
+        Insert: {
+          assigned_hours?: number
+          created_at?: string | null
+          id?: string
+          product_id: string
+          updated_at?: string | null
+          work_plan_id: string
+        }
+        Update: {
+          assigned_hours?: number
+          created_at?: string | null
+          id?: string
+          product_id?: string
+          updated_at?: string | null
+          work_plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_plan_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plan_assignments_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["work_plan_id"]
+          },
+          {
+            foreignKeyName: "work_plan_assignments_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: false
+            referencedRelation: "work_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plan_assignments_work_plan_id_fkey"
+            columns: ["work_plan_id"]
+            isOneToOne: false
+            referencedRelation: "work_plans_with_manager"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_plans: {
+        Row: {
+          approval_comments: string | null
+          approved_by: string | null
+          approved_date: string | null
+          comments: string | null
+          coordinator_approval_date: string | null
+          coordinator_comments: string | null
+          created_at: string | null
+          id: string
+          manager_id: string
+          objectives: string | null
+          program_id: string
+          status: Database["public"]["Enums"]["work_plan_status"] | null
+          submitted_date: string | null
+          total_hours_assigned: number
+          updated_at: string | null
+        }
+        Insert: {
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          comments?: string | null
+          coordinator_approval_date?: string | null
+          coordinator_comments?: string | null
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          objectives?: string | null
+          program_id: string
+          status?: Database["public"]["Enums"]["work_plan_status"] | null
+          submitted_date?: string | null
+          total_hours_assigned: number
+          updated_at?: string | null
+        }
+        Update: {
+          approval_comments?: string | null
+          approved_by?: string | null
+          approved_date?: string | null
+          comments?: string | null
+          coordinator_approval_date?: string | null
+          coordinator_comments?: string | null
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          objectives?: string | null
+          program_id?: string
+          status?: Database["public"]["Enums"]["work_plan_status"] | null
+          submitted_date?: string | null
+          total_hours_assigned?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "academic_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["program_id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      template_based_reports_with_details: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          manager_email: string | null
+          manager_id: string | null
+          manager_name: string | null
+          period_end: string | null
+          period_name: string | null
+          period_start: string | null
+          report_period_id: string | null
+          report_template_id: string | null
+          reviewed_by: string | null
+          reviewed_by_name: string | null
+          reviewed_date: string | null
+          status: string | null
+          submitted_date: string | null
+          template_description: string | null
+          template_name: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_based_reports_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_report_template_id_fkey"
+            columns: ["report_template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_based_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unified_reports: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          manager_id: string | null
+          report_period_id: string | null
+          report_type: string | null
+          status: string | null
+          submitted_date: string | null
+          title: string | null
+          type_display_name: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      vw_full_report_data: {
+        Row: {
+          action_name: string | null
+          assignment_id: string | null
+          campus_id: string | null
+          delivery_date: string | null
+          evidence_files: string[] | null
+          faculty_id: string | null
+          manager_email: string | null
+          manager_id: string | null
+          manager_name: string | null
+          observations: string | null
+          plan_total_hours: number | null
+          product_assigned_hours: number | null
+          product_id: string | null
+          product_name: string | null
+          program_id: string | null
+          program_name: string | null
+          progress_percentage: number | null
+          report_created_at: string | null
+          report_id: string | null
+          strategic_axis_name: string | null
+          weekly_hours: number | null
+          work_plan_id: string | null
+          work_plan_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_programs_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_programs_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plan_assignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_plans_with_manager: {
+        Row: {
+          approval_comments: string | null
+          approved_by: string | null
+          approved_date: string | null
+          campus_name: string | null
+          comments: string | null
+          coordinator_approval_date: string | null
+          coordinator_comments: string | null
+          created_at: string | null
+          faculty_name: string | null
+          id: string | null
+          manager_email: string | null
+          manager_id: string | null
+          manager_name: string | null
+          manager_position: string | null
+          objectives: string | null
+          program_id: string | null
+          program_name: string | null
+          status: Database["public"]["Enums"]["work_plan_status"] | null
+          submitted_date: string | null
+          total_hours_assigned: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_plans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "academic_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_plans_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "vw_full_report_data"
+            referencedColumns: ["program_id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      calculate_report_completion: {
+        Args: { report_id: string }
+        Returns: number
+      }
+      can_manage_campus: {
+        Args: { admin_id: string; target_campus_id: string }
+        Returns: boolean
+      }
+      create_notification: {
+        Args: {
+          p_user_id: string
+          p_title: string
+          p_message: string
+          p_type: string
+          p_related_entity_type?: string
+          p_related_entity_id?: string
+        }
+        Returns: string
+      }
+      get_available_plan_types_for_manager: {
+        Args: { manager_profile_id: string }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          min_weekly_hours: number
+          max_weekly_hours: number
+          field_count: number
+        }[]
+      }
+      get_next_version_number: {
+        Args: { p_manager_report_id: string; p_template_id: string }
+        Returns: number
+      }
+      is_period_active: {
+        Args: { period_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      field_type:
+        | "numeric"
+        | "short_text"
+        | "long_text"
+        | "dropdown"
+        | "file"
+        | "section"
+        | "manager_name"
+        | "campus_name"
+        | "program_director"
+        | "strategic_axes"
+      work_plan_status:
+        | "draft"
+        | "submitted"
+        | "pending"
+        | "approved"
+        | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -660,6 +3018,26 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      field_type: [
+        "numeric",
+        "short_text",
+        "long_text",
+        "dropdown",
+        "file",
+        "section",
+        "manager_name",
+        "campus_name",
+        "program_director",
+        "strategic_axes",
+      ],
+      work_plan_status: [
+        "draft",
+        "submitted",
+        "pending",
+        "approved",
+        "rejected",
+      ],
+    },
   },
 } as const
