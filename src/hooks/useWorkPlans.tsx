@@ -15,23 +15,17 @@ export function useWorkPlans() {
     return { data, error };
   };
 
-  const fetchPendingWorkPlans = async (): Promise<Result<CustomPlan[]>> => {
+  const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
-      .from("custom_plans")
-      .select(`
-        *,
-        profiles:manager_id(*)
-      `)
-      .eq("status", "submitted")
-      .order("submitted_date", { ascending: false });
+      .rpc('get_pending_work_plans_with_details');
     return { data, error };
   };
 
-  const approveWorkPlan = async (planId: string, approvedBy: string, comments?: string): Promise<Result<CustomPlan>> => {
+  const approveWorkPlan = async (planId: string, status: 'approved' | 'rejected', approvedBy: string, comments?: string): Promise<Result<CustomPlan>> => {
     const { data, error } = await supabase
       .from("custom_plans")
       .update({
-        status: "approved",
+        status: status,
         approved_by: approvedBy,
         approved_date: new Date().toISOString(),
         approval_comments: comments

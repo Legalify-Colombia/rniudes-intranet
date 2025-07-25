@@ -83,7 +83,7 @@ export function WorkPlanApproval() {
         userRole: profile.role
       });
       
-      const { data, error } = await approveWorkPlan(workPlanId, status, comments[workPlanId]);
+      const { data, error } = await approveWorkPlan(workPlanId, status, profile.id, comments[workPlanId]);
       
       if (error) {
         console.error('Error en aprobación:', error);
