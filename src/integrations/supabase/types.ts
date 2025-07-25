@@ -3079,6 +3079,31 @@ export type Database = {
         Args: { p_manager_report_id: string; p_template_id: string }
         Returns: number
       }
+      get_pending_work_plans_with_details: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          title: string
+          manager_id: string
+          plan_type_id: string
+          status: string
+          created_at: string
+          updated_at: string
+          submitted_date: string
+          approved_date: string
+          approved_by: string
+          approval_comments: string
+          manager_name: string
+          manager_email: string
+          manager_position: string
+          plan_type_name: string
+          total_hours_assigned: number
+          program_name: string
+          campus_name: string
+          faculty_name: string
+          objectives: string
+        }[]
+      }
       is_period_active: {
         Args: { period_id: string }
         Returns: boolean

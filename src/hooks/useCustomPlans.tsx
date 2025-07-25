@@ -236,6 +236,27 @@ export function useCustomPlans() {
     }
   };
 
+  const fetchCustomPlanAssignments = async (planId: string): Promise<Result<any[]>> => {
+    try {
+      if (!planId) {
+        return { data: [], error: new Error("Plan ID is required") };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plan_assignments")
+        .select("*")
+        .eq("custom_plan_id", planId);
+      
+      return { data: data || [], error };
+    } catch (error) {
+      console.error("Error fetching custom plan assignments:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
   return {
     fetchCustomPlans,
     fetchCustomPlansByManager,
@@ -246,5 +267,6 @@ export function useCustomPlans() {
     upsertCustomPlanResponse,
     upsertCustomPlanAssignment,
     deleteCustomPlanAssignment,
+    fetchCustomPlanAssignments,
   };
 }

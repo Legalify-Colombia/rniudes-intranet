@@ -17,8 +17,95 @@ export function useWorkPlans() {
 
   const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
-      .rpc('get_pending_work_plans_with_details');
-    return { data, error };
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(
+          full_name,
+          email,
+          position,
+          campus_id
+        ),
+        plan_types:plan_type_id(name)
+      `)
+      .eq("status", "submitted")
+      .order("submitted_date", { ascending: false });
+    
+    if (error) return { data: [], error };
+    
+    // Procesar los datos para incluir información adicional
+    const processedData = await Promise.all((data || []).map(async (plan: any) => {
+      // Obtener información del campus
+      let campusName = 'N/A';
+      let programName = 'N/A';
+      let facultyName = 'N/A';
+      
+      if (plan.profiles?.campus_id) {
+        const { data: campusData } = await supabase
+          .from("campus")
+          .select("name")
+          .eq("id", plan.profiles.campus_id)
+          .single();
+        
+        campusName = campusData?.name || 'N/A';
+        
+        // Obtener información del programa académico
+        const { data: programData } = await supabase
+          .from("academic_programs")
+          .select("name, faculties(name)")
+          .eq("campus_id", plan.profiles.campus_id)
+          .limit(1)
+          .single();
+        
+        if (programData) {
+          programName = programData.name || 'N/A';
+          facultyName = (programData as any).faculties?.name || 'N/A';
+        }
+      }
+      
+      // Obtener total de horas asignadas
+      const { data: assignmentsData } = await supabase
+        .from("custom_plan_assignments")
+        .select("assigned_hours")
+        .eq("custom_plan_id", plan.id);
+      
+      const totalHours = assignmentsData?.reduce((sum, assignment) => 
+        sum + (assignment.assigned_hours || 0), 0) || 0;
+      
+      // Obtener objetivos de las respuestas
+      const { data: objectivesData } = await supabase
+        .from("custom_plan_responses")
+        .select(`
+          response_value,
+          plan_fields(label, field_type)
+        `)
+        .eq("custom_plan_id", plan.id);
+      
+      const objectivesResponse = objectivesData?.find((response: any) => 
+        response.plan_fields?.field_type === 'textarea' && 
+        response.plan_fields?.label?.toLowerCase().includes('objetivo')
+      );
+      
+      const objectives = objectivesResponse?.response_value && 
+        typeof objectivesResponse.response_value === 'object' 
+        ? (objectivesResponse.response_value as any).text || '' 
+        : '';
+      
+      return {
+        ...plan,
+        manager_name: plan.profiles?.full_name || 'N/A',
+        manager_email: plan.profiles?.email || 'N/A',
+        manager_position: plan.profiles?.position || 'N/A',
+        plan_type_name: plan.plan_types?.name || 'N/A',
+        campus_name: campusName,
+        program_name: programName,
+        faculty_name: facultyName,
+        total_hours_assigned: totalHours,
+        objectives: objectives
+      };
+    }));
+    
+    return { data: processedData, error: null };
   };
 
   const approveWorkPlan = async (planId: string, status: 'approved' | 'rejected', approvedBy: string, comments?: string): Promise<Result<CustomPlan>> => {

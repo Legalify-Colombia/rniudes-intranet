@@ -12,7 +12,7 @@ interface WorkPlanPreviewProps {
 }
 
 export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
-  const { fetchWorkPlanDetails, fetchWorkPlanAssignments, fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
+  const { fetchCustomPlanDetails, fetchCustomPlanAssignments, fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
   const [workPlan, setWorkPlan] = useState<any>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
@@ -28,12 +28,12 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
     setLoading(true);
     try {
       // Cargar datos del plan de trabajo
-      const { data: planData, error: planError } = await fetchWorkPlanDetails(workPlanId);
+      const { data: planData, error: planError } = await fetchCustomPlanDetails(workPlanId);
       if (planError) throw planError;
       setWorkPlan(planData);
 
       // Cargar asignaciones
-      const { data: assignmentsData, error: assignmentsError } = await fetchWorkPlanAssignments(workPlanId);
+      const { data: assignmentsData, error: assignmentsError } = await fetchCustomPlanAssignments(workPlanId);
       if (assignmentsError) throw assignmentsError;
       setAssignments(assignmentsData || []);
 
@@ -123,22 +123,25 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="font-medium">Gestor:</span> {workPlan.manager?.full_name}
+              <span className="font-medium">Gestor:</span> {workPlan.profiles?.full_name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Email:</span> {workPlan.manager?.email}
+              <span className="font-medium">Email:</span> {workPlan.profiles?.email || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Programa:</span> {workPlan.program?.name}
+              <span className="font-medium">Tipo de Plan:</span> {workPlan.plan_types?.name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Campus:</span> {workPlan.program?.campus?.name}
+              <span className="font-medium">Campus:</span> {workPlan.campus_name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Facultad:</span> {workPlan.program?.faculty?.name}
+              <span className="font-medium">Programa:</span> {workPlan.program_name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Total Horas:</span> {workPlan.total_hours_assigned}
+              <span className="font-medium">Facultad:</span> {workPlan.faculty_name || 'N/A'}
+            </div>
+            <div>
+              <span className="font-medium">Total Horas:</span> {assignments?.reduce((sum, assignment) => sum + (assignment.assigned_hours || 0), 0) || 0}
             </div>
           </div>
           
@@ -232,7 +235,7 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
                     TOTAL:
                   </TableCell>
                   <TableCell className="border border-gray-300 text-center font-bold text-lg">
-                    {workPlan.total_hours_assigned}
+                    {assignments?.reduce((sum, assignment) => sum + (assignment.assigned_hours || 0), 0) || 0}
                   </TableCell>
                 </TableRow>
               </TableBody>
