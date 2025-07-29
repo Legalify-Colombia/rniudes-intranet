@@ -3093,6 +3093,7 @@ export type Database = {
           campus_name: string
           faculty_name: string
           objectives: string
+          assignments_data: Json
         }[]
       }
       get_managers_by_coordinator_campus: {
@@ -3132,6 +3133,7 @@ export type Database = {
           campus_name: string
           faculty_name: string
           objectives: string
+          assignments_data: Json
         }[]
       }
       is_period_active: {
