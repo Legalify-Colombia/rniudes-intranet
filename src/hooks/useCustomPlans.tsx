@@ -191,6 +191,8 @@ export function useCustomPlans() {
         };
       }
       
+      console.log('Attempting to upsert assignment:', assignment);
+      
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .upsert(assignment, {
@@ -199,7 +201,13 @@ export function useCustomPlans() {
         .select()
         .single();
       
-      return { data, error };
+      if (error) {
+        console.error('Supabase error in upsertCustomPlanAssignment:', error);
+        return { data: null, error };
+      }
+      
+      console.log('Assignment upserted successfully:', data);
+      return { data, error: null };
     } catch (error) {
       console.error("Error upserting custom plan assignment:", error);
       return { 
