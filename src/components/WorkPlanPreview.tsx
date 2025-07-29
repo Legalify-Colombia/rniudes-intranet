@@ -27,12 +27,12 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
   const loadWorkPlanData = async () => {
     setLoading(true);
     try {
-      // Cargar datos del plan de trabajo
+      // Cargar datos del plan de trabajo usando la función optimizada
       const { data: planData, error: planError } = await fetchCustomPlanDetails(workPlanId);
       if (planError) throw planError;
       setWorkPlan(planData);
 
-      // Cargar asignaciones
+      // Cargar asignaciones con datos completos
       const { data: assignmentsData, error: assignmentsError } = await fetchCustomPlanAssignments(workPlanId);
       if (assignmentsError) throw assignmentsError;
       setAssignments(assignmentsData || []);
@@ -71,25 +71,56 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
 
   // Organizar asignaciones por eje estratégico
   const organizeAssignments = () => {
-    const organized = strategicAxes.map(axis => ({
+    if (!assignments || assignments.length === 0) {
+      return [];
+    }
+
+    // Crear mapa de asignaciones por producto
+    const assignmentMap = new Map();
+    assignments.forEach(assignment => {
+      if (assignment.product_id && assignment.assigned_hours > 0) {
+        assignmentMap.set(assignment.product_id, assignment.assigned_hours);
+      }
+    });
+
+    // Organizar usando los datos relacionados de las asignaciones
+    const axesMap = new Map();
+    
+    assignments.forEach(assignment => {
+      if (assignment.product?.action?.strategic_axis && assignment.assigned_hours > 0) {
+        const axis = assignment.product.action.strategic_axis;
+        const action = assignment.product.action;
+        const product = assignment.product;
+
+        if (!axesMap.has(axis.id)) {
+          axesMap.set(axis.id, {
+            ...axis,
+            actions: new Map()
+          });
+        }
+
+        const axisData = axesMap.get(axis.id);
+        
+        if (!axisData.actions.has(action.id)) {
+          axisData.actions.set(action.id, {
+            ...action,
+            products: []
+          });
+        }
+
+        const actionData = axisData.actions.get(action.id);
+        actionData.products.push({
+          ...product,
+          assigned_hours: assignment.assigned_hours
+        });
+      }
+    });
+
+    // Convertir Maps a arrays
+    const organized = Array.from(axesMap.values()).map(axis => ({
       ...axis,
-      actions: actions
-        .filter(action => action.strategic_axis_id === axis.id)
-        .map(action => ({
-          ...action,
-          products: products
-            .filter(product => product.action_id === action.id)
-            .map(product => {
-              const assignment = assignments.find(a => a.product_id === product.id);
-              return {
-                ...product,
-                assigned_hours: assignment?.assigned_hours || 0
-              };
-            })
-            .filter(product => product.assigned_hours > 0)
-        }))
-        .filter(action => action.products.length > 0)
-    })).filter(axis => axis.actions.length > 0);
+      actions: Array.from(axis.actions.values())
+    }));
 
     return organized;
   };
@@ -123,13 +154,16 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="font-medium">Gestor:</span> {workPlan.profiles?.full_name || 'N/A'}
+              <span className="font-medium">Gestor:</span> {workPlan.manager_name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Email:</span> {workPlan.profiles?.email || 'N/A'}
+              <span className="font-medium">Email:</span> {workPlan.manager_email || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Tipo de Plan:</span> {workPlan.plan_types?.name || 'N/A'}
+              <span className="font-medium">Cargo:</span> {workPlan.manager_position || 'N/A'}
+            </div>
+            <div>
+              <span className="font-medium">Tipo de Plan:</span> {workPlan.plan_type_name || 'N/A'}
             </div>
             <div>
               <span className="font-medium">Campus:</span> {workPlan.campus_name || 'N/A'}
@@ -141,7 +175,7 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
               <span className="font-medium">Facultad:</span> {workPlan.faculty_name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Total Horas:</span> {assignments?.reduce((sum, assignment) => sum + (assignment.assigned_hours || 0), 0) || 0}
+              <span className="font-medium">Total Horas:</span> {workPlan.total_hours_assigned || assignments?.reduce((sum, assignment) => sum + (assignment.assigned_hours || 0), 0) || 0}
             </div>
           </div>
           

@@ -62,18 +62,16 @@ export function useCustomPlans() {
         return { data: null, error: new Error("Plan ID is required") };
       }
       
-      const { data, error } = await supabase
-        .from("custom_plans")
-        .select(`
-          *,
-          plan_type:plan_types(*),
-          responses:custom_plan_responses(*),
-          assignments:custom_plan_assignments(*)
-        `)
-        .eq("id", planId)
-        .single();
+      // Usar la función optimizada de base de datos
+      const { data, error } = await supabase.rpc("get_complete_work_plan_details", {
+        plan_id: planId
+      });
       
-      return { data, error };
+      if (error) return { data: null, error };
+      
+      // Retornar el primer resultado ya que la función devuelve una tabla
+      const planDetails = data && data.length > 0 ? data[0] : null;
+      return { data: planDetails, error: null };
     } catch (error) {
       console.error("Error fetching custom plan details:", error);
       return { 
@@ -244,7 +242,16 @@ export function useCustomPlans() {
       
       const { data, error } = await supabase
         .from("custom_plan_assignments")
-        .select("*")
+        .select(`
+          *,
+          product:product_id(
+            *,
+            action:action_id(
+              *,
+              strategic_axis:strategic_axis_id(*)
+            )
+          )
+        `)
         .eq("custom_plan_id", planId);
       
       return { data: data || [], error };

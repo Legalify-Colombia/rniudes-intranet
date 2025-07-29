@@ -3065,6 +3065,32 @@ export type Database = {
           field_count: number
         }[]
       }
+      get_complete_work_plan_details: {
+        Args: { plan_id: string }
+        Returns: {
+          id: string
+          title: string
+          manager_id: string
+          plan_type_id: string
+          status: string
+          created_at: string
+          updated_at: string
+          submitted_date: string
+          approved_date: string
+          approved_by: string
+          approval_comments: string
+          manager_name: string
+          manager_email: string
+          manager_position: string
+          manager_campus_id: string
+          plan_type_name: string
+          total_hours_assigned: number
+          program_name: string
+          campus_name: string
+          faculty_name: string
+          objectives: string
+        }[]
+      }
       get_managers_by_coordinator_campus: {
         Args: { coordinator_id: string }
         Returns: {

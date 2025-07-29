@@ -225,11 +225,23 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     
     try {
       setIsLoading(true);
+      
+      // Asegurar que todas las respuestas estén guardadas antes del envío
+      for (const [fieldId, value] of Object.entries(responses)) {
+        if (value !== null && value !== undefined && value !== '') {
+          await upsertCustomPlanResponse({
+            custom_plan_id: plan.id,
+            plan_field_id: fieldId,
+            response_value: value
+          });
+        }
+      }
+      
       await submitCustomPlan(plan.id);
       
       toast({
         title: "Éxito",
-        description: "Plan enviado para revisión",
+        description: "Plan enviado para revisión con todas las asignaciones guardadas",
       });
       
       if (onSave) onSave();
