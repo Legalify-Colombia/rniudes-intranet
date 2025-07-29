@@ -262,34 +262,37 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     
     switch (field.field_type) {
       case 'text':
+      case 'short_text':
         return (
           <Input
             value={value}
             onChange={(e) => handleResponseChange(field.id, e.target.value)}
             placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           />
         );
       
       case 'textarea':
+      case 'long_text':
         return (
           <Textarea
             value={value}
             onChange={(e) => handleResponseChange(field.id, e.target.value)}
             placeholder={`Describe ${field.field_name.toLowerCase()}`}
             rows={4}
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           />
         );
       
       case 'number':
+      case 'numeric':
         return (
           <Input
             type="number"
             value={value}
             onChange={(e) => handleResponseChange(field.id, parseInt(e.target.value) || 0)}
             placeholder="0"
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           />
         );
       
@@ -298,7 +301,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
           <Select 
             value={value} 
             onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           >
             <SelectTrigger>
               <SelectValue placeholder={`Selecciona ${field.field_name.toLowerCase()}`} />
@@ -318,7 +321,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
           <Select 
             value={value} 
             onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecciona un eje estratégico" />
@@ -338,7 +341,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
           <Select 
             value={value} 
             onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecciona una acción" />
@@ -358,7 +361,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
           <Select 
             value={value} 
             onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecciona un producto" />
@@ -379,7 +382,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
             value={value}
             onChange={(e) => handleResponseChange(field.id, e.target.value)}
             placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
-            disabled={plan?.status === 'submitted' || plan?.status === 'approved'}
+            disabled={isReadOnly}
           />
         );
     }
@@ -389,6 +392,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
+  // Permitir edición de planes rechazados
   const isReadOnly = plan?.status === 'submitted' || plan?.status === 'approved';
 
   if (embedded) {
