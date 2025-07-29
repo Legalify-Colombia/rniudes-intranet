@@ -3,16 +3,21 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { CustomPlanForm } from "./CustomPlanForm";
+import { StructuredWorkPlanForm } from "./StructuredWorkPlanForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, FileText, Clock, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export function ManagerWorkPlan() {
   const { profile } = useAuth();
-  const { fetchManagers, fetchWorkPlans } = useSupabaseData();
+  const { fetchManagers, fetchWorkPlans, fetchPlanTypes } = useSupabaseData();
   const [managerData, setManagerData] = useState<any>(null);
   const [assignedPlans, setAssignedPlans] = useState<any[]>([]);
+  const [planTypes, setPlanTypes] = useState<any[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [showStructuredForm, setShowStructuredForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +39,10 @@ export function ManagerWorkPlan() {
       const { data: workPlans } = await fetchWorkPlans();
       const managerPlans = workPlans?.filter(plan => plan.manager_id === profile.id) || [];
       setAssignedPlans(managerPlans);
+
+      // Cargar tipos de plan
+      const { data: planTypesData } = await fetchPlanTypes();
+      setPlanTypes(planTypesData || []);
     } catch (error) {
       console.error('Error loading manager data:', error);
     } finally {
@@ -113,6 +122,24 @@ export function ManagerWorkPlan() {
     );
   }
 
+  if (showStructuredForm && selectedPlan) {
+    return (
+      <StructuredWorkPlanForm
+        planType={selectedPlan.planType}
+        manager={managerData}
+        onClose={() => {
+          setShowStructuredForm(false);
+          setSelectedPlan(null);
+        }}
+        onSave={() => {
+          loadManagerData();
+          setShowStructuredForm(false);
+          setSelectedPlan(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -166,12 +193,46 @@ export function ManagerWorkPlan() {
                     )}
 
                     <div className="pt-4">
-                      <CustomPlanForm
-                        planId={plan.id}
-                        planTypeId={plan.plan_type_id}
-                        onSave={() => loadManagerData()}
-                        embedded={true}
-                      />
+                      {(() => {
+                        const planType = planTypes.find(pt => pt.id === plan.plan_type_id);
+                        const isStructured = planType?.uses_structured_elements;
+                        
+                        if (isStructured && (plan.status === 'draft' || plan.status === 'rejected')) {
+                          return (
+                            <Button 
+                              onClick={() => {
+                                setSelectedPlan({ plan, planType });
+                                setShowStructuredForm(true);
+                              }}
+                              className="w-full"
+                            >
+                              {plan.status === 'rejected' ? 'Editar y Reenviar Plan' : 'Asignar Horas al Plan'}
+                            </Button>
+                          );
+                        } else if (isStructured) {
+                          return (
+                            <Button 
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedPlan({ plan, planType });
+                                setShowStructuredForm(true);
+                              }}
+                              className="w-full"
+                            >
+                              Ver Plan de Horas
+                            </Button>
+                          );
+                        } else {
+                          return (
+                            <CustomPlanForm
+                              planId={plan.id}
+                              planTypeId={plan.plan_type_id}
+                              onSave={() => loadManagerData()}
+                              embedded={true}
+                            />
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                 </CardContent>

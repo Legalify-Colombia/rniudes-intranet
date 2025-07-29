@@ -213,6 +213,19 @@ export function WorkPlanApproval() {
               <div>
                 <h4 className="font-medium mb-2">Horas totales asignadas:</h4>
                 <p className="text-sm">{plan.total_hours_assigned} horas</p>
+                {plan.assignments_data && plan.assignments_data.length > 0 && (
+                  <div className="mt-2">
+                    <h5 className="font-medium text-xs mb-1">Detalle de Asignaciones:</h5>
+                    <div className="space-y-1 text-xs bg-gray-50 p-2 rounded max-h-32 overflow-y-auto">
+                      {plan.assignments_data.map((assignment: any, index: number) => (
+                        <div key={index} className="flex justify-between">
+                          <span className="truncate mr-2">{assignment.product_name}</span>
+                          <span className="font-medium">{assignment.assigned_hours}h</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

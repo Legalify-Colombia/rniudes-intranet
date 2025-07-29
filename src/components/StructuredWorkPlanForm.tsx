@@ -23,7 +23,8 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
     createCustomPlan,
     updateCustomPlan,
     fetchCustomPlansByManager,
-    upsertCustomPlanAssignment
+    upsertCustomPlanAssignment,
+    fetchCustomPlanAssignments
   } = useSupabaseData();
   const { toast } = useToast();
 
@@ -55,7 +56,16 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
         setObjectives(existingPlan.title || '');
         
         // Cargar asignaciones existentes
-        setAssignments({});
+        const { data: assignmentsData } = await fetchCustomPlanAssignments(existingPlan.id);
+        if (assignmentsData) {
+          const assignmentsMap: {[key: string]: number} = {};
+          assignmentsData.forEach((assignment: any) => {
+            if (assignment.product_id && assignment.assigned_hours) {
+              assignmentsMap[assignment.product_id] = assignment.assigned_hours;
+            }
+          });
+          setAssignments(assignmentsMap);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
