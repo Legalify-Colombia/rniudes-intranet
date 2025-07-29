@@ -90,35 +90,48 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
   };
 
   const updateAssignment = async (productId: string, hours: number) => {
-    let currentWorkPlan = workPlan;
+    try {
+      let currentWorkPlan = workPlan;
 
-    if (!currentWorkPlan) {
-      // Crear plan si no existe
-      const newPlan = {
-        manager_id: manager.id,
-        plan_type_id: planType.id,
-        title: objectives,
-        status: 'draft' as const
-      };
-      
-      const { data: createdPlan, error } = await createCustomPlan(newPlan);
-      if (error) {
-        toast({ title: "Error", description: "No se pudo crear el plan", variant: "destructive" });
-        return;
+      if (!currentWorkPlan) {
+        // Crear plan si no existe
+        const newPlan = {
+          manager_id: manager.id,
+          plan_type_id: planType.id,
+          title: objectives || 'Plan de Trabajo - Borrador',
+          status: 'draft' as const
+        };
+        
+        console.log('Creating new plan:', newPlan);
+        const { data: createdPlan, error } = await createCustomPlan(newPlan);
+        if (error) {
+          console.error('Error creating plan:', error);
+          toast({ title: "Error", description: `No se pudo crear el plan: ${error.message}`, variant: "destructive" });
+          return;
+        }
+        currentWorkPlan = createdPlan;
+        setWorkPlan(createdPlan);
+        console.log('Plan created successfully:', createdPlan);
       }
-      currentWorkPlan = createdPlan;
-      setWorkPlan(createdPlan);
-    }
 
-    const assignment = {
-      custom_plan_id: currentWorkPlan.id,
-      product_id: productId,
-      assigned_hours: hours
-    };
+      const assignment = {
+        custom_plan_id: currentWorkPlan.id,
+        product_id: productId,
+        assigned_hours: hours || 0
+      };
 
-    const { error } = await upsertCustomPlanAssignment(assignment);
-    if (error) {
-      toast({ title: "Error", description: "No se pudo actualizar la asignación", variant: "destructive" });
+      console.log('Upserting assignment:', assignment);
+      const { data, error } = await upsertCustomPlanAssignment(assignment);
+      if (error) {
+        console.error('Error upserting assignment:', error);
+        toast({ title: "Error", description: `No se pudo actualizar la asignación: ${error.message}`, variant: "destructive" });
+      } else {
+        console.log('Assignment upserted successfully:', data);
+        toast({ title: "Éxito", description: "Horas asignadas correctamente" });
+      }
+    } catch (error) {
+      console.error('Unexpected error in updateAssignment:', error);
+      toast({ title: "Error", description: "Error inesperado al asignar horas", variant: "destructive" });
     }
   };
 
@@ -142,6 +155,28 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
 
     if (!objectives.trim()) {
       toast({ title: "Error", description: "Debe agregar objetivos antes de enviar", variant: "destructive" });
+      return;
+    }
+
+    // VALIDACIÓN CRÍTICA: Evitar envío con 0 horas
+    const totalHours = getTotalAssignedHours();
+    if (totalHours === 0) {
+      toast({ 
+        title: "Error", 
+        description: "No se puede enviar un plan con 0 horas asignadas. Debe asignar al menos 1 hora a algún producto.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // VALIDACIÓN CRÍTICA: Evitar balance negativo
+    const availableHours = getAvailableHours();
+    if (availableHours < 0) {
+      toast({ 
+        title: "Error", 
+        description: `No se puede enviar un plan que excede las horas disponibles. Balance actual: ${availableHours} horas.`, 
+        variant: "destructive" 
+      });
       return;
     }
 

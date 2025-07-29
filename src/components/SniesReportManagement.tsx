@@ -12,7 +12,7 @@ import { Plus, Edit, Send, FileText, Eye, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSniesReports } from "@/hooks/useSniesReports";
-import SniesReportForm from "./SniesReportForm";
+import { DynamicSniesReportForm } from "./DynamicSniesReportForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function SniesReportManagement() {
@@ -353,23 +353,25 @@ export function SniesReportManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => openReportForm(report)}
-                        disabled={isLoading}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {report.status === 'draft' && profile?.role === 'Gestor' && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleSubmitReport(report.id)}
-                          disabled={isLoading}
-                        >
-                          <Send className="w-4 h-4" />
-                        </Button>
-                      )}
+                       <Button 
+                         size="sm" 
+                         variant="outline" 
+                         onClick={() => openReportForm(report)}
+                         disabled={isLoading}
+                         title={`Editar reporte: ${report.title}`}
+                       >
+                         <Eye className="w-4 h-4" />
+                       </Button>
+                       {report.status === 'draft' && profile?.role === 'Gestor' && (
+                         <Button 
+                           size="sm" 
+                           onClick={() => handleSubmitReport(report.id)}
+                           disabled={isLoading}
+                           title={`Enviar reporte: ${report.title}`}
+                         >
+                           <Send className="w-4 h-4" />
+                         </Button>
+                       )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -397,7 +399,7 @@ export function SniesReportManagement() {
             </DialogTitle>
           </DialogHeader>
           {selectedReport && (
-            <SniesReportForm 
+            <DynamicSniesReportForm 
               reportId={selectedReport.id}
               templateId={selectedReport.template_id}
               onSave={() => {
