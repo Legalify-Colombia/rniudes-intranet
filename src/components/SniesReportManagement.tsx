@@ -12,7 +12,7 @@ import { Plus, Edit, Send, FileText, Eye, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSniesReports } from "@/hooks/useSniesReports";
-import { SniesReportForm } from "./SniesReportForm";
+import SniesReportForm from "./SniesReportForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function SniesReportManagement() {
@@ -398,7 +398,8 @@ export function SniesReportManagement() {
           </DialogHeader>
           {selectedReport && (
             <SniesReportForm 
-              report={selectedReport}
+              reportId={selectedReport.id}
+              templateId={selectedReport.template_id}
               onSave={() => {
                 setIsReportFormOpen(false);
                 loadData();
