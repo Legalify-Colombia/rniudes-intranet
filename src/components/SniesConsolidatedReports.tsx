@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useSupabaseDataSnies } from "@/hooks/useSupabaseDataSnies";
+import { useSnies } from "@/hooks/useSnies";
 import { FileText, Download, FileSpreadsheet } from "lucide-react";
 import * as XLSX from 'xlsx';
 
@@ -22,9 +23,10 @@ export function SniesConsolidatedReports() {
     fetchSniesReportTemplates, 
     consolidateSniesReports, 
     fetchSniesReports,
-    fetchSniesReportData,
     fetchSniesTemplateFields 
-  } = useSupabaseData();
+  } = useSupabaseDataSnies();
+  
+  const { fetchSniesReportData } = useSnies();
 
   useEffect(() => {
     loadTemplates();
@@ -169,7 +171,7 @@ export function SniesConsolidatedReports() {
         'ID Reporte',
         'Título Reporte',
         'Fecha Creación',
-        ...templateFields.map(field => field.field_label)
+        ...templateFields.map(field => field.field_label || field.name)
       ];
       
       // Preparar los datos
@@ -181,7 +183,7 @@ export function SniesConsolidatedReports() {
         ];
         
         templateFields.forEach(field => {
-          rowData.push(row[field.field_name] || '');
+          rowData.push(row[field.field_name || field.name] || '');
         });
         
         return rowData;
@@ -241,7 +243,7 @@ export function SniesConsolidatedReports() {
         'ID Reporte',
         'Título Reporte', 
         'Fecha Creación',
-        ...templateFields.map(field => field.field_label)
+        ...templateFields.map(field => field.field_label || field.name)
       ];
       
       // Preparar los datos
@@ -255,7 +257,7 @@ export function SniesConsolidatedReports() {
         ];
         
         templateFields.forEach(field => {
-          const value = row[field.field_name] || '';
+          const value = row[field.field_name || field.name] || '';
           // Escapar comillas y comas en CSV
           rowData.push(`"${String(value).replace(/"/g, '""')}"`);
         });

@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useSnies } from "@/hooks/useSnies";
 import { SearchableSelect } from "./SearchableSelect";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SniesReportFormProps {
   reportId?: string;
@@ -37,6 +38,7 @@ interface StudentData {
 
 export default function SniesReportForm({ reportId, templateId, onSave }: SniesReportFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [studentsData, setStudentsData] = useState<StudentData[]>([]);
   const [sniesData, setSniesData] = useState({
@@ -67,7 +69,7 @@ export default function SniesReportForm({ reportId, templateId, onSave }: SniesR
     createSniesReportData,
     updateSniesReportData,
     fetchSniesReportData,
-  } = useSupabaseData();
+  } = useSnies();
 
   useEffect(() => {
     loadSniesData();
@@ -192,17 +194,21 @@ export default function SniesReportForm({ reportId, templateId, onSave }: SniesR
   const getFilteredMunicipalities = (countryId: string) => {
     if (!countryId || !sniesData.municipalities) return [];
     
-    // For Colombia, filter by departments that belong to Colombia
-    if (countryId === 'CO') {
-      return sniesData.municipalities.filter(
-        (municipality: any) => municipality.country_id === 'CO'
-      );
-    }
-    
-    return [];
+    return sniesData.municipalities.filter(
+      (municipality: any) => municipality.country_id === countryId
+    );
   };
 
   const handleSave = async () => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "Usuario no autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       let currentReportId = reportId;
@@ -211,6 +217,7 @@ export default function SniesReportForm({ reportId, templateId, onSave }: SniesR
         const reportRes = await createSniesReport({
           title: `Reporte SNIES - ${new Date().toLocaleDateString()}`,
           template_id: templateId,
+          manager_id: user.id,
           status: 'draft',
         });
         if (reportRes.error) throw reportRes.error;
@@ -384,3 +391,6 @@ export default function SniesReportForm({ reportId, templateId, onSave }: SniesR
     </div>
   );
 }
+
+// Also export as named export for compatibility
+export { SniesReportForm };
