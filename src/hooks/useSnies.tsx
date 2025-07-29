@@ -1,141 +1,313 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
+import type { Database } from "@/integrations/supabase/types";
 
 export function useSnies() {
   const fetchSniesCountries = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase.from("snies_countries").select("*").order("name");
-    return { data, error };
-  };
-
-  const fetchSniesMunicipalities = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("snies_municipalities")
-      .select("*")
-      .order("name");
-    return { data, error };
-  };
-
-  const fetchSniesDocumentTypes = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase.from("snies_document_types").select("*").order("name");
-    return { data, error };
-  };
-
-  const fetchSniesBiologicalSex = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase.from("snies_biological_sex").select("*").order("name");
-    return { data, error };
-  };
-
-  const fetchSniesMaritalStatus = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase.from("snies_marital_status").select("*").order("name");
-    return { data, error };
-  };
-
-  const createSniesCountry = async (country: any): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("snies_countries").insert(country).select().single();
-    return { data, error };
-  };
-
-  const createSniesMunicipality = async (municipality: any): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("snies_municipalities").insert(municipality).select().single();
-    return { data, error };
-  };
-
-  const bulkCreateSniesCountries = async (countries: any[]): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("snies_countries").insert(countries).select();
-    return { data, error };
-  };
-
-  const bulkCreateSniesMunicipalities = async (municipalities: any[]): Promise<Result<any>> => {
-    const { data, error } = await supabase.from("snies_municipalities").insert(municipalities).select();
-    return { data, error };
-  };
-
-  const fetchSniesReportTemplates = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase.from("snies_report_templates").select("*").order("name");
-    return { data, error };
-  };
-
-  const fetchSniesTemplateFields = async (templateId: string): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("snies_template_fields")
-      .select("*")
-      .eq("template_id", templateId)
-      .order("field_order");
-    return { data, error };
-  };
-
-  const fetchSniesReportData = async (reportId: string): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("snies_report_data")
-      .select("*")
-      .eq("report_id", reportId);
-    return { data, error };
-  };
-
-  const fetchSniesReports = async (): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("snies_reports")
-      .select("*")
-      .order("created_at", { ascending: false });
-    return { data, error };
-  };
-
-  const saveSniesReportData = async (reportId: string, reportData: any[]): Promise<Result<any>> => {
     try {
-      // Delete existing data
-      await supabase.from("snies_report_data").delete().eq("report_id", reportId);
+      const { data, error } = await supabase
+        .from("snies_countries")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
       
-      // Insert new data with row_index
-      const dataToInsert = reportData.map((row, index) => ({
-        report_id: reportId,
-        field_data: row,
-        row_index: index
-      }));
-      
-      const { data, error } = await supabase.from("snies_report_data").insert(dataToInsert);
-      return { data, error };
+      return { 
+        data: data || [], 
+        error 
+      };
     } catch (error) {
-      return { data: null, error };
+      console.error("Error fetching SNIES countries:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
     }
   };
 
-  const consolidateSniesReports = async (templateId: string): Promise<Result<any>> => {
-    // Since the RPC function doesn't exist, we'll return a mock response
-    // In a real implementation, this would call a proper database function
+  const fetchSniesMunicipalities = async (countryId?: string): Promise<Result<any[]>> => {
+    try {
+      let query = supabase
+        .from("snies_municipalities")
+        .select("*")
+        .eq("is_active", true);
+      
+      if (countryId) {
+        query = query.eq("country_id", countryId);
+      }
+      
+      const { data, error } = await query.order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES municipalities:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesDocumentTypes = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_document_types")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES document types:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesGenders = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_genders")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES genders:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesMaritalStatus = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_marital_status")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES marital status:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesEducationLevels = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_education_levels")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES education levels:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesKnowledgeAreas = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_knowledge_areas")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES knowledge areas:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesInstitutions = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_institutions")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES institutions:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesModalities = async (): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_modalities")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES modalities:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
+    }
+  };
+
+  const createSniesReport = async (report: Database["public"]["Tables"]["snies_reports"]["Insert"]): Promise<Result<any>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_reports")
+        .insert(report)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error creating SNIES report:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
+
+  const updateSniesReport = async (id: string, updates: Database["public"]["Tables"]["snies_reports"]["Update"]): Promise<Result<any>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_reports")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error updating SNIES report:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesReportById = async (id: string): Promise<Result<any>> => {
     try {
       const { data, error } = await supabase
         .from("snies_reports")
         .select("*")
-        .eq("template_id", templateId);
+        .eq("id", id)
+        .single();
       
-      return { data: { message: "Reports consolidated successfully" }, error };
+      return { data, error };
     } catch (error) {
-      return { data: null, error };
+      console.error("Error fetching SNIES report:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
     }
   };
 
-  const uploadFile = async (file: File, folder: string = "uploads", fileName?: string): Promise<Result<{ publicUrl: string }>> => {
+  const createSniesReportData = async (reportData: any): Promise<Result<any>> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const finalFileName = fileName || `${Math.random()}.${fileExt}`;
-      const filePath = `${folder}/${finalFileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('files')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        return { data: null, error: uploadError };
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('files')
-        .getPublicUrl(filePath);
-
-      return { data: { publicUrl }, error: null };
+      const { data, error } = await supabase
+        .from("snies_report_data")
+        .insert(reportData)
+        .select()
+        .single();
+      
+      return { data, error };
     } catch (error) {
-      return { data: null, error };
+      console.error("Error creating SNIES report data:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
+
+  const updateSniesReportData = async (id: string, updates: any): Promise<Result<any>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_report_data")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (error) {
+      console.error("Error updating SNIES report data:", error);
+      return { 
+        data: null, 
+        error: error as any 
+      };
+    }
+  };
+
+  const fetchSniesReportData = async (reportId: string): Promise<Result<any[]>> => {
+    try {
+      const { data, error } = await supabase
+        .from("snies_report_data")
+        .select("*")
+        .eq("snies_report_id", reportId)
+        .order("created_at");
+      
+      return { 
+        data: data || [], 
+        error 
+      };
+    } catch (error) {
+      console.error("Error fetching SNIES report data:", error);
+      return { 
+        data: [], 
+        error: error as any 
+      };
     }
   };
 
@@ -143,18 +315,17 @@ export function useSnies() {
     fetchSniesCountries,
     fetchSniesMunicipalities,
     fetchSniesDocumentTypes,
-    fetchSniesBiologicalSex,
+    fetchSniesGenders,
     fetchSniesMaritalStatus,
-    createSniesCountry,
-    createSniesMunicipality,
-    bulkCreateSniesCountries,
-    bulkCreateSniesMunicipalities,
-    fetchSniesReportTemplates,
-    fetchSniesTemplateFields,
+    fetchSniesEducationLevels,
+    fetchSniesKnowledgeAreas,
+    fetchSniesInstitutions,
+    fetchSniesModalities,
+    createSniesReport,
+    updateSniesReport,
+    fetchSniesReportById,
+    createSniesReportData,
+    updateSniesReportData,
     fetchSniesReportData,
-    fetchSniesReports,
-    saveSniesReportData,
-    consolidateSniesReports,
-    uploadFile,
   };
 }
