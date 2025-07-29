@@ -1284,6 +1284,47 @@ export type Database = {
           },
         ]
       }
+      plan_type_element_order: {
+        Row: {
+          created_at: string
+          display_order: number
+          element_id: string
+          element_type: string
+          id: string
+          is_visible: boolean
+          plan_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          element_id: string
+          element_type: string
+          id?: string
+          is_visible?: boolean
+          plan_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          element_id?: string
+          element_type?: string
+          id?: string
+          is_visible?: boolean
+          plan_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_type_element_order_plan_type_id_fkey"
+            columns: ["plan_type_id"]
+            isOneToOne: false
+            referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_type_products: {
         Row: {
           created_at: string | null

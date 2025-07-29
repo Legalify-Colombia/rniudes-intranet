@@ -383,6 +383,15 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
                   onClick={submitForApproval}
                   disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
                   className="bg-blue-600 hover:bg-blue-700"
+                  title={
+                    getTotalAssignedHours() === 0 
+                      ? "Debe asignar al menos 1 hora para enviar" 
+                      : getAvailableHours() < 0 
+                        ? "Debe ajustar las horas para no exceder el límite"
+                        : !objectives.trim()
+                          ? "Debe agregar objetivos antes de enviar"
+                          : "Enviar plan para aprobación"
+                  }
                 >
                   Enviar para Aprobación
                 </Button>
@@ -392,6 +401,15 @@ export function StructuredWorkPlanForm({ planType, manager, onClose, onSave }: S
                   onClick={submitForApproval}
                   disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
                   className="bg-blue-600 hover:bg-blue-700"
+                  title={
+                    getTotalAssignedHours() === 0 
+                      ? "Debe asignar al menos 1 hora para reenviar" 
+                      : getAvailableHours() < 0 
+                        ? "Debe ajustar las horas para no exceder el límite"
+                        : !objectives.trim()
+                          ? "Debe agregar objetivos antes de reenviar"
+                          : "Reenviar plan para aprobación"
+                  }
                 >
                   Reenviar para Aprobación
                 </Button>

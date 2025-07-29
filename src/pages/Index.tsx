@@ -8,6 +8,7 @@ import CampusManagement from "@/components/CampusManagement";
 import { InternationalizationManagers } from "@/components/InternationalizationManagers";
 import { StrategicConfiguration } from "@/components/StrategicConfiguration";
 import { ManagerReports } from "@/components/ManagerReports";
+import { CoordinatorSettings } from "@/components/CoordinatorSettings";
 import { ManagerWorkPlan } from "@/components/ManagerWorkPlan";
 import { WorkPlanApproval } from "@/components/WorkPlanApproval";
 import { MyReport } from "@/components/MyReport";

@@ -1,4 +1,5 @@
 
+import { supabase } from "@/integrations/supabase/client";
 import { useStrategicAxes } from "./useStrategicAxes";
 import { useActions } from "./useActions";
 import { useProducts } from "./useProducts";
@@ -105,6 +106,26 @@ export function useSupabaseData() {
   const snies = useSnies();
 
   // Return all functions from specialized hooks
+  const savePlanElementOrder = async (orderData: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("plan_type_element_order")
+      .upsert(orderData, {
+        onConflict: "plan_type_id,element_type,element_id"
+      })
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  const fetchPlanElementOrder = async (planTypeId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("plan_type_element_order")
+      .select("*")
+      .eq("plan_type_id", planTypeId)
+      .order("display_order");
+    return { data, error };
+  };
+
   return {
     // Strategic Axes
     ...strategicAxes,
@@ -162,5 +183,9 @@ export function useSupabaseData() {
     
     // SNIES
     ...snies,
+    
+    // Plan Element Order Management
+    savePlanElementOrder,
+    fetchPlanElementOrder,
   };
 }

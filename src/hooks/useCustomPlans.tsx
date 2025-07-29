@@ -193,6 +193,7 @@ export function useCustomPlans() {
       
       console.log('Attempting to upsert assignment:', assignment);
       
+      // Usar la constraint única correcta que acabamos de crear
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .upsert(assignment, {
@@ -203,6 +204,44 @@ export function useCustomPlans() {
       
       if (error) {
         console.error('Supabase error in upsertCustomPlanAssignment:', error);
+        
+        // Si hay error de constraint, intentar con INSERT/UPDATE manual
+        if (error.code === "42P10") {
+          console.log('Fallback: trying manual insert/update');
+          
+          // Primero intentar actualizar
+          const { data: updateData, error: updateError } = await supabase
+            .from("custom_plan_assignments")
+            .update({ assigned_hours: assignment.assigned_hours })
+            .eq("custom_plan_id", assignment.custom_plan_id)
+            .eq("product_id", assignment.product_id)
+            .select()
+            .single();
+          
+          if (updateError && updateError.code === "PGRST116") {
+            // No existe, crear nuevo
+            const { data: insertData, error: insertError } = await supabase
+              .from("custom_plan_assignments")
+              .insert(assignment)
+              .select()
+              .single();
+            
+            if (insertError) {
+              console.error('Insert fallback failed:', insertError);
+              return { data: null, error: insertError };
+            }
+            
+            console.log('Assignment created via fallback:', insertData);
+            return { data: insertData, error: null };
+          } else if (updateError) {
+            console.error('Update fallback failed:', updateError);
+            return { data: null, error: updateError };
+          } else {
+            console.log('Assignment updated via fallback:', updateData);
+            return { data: updateData, error: null };
+          }
+        }
+        
         return { data: null, error };
       }
       
