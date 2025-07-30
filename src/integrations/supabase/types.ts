@@ -389,6 +389,7 @@ export type Database = {
           approval_comments: string | null
           approved_by: string | null
           approved_date: string | null
+          coordinator_observations: string | null
           created_at: string | null
           id: string
           manager_id: string
@@ -402,6 +403,7 @@ export type Database = {
           approval_comments?: string | null
           approved_by?: string | null
           approved_date?: string | null
+          coordinator_observations?: string | null
           created_at?: string | null
           id?: string
           manager_id: string
@@ -415,6 +417,7 @@ export type Database = {
           approval_comments?: string | null
           approved_by?: string | null
           approved_date?: string | null
+          coordinator_observations?: string | null
           created_at?: string | null
           id?: string
           manager_id?: string
@@ -1241,6 +1244,48 @@ export type Database = {
             columns: ["plan_type_id"]
             isOneToOne: false
             referencedRelation: "plan_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_observations: {
+        Row: {
+          created_at: string | null
+          id: string
+          observation_text: string
+          observer_id: string
+          plan_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          observation_text: string
+          observer_id: string
+          plan_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          observation_text?: string
+          observer_id?: string
+          plan_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_observations_observer_id_fkey"
+            columns: ["observer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_observations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -3177,8 +3222,16 @@ export type Database = {
           assignments_data: Json
         }[]
       }
+      is_campus_coordinator: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       is_period_active: {
         Args: { period_id: string }
+        Returns: boolean
+      }
+      is_program_director: {
+        Args: { user_id: string }
         Returns: boolean
       }
     }

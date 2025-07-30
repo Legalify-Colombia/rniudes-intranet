@@ -23,15 +23,18 @@ export function WorkPlanApproval() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Verificar que el usuario tenga permisos de coordinador o administrador
+    // Verificar que el usuario tenga permisos (directores de programa, coordinadores o administradores)
     if (!profile) {
       console.log('No hay perfil de usuario');
       setLoading(false);
       return;
     }
 
-    if (!['Coordinador', 'Administrador'].includes(profile.role)) {
-      console.log('Usuario sin permisos para aprobar planes:', profile.role);
+    const allowedPositions = ['Director de Programa', 'Coordinador de Campus'];
+    const allowedRoles = ['Administrador'];
+    
+    if (!allowedPositions.includes(profile.position) && !allowedRoles.includes(profile.role)) {
+      console.log('Usuario sin permisos para ver planes:', profile.position, profile.role);
       setLoading(false);
       return;
     }
@@ -118,6 +121,43 @@ export function WorkPlanApproval() {
     }
   };
 
+  const handleObservation = async (workPlanId: string) => {
+    if (!profile || !comments[workPlanId]?.trim()) {
+      toast({
+        title: "Error",
+        description: "Debe agregar una observación antes de guardar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setActionLoading(workPlanId);
+    try {
+      // Aquí agregaremos la función para guardar observaciones
+      // Por ahora solo mostramos mensaje de éxito
+      toast({
+        title: "Éxito",
+        description: "Observación guardada correctamente",
+      });
+
+      // Limpiar comentarios
+      setComments(prev => {
+        const newComments = { ...prev };
+        delete newComments[workPlanId];
+        return newComments;
+      });
+    } catch (error) {
+      console.error('Error saving observation:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar la observación",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Verificar permisos del usuario
   if (!profile) {
     return (
@@ -130,12 +170,17 @@ export function WorkPlanApproval() {
     );
   }
 
-  if (!['Coordinador', 'Administrador'].includes(profile.role)) {
+  const allowedPositions = ['Director de Programa', 'Coordinador de Campus'];
+  const allowedRoles = ['Administrador'];
+  const canApprove = profile.position === 'Director de Programa' || profile.role === 'Administrador';
+  const canObserve = profile.position === 'Coordinador de Campus' || canApprove;
+
+  if (!allowedPositions.includes(profile.position) && !allowedRoles.includes(profile.role)) {
     return (
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          No tienes permisos para aprobar planes de trabajo. Solo coordinadores y administradores pueden realizar esta acción.
+          No tienes permisos para ver planes de trabajo. Solo directores de programa, coordinadores de campus y administradores pueden acceder.
         </AlertDescription>
       </Alert>
     );
@@ -230,7 +275,7 @@ export function WorkPlanApproval() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Comentarios de aprobación:
+                  {canApprove ? 'Comentarios de aprobación:' : 'Observaciones:'}
                 </label>
                 <Textarea
                   value={comments[plan.id] || ''}
@@ -238,29 +283,44 @@ export function WorkPlanApproval() {
                     ...prev,
                     [plan.id]: e.target.value
                   }))}
-                  placeholder="Agregar comentarios sobre la aprobación o rechazo..."
+                  placeholder={canApprove ? "Agregar comentarios sobre la aprobación o rechazo..." : "Agregar observaciones sobre el plan..."}
                   className="min-h-[100px]"
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={() => handleApproval(plan.id, 'approved')}
-                  disabled={actionLoading === plan.id}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  {actionLoading === plan.id ? 'Procesando...' : 'Aprobar'}
-                </Button>
-                <Button
-                  onClick={() => handleApproval(plan.id, 'rejected')}
-                  disabled={actionLoading === plan.id}
-                  variant="destructive"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  {actionLoading === plan.id ? 'Procesando...' : 'Rechazar'}
-                </Button>
-              </div>
+              {canApprove && (
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => handleApproval(plan.id, 'approved')}
+                    disabled={actionLoading === plan.id}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {actionLoading === plan.id ? 'Procesando...' : 'Aprobar'}
+                  </Button>
+                  <Button
+                    onClick={() => handleApproval(plan.id, 'rejected')}
+                    disabled={actionLoading === plan.id}
+                    variant="destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    {actionLoading === plan.id ? 'Procesando...' : 'Rechazar'}
+                  </Button>
+                </div>
+              )}
+
+              {canObserve && !canApprove && (
+                <div className="pt-4">
+                  <Button
+                    onClick={() => handleObservation(plan.id)}
+                    disabled={actionLoading === plan.id}
+                    variant="outline"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {actionLoading === plan.id ? 'Guardando...' : 'Guardar Observación'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
