@@ -392,8 +392,8 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
-  // Permitir edición de planes rechazados
-  const isReadOnly = plan?.status === 'submitted' || plan?.status === 'approved';
+  // Permitir edición siempre que el gestor sea el propietario del plan
+  const isReadOnly = plan?.status === 'approved' && profile?.role !== 'Administrador';
 
   if (embedded) {
     return (
@@ -506,10 +506,12 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
                 <Save className="h-4 w-4 mr-2" />
                 {isLoading ? 'Guardando...' : 'Guardar'}
               </Button>
-              <Button onClick={handleSubmit} disabled={isLoading || !title.trim()}>
-                <Send className="h-4 w-4 mr-2" />
-                {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
-              </Button>
+              {plan?.status !== 'submitted' && (
+                <Button onClick={handleSubmit} disabled={isLoading || !title.trim()}>
+                  <Send className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
