@@ -67,10 +67,9 @@ export function ManagerWorkPlan() {
   
   const handleBackToList = () => {
     setSelectedPlan(null);
-    loadManagerData();
+    // REMOVED: loadManagerData() call to prevent unnecessary data reload
   };
 
-  // Lógica de renderizado condicional consolidada en un solo return
   if (loading) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
