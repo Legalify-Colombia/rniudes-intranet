@@ -158,14 +158,12 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       }
       
       if (currentPlan) {
-        // CORRECCIÓN: Actualizar solo los campos del plan principal
         const updateResult = await updateCustomPlan(currentPlan.id, { title: title });
         if (updateResult.error) {
           console.error("Error al actualizar el título del plan:", updateResult.error);
           throw new Error(updateResult.error.message);
         }
         
-        // Guardar las asignaciones en la tabla 'custom_plan_assignments'
         console.log("Saving assignments for plan:", currentPlan.id);
         
         for (const [productId, hours] of Object.entries(assignments)) {
@@ -381,3 +379,4 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
     </div>
   );
 }
+
