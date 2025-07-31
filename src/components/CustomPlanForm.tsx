@@ -28,7 +28,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
   const [actions, setActions] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Cambiado a true para que muestre el spinner inicial
+  const [isLoading, setIsLoading] = useState(true);
   const [title, setTitle] = useState("");
     
   const { profile } = useAuth();
@@ -50,12 +50,12 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     const loadData = async () => {
       setIsLoading(true);
       try {
+        await loadMasterData();
         if (planId) {
           await loadPlanDetails();
         } else if (planTypeId) {
           await loadPlanType();
         }
-        await loadMasterData();
       } finally {
         setIsLoading(false);
       }
@@ -112,6 +112,12 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       const fieldsResult = await fetchPlanFields(planTypeId);
       if (fieldsResult.data) {
         setFields(fieldsResult.data);
+        // Initialize responses for a new plan
+        const initialResponses: {[key: string]: any} = {};
+        fieldsResult.data.forEach((field: any) => {
+          initialResponses[field.id] = '';
+        });
+        setResponses(initialResponses);
       }
     } catch (error) {
       console.error("Error loading plan type:", error);
@@ -134,10 +140,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     }
   };
 
-  // If it's a structured plan type, use the StructuredCustomPlanForm
-  // Esta es la condición clave que determina qué formulario renderizar.
-  // Si planType tiene la propiedad `uses_structured_elements` y es true, se delega al componente StructuredCustomPlanForm.
-  // De lo contrario, se renderiza el formulario simple con los campos definidos.
+  // This is the key condition that determines which form to render.
   if (planType?.uses_structured_elements) {
     return (
       <StructuredCustomPlanForm
@@ -151,6 +154,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
   const handleResponseChange = async (fieldId: string, value: any) => {
     setResponses(prev => ({ ...prev, [fieldId]: value }));
     
+    // Auto-save the response if a plan ID exists
     if (plan?.id) {
       try {
         await upsertCustomPlanResponse({
@@ -171,7 +175,7 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       let currentPlan = plan;
       
       if (!currentPlan && planTypeId) {
-        // Create new plan
+        // Create new plan if it doesn't exist
         const planData = {
           title,
           plan_type_id: planTypeId,
@@ -224,13 +228,20 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
   const handleSubmit = async () => {
     if (!plan?.id) {
       await handleSave();
-      return;
+      if (!plan?.id) {
+        toast({
+          title: "Error",
+          description: "No se pudo crear el plan. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     
     try {
       setIsLoading(true);
       
-      // Asegurar que todas las respuestas estén guardadas antes del envío
+      // Ensure all responses are saved before submitting
       for (const [fieldId, value] of Object.entries(responses)) {
         if (value !== null && value !== undefined && value !== '') {
           await upsertCustomPlanResponse({
@@ -392,14 +403,15 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     }
   };
 
-  // El spinner de carga se muestra mientras se obtienen los datos.
-  // Cuando isLoading es false, se renderiza el formulario.
+  // Show a loading spinner while data is being fetched
   if (isLoading) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
-  // Permitir edición siempre que el gestor sea el propietario del plan
+  // The `isReadOnly` flag is true only if the plan is approved AND the user is not an Admin.
   const isReadOnly = plan?.status === 'approved' && profile?.role !== 'Administrador';
+  console.log("Plan Status:", plan?.status);
+  console.log("Is Read Only:", isReadOnly);
 
   if (embedded) {
     return (
