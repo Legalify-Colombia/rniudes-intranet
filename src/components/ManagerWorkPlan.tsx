@@ -33,12 +33,10 @@ export function ManagerWorkPlan() {
       const currentManager = managers?.find(m => m.id === profile.id);
       setManagerData(currentManager);
 
-      // Cargar planes asignados al gestor
       const { data: workPlans } = await fetchWorkPlans();
       const managerPlans = workPlans?.filter(plan => plan.manager_id === profile.id) || [];
       setAssignedPlans(managerPlans);
 
-      // Cargar tipos de plan
       const { data: planTypesData } = await fetchPlanTypes();
       setPlanTypes(planTypesData || []);
     } catch (error) {
@@ -63,12 +61,10 @@ export function ManagerWorkPlan() {
     }
   };
 
-  // Función para manejar la navegación hacia el formulario de edición
   const handleEditPlan = (plan: any) => {
     setSelectedPlan(plan);
   };
   
-  // Función para volver a la lista de planes
   const handleBackToList = () => {
     setSelectedPlan(null);
     loadManagerData();
@@ -111,7 +107,6 @@ export function ManagerWorkPlan() {
     );
   }
 
-  // Si hay un plan seleccionado, renderizamos el formulario correspondiente
   if (selectedPlan) {
     const planType = planTypes.find(pt => pt.id === selectedPlan.plan_type_id);
     const isStructured = planType?.uses_structured_elements;
@@ -126,19 +121,17 @@ export function ManagerWorkPlan() {
         />
       );
     } else {
-      // Para planes de campos, renderizamos CustomPlanForm completo
       return (
         <CustomPlanForm
           planId={selectedPlan.id}
           planTypeId={selectedPlan.plan_type_id}
           onSave={handleBackToList}
-          embedded={false} // IMPORTANTE: no incrustar para que sea editable
+          embedded={false}
         />
       );
     }
   }
 
-  // Vista predeterminada: lista de planes
   return (
     <div className="space-y-6">
       <Card>
