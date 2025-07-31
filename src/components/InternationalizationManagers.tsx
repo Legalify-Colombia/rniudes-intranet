@@ -1,429 +1,171 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { useManagers } from "@/hooks/useManagers";
-import { Eye, Users, FileText, Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { supabase } from "@/integrations/supabase/client";
+import type { CustomPlan, Result } from "@/types/supabase";
 
-export function InternationalizationManagers() {
-  const [managers, setManagers] = useState<any[]>([]);
-  const [selectedManager, setSelectedManager] = useState<any | null>(null);
-  const [managerPlanTypes, setManagerPlanTypes] = useState<any[]>([]);
-  const [availablePlanTypes, setAvailablePlanTypes] = useState<any[]>([]);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isAssignPlanDialogOpen, setIsAssignPlanDialogOpen] = useState(false);
-  const [selectedPlanTypeForAssignment, setSelectedPlanTypeForAssignment] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { profile } = useAuth();
-  const { toast } = useToast();
-  const { fetchManagersByCampus, fetchAvailablePlanTypes } = useManagers();
-  const { fetchPlanTypes, createCustomPlan } = useSupabaseData();
-
-  useEffect(() => {
-    loadManagers();
-    loadAvailablePlanTypes();
-  }, [profile]); // Added profile to the dependency array to reload when user changes
-
-  const loadAvailablePlanTypes = async () => {
-    try {
-      const result = await fetchPlanTypes();
-      if (result.data) {
-        setAvailablePlanTypes(result.data);
-      }
-    } catch (error) {
-      console.error("Error loading plan types:", error);
-    }
+export function useWorkPlans() {
+  const fetchWorkPlans = async (): Promise<Result<CustomPlan[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        plan_type:plan_type_id(*)
+      `)
+      .order("created_at", { ascending: false });
+    return { data, error };
   };
 
-  const loadManagers = async () => {
-    try {
-      setIsLoading(true);
+  // NUEVA FUNCIÓN: Obtiene los planes de trabajo asignados a un gestor
+  const fetchWorkPlansForManager = async (managerId: string): Promise<Result<CustomPlan[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        plan_type:plan_type_id(*)
+      `)
+      .eq("manager_id", managerId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const fetchPendingWorkPlans = async (): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(
+          full_name,
+          email,
+          position,
+          campus_id
+        ),
+        plan_types:plan_type_id(name)
+      `)
+      .eq("status", "submitted")
+      .order("submitted_date", { ascending: false });
+    
+    if (error) return { data: [], error };
+    
+    const processedData = await Promise.all((data || []).map(async (plan: any) => {
+      let campusName = 'N/A';
+      let programName = 'N/A';
+      let facultyName = 'N/A';
       
-      let campusIds: string[] | undefined;
-      // CORRECTED: For administrators, no campus filter is applied unless explicitly configured.
-      if (profile?.role === 'Administrador' && profile.managed_campus_ids && profile.managed_campus_ids.length > 0) {
-        campusIds = profile.managed_campus_ids;
+      if (plan.profiles?.campus_id) {
+        const { data: campusData } = await supabase
+          .from("campus")
+          .select("name")
+          .eq("id", plan.profiles.campus_id)
+          .single();
+        
+        campusName = campusData?.name || 'N/A';
+        
+        const { data: programData } = await supabase
+          .from("academic_programs")
+          .select("name, faculties(name)")
+          .eq("campus_id", plan.profiles.campus_id)
+          .limit(1)
+          .single();
+        
+        if (programData) {
+          programName = programData.name || 'N/A';
+          facultyName = (programData as any).faculties?.name || 'N/A';
+        }
       }
-      // If no managed_campus_ids are present, pass undefined to fetch all managers
-      const result = await fetchManagersByCampus(campusIds);
-
-      if (result.error) {
-        console.error("Error loading managers:", result.error);
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los gestores",
-          variant: "destructive",
-        });
-      } else {
-        console.log("Managers data:", result.data);
-        setManagers(result.data || []);
-      }
-    } catch (error) {
-      console.error("Error loading managers:", error);
-      toast({
-        title: "Error",
-        description: "Error inesperado al cargar los gestores",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const openManagerDetails = async (manager: any) => {
-    setSelectedManager(manager);
-    
-    // Load available plan types for this manager
-    try {
-      // Assuming fetchAvailablePlanTypes is defined in your useManagers hook
-      const planTypesResult = await fetchAvailablePlanTypes(manager.id);
-      if (planTypesResult.data) {
-        setManagerPlanTypes(planTypesResult.data);
-      }
-    } catch (error) {
-      console.error("Error loading plan types:", error);
-    }
-    
-    setIsDetailsDialogOpen(true);
-  };
-
-  const openAssignPlanDialog = (manager: any) => {
-    setSelectedManager(manager);
-    setIsAssignPlanDialogOpen(true);
-  };
-
-  const handleAssignPlan = async () => {
-    if (!selectedManager || !selectedPlanTypeForAssignment) {
-      toast({
-        title: "Error",
-        description: "Debe seleccionar un tipo de plan",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const planType = availablePlanTypes.find(pt => pt.id === selectedPlanTypeForAssignment);
-      const result = await createCustomPlan({
-        plan_type_id: selectedPlanTypeForAssignment,
-        title: `Plan de ${planType?.name} - ${selectedManager.full_name}`,
-        manager_id: selectedManager.id,
-        status: 'draft'
-      });
-
-      if (result.data) {
-        toast({
-          title: "Éxito",
-          description: "Plan asignado correctamente al gestor",
-        });
-        setIsAssignPlanDialogOpen(false);
-        setSelectedPlanTypeForAssignment("");
-        loadManagers();
-      }
-    } catch (error) {
-      console.error("Error assigning plan:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo asignar el plan",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getStatusBadge = (manager: any) => {
-    const hasHours = manager.weekly_hours && manager.number_of_weeks;
-    const hasProgram = manager.academic_programs && manager.academic_programs.length > 0;
-    
-    if (hasHours && hasProgram) {
-      return <Badge variant="default" className="bg-green-600">Configurado</Badge>;
-    } else if (hasProgram) {
-      return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Programa asignado</Badge>;
-    } else {
-      return <Badge variant="secondary">Sin configurar</Badge>;
-    }
-  };
-
-  const getAssignedProgram = (manager: any) => {
-    if (manager.academic_programs && manager.academic_programs.length > 0) {
-      const program = manager.academic_programs[0];
+      
+      const { data: assignmentsData } = await supabase
+        .from("custom_plan_assignments")
+        .select("assigned_hours")
+        .eq("custom_plan_id", plan.id);
+      
+      const totalHours = assignmentsData?.reduce((sum, assignment) => 
+        sum + (assignment.assigned_hours || 0), 0) || 0;
+      
+      const { data: objectivesData } = await supabase
+        .from("custom_plan_responses")
+        .select(`
+          response_value,
+          plan_fields(label, field_type)
+        `)
+        .eq("custom_plan_id", plan.id);
+      
+      const objectivesResponse = objectivesData?.find((response: any) => 
+        response.plan_fields?.field_type === 'textarea' && 
+        response.plan_fields?.label?.toLowerCase().includes('objetivo')
+      );
+      
+      const objectives = objectivesResponse?.response_value && 
+        typeof objectivesResponse.response_value === 'object' 
+        ? (objectivesResponse.response_value as any).text || '' 
+        : '';
+      
       return {
-        name: program.name,
-        campus: program.campus?.name || 'Sin campus',
-        faculty: program.faculty?.name || 'Sin facultad'
+        ...plan,
+        manager_name: plan.profiles?.full_name || 'N/A',
+        manager_email: plan.profiles?.email || 'N/A',
+        manager_position: plan.profiles?.position || 'N/A',
+        plan_type_name: plan.plan_types?.name || 'N/A',
+        campus_name: campusName,
+        program_name: programName,
+        faculty_name: facultyName,
+        total_hours_assigned: totalHours,
+        objectives: objectives
       };
-    }
-    return null;
+    }));
+    
+    return { data: processedData, error: null };
   };
 
-  if (profile?.role !== 'Administrador') {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">No tienes permisos para acceder a esta sección.</p>
-      </div>
-    );
-  }
+  const approveWorkPlan = async (planId: string, status: 'approved' | 'rejected', approvedBy: string, comments?: string): Promise<Result<CustomPlan>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .update({
+        status: status,
+        approved_by: approvedBy,
+        approved_date: new Date().toISOString(),
+        approval_comments: comments
+      })
+      .eq("id", planId)
+      .select()
+      .single();
+    return { data, error };
+  };
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Gestores de Internacionalización
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">
-              <p>Cargando gestores...</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Programa Asignado</TableHead>
-                  <TableHead>Campus</TableHead>
-                  <TableHead>Horas Semanales</TableHead>
-                  <TableHead>Total Horas</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {managers.map((manager: any) => {
-                  const assignedProgram = getAssignedProgram(manager);
-                  return (
-                    <TableRow key={manager.id}>
-                      <TableCell className="font-medium">{manager.full_name}</TableCell>
-                      <TableCell>{manager.email}</TableCell>
-                      <TableCell>
-                        {assignedProgram ? (
-                          <div>
-                            <p className="font-medium">{assignedProgram.name}</p>
-                            <p className="text-sm text-gray-500">{assignedProgram.faculty}</p>
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">Sin asignar</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {assignedProgram?.campus || 'Sin asignar'}
-                      </TableCell>
-                      <TableCell>
-                        {manager.weekly_hours ? (
-                          <span>{manager.weekly_hours} horas/semana</span>
-                        ) : (
-                          <span className="text-gray-500">No configurado</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {manager.total_hours ? (
-                          <span>{manager.total_hours} horas</span>
-                        ) : (
-                          <span className="text-gray-500">No calculado</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(manager)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => openManagerDetails(manager)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => openAssignPlanDialog(manager)}
-                            className="bg-blue-50 hover:bg-blue-100"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+  const createWorkPlan = async (workPlan: any): Promise<Result<CustomPlan>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .insert(workPlan)
+      .select()
+      .single();
+    return { data, error };
+  };
 
-          {managers.length === 0 && !isLoading && (
-            <div className="text-center py-8 text-gray-500">
-              No hay gestores de internacionalización registrados.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+  const updateWorkPlan = async (id: string, updates: any): Promise<Result<CustomPlan>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    return { data, error };
+  };
 
-      {/* Dialog para ver detalles del gestor */}
-      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalles del Gestor</DialogTitle>
-          </DialogHeader>
-          
-          {selectedManager && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-3">Información Personal</h4>
-                  <div className="space-y-2">
-                    <p><span className="font-medium">Nombre:</span> {selectedManager.full_name}</p>
-                    <p><span className="font-medium">Email:</span> {selectedManager.email}</p>
-                    <p><span className="font-medium">Documento:</span> {selectedManager.document_number || 'No registrado'}</p>
-                    <p><span className="font-medium">Cargo:</span> {selectedManager.position}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-3">Carga Académica</h4>
-                  <div className="space-y-2">
-                    <p><span className="font-medium">Horas semanales:</span> {selectedManager.weekly_hours || 'No configurado'}</p>
-                    <p><span className="font-medium">Número de semanas:</span> {selectedManager.number_of_weeks || 'No configurado'}</p>
-                    <p><span className="font-medium">Total de horas:</span> {selectedManager.total_hours || 'No calculado'}</p>
-                  </div>
-                </div>
-              </div>
+  const upsertWorkPlanAssignment = async (assignment: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments")
+      .upsert(assignment)
+      .select()
+      .single();
+    return { data, error };
+  };
 
-              <div>
-                <h4 className="font-medium text-gray-700 mb-3">Programa Académico Asignado</h4>
-                {selectedManager.academic_programs && selectedManager.academic_programs.length > 0 ? (
-                  <div className="space-y-3">
-                    {selectedManager.academic_programs.map((program: any) => (
-                      <div key={program.id} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <p className="font-medium text-lg">{program.name}</p>
-                            <p className="text-sm text-gray-600">Director: {program.director_name}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Campus: {program.campus?.name}</p>
-                            <p className="text-sm text-gray-600">Facultad: {program.faculty?.name}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-yellow-800">Este gestor no tiene programas académicos asignados.</p>
-                    <p className="text-sm text-yellow-600 mt-1">Para asignar un programa, edite el programa académico correspondiente y seleccione este gestor como responsable.</p>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-700 mb-3">Tipos de Plan Disponibles</h4>
-                {selectedManager.weekly_hours ? (
-                  <div className="space-y-3">
-                    {managerPlanTypes.length > 0 ? (
-                      managerPlanTypes.map((planType: any) => (
-                        <div key={planType.id} className="border rounded-lg p-3 bg-blue-50">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{planType.name}</p>
-                              <p className="text-sm text-gray-600">{planType.description}</p>
-                              <p className="text-xs text-gray-500">
-                                Horas: {planType.min_weekly_hours} - {planType.max_weekly_hours || '∞'} por semana
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline">
-                                <FileText className="w-3 h-3 mr-1" />
-                                {planType.field_count} campos
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <p className="text-gray-600">No hay tipos de plan disponibles para este gestor con {selectedManager.weekly_hours} horas semanales.</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                    <p className="text-orange-800">Debe configurar las horas semanales del gestor para ver los tipos de plan disponibles.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog para asignar plan */}
-      <Dialog open={isAssignPlanDialogOpen} onOpenChange={setIsAssignPlanDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Asignar Tipo de Plan</DialogTitle>
-          </DialogHeader>
-          
-          {selectedManager && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Gestor:</p>
-                <p className="font-medium">{selectedManager.full_name}</p>
-                <p className="text-sm text-gray-500">{selectedManager.email}</p>
-              </div>
-
-              <div>
-                <Label htmlFor="planType">Tipo de Plan</Label>
-                <Select 
-                  value={selectedPlanTypeForAssignment} 
-                  onValueChange={setSelectedPlanTypeForAssignment}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un tipo de plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availablePlanTypes.map((planType) => (
-                      <SelectItem key={planType.id} value={planType.id}>
-                        <div>
-                          <div className="font-medium">{planType.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {planType.min_weekly_hours} - {planType.max_weekly_hours || '∞'} hrs/semana
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedPlanTypeForAssignment && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    {availablePlanTypes.find(pt => pt.id === selectedPlanTypeForAssignment)?.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleAssignPlan} disabled={!selectedPlanTypeForAssignment}>
-                  Asignar Plan
-                </Button>
-                <Button variant="outline" onClick={() => setIsAssignPlanDialogOpen(false)}>
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+  return {
+    fetchWorkPlans,
+    fetchWorkPlansForManager, // Exponemos la nueva función
+    fetchPendingWorkPlans,
+    approveWorkPlan,
+    createWorkPlan,
+    updateWorkPlan,
+    upsertWorkPlanAssignment,
+  };
 }
