@@ -131,6 +131,16 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       
       let currentPlan = plan;
       
+      // Validar si el título del plan está vacío
+      if (!title.trim()) {
+        toast({
+          title: "Error de validación",
+          description: "El título del plan no puede estar vacío.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       if (!currentPlan && planTypeId) {
         const planData = {
           title,
@@ -198,12 +208,24 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
   };
 
   const handleSubmit = async () => {
-    await handleSave();
+    // Primero, intenta guardar el plan. handleSave() se encargará de crear el plan si es nuevo.
+    try {
+      await handleSave();
+    } catch (error) {
+      console.error("Error durante el guardado previo al envío:", error);
+      toast({
+        title: "Error de guardado",
+        description: "No se pudo guardar el plan antes de enviarlo. Intenta de nuevo.",
+        variant: "destructive",
+      });
+      return;
+    }
     
+    // Asegurarse de que el plan ya tiene un ID después del guardado.
     if (!plan?.id) {
       toast({
         title: "Error",
-        description: "No se pudo crear el plan. Inténtalo de nuevo.",
+        description: "No se pudo encontrar el plan para enviarlo.",
         variant: "destructive",
       });
       return;
@@ -345,7 +367,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
 
       {!isReadOnly && (
         <div className="flex gap-4">
-          <Button onClick={handleSave} disabled={isLoading || getTotalHours() > maxTotalHours}>
+          <Button onClick={handleSave} disabled={isLoading || !title.trim() || getTotalHours() > maxTotalHours}>
             <Save className="h-4 w-4 mr-2" />
             {isLoading ? 'Guardando...' : 'Guardar'}
           </Button>
