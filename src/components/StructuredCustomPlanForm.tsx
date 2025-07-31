@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -190,8 +189,15 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
   };
 
   const handleSubmit = async () => {
+    // BUG FIX: Ensure assignments are saved before submitting the plan.
+    // If the plan doesn't exist yet, handleSave() will create it and save the assignments.
+    // If it exists, it will update the assignments.
+    await handleSave();
+    
+    // Now, with the data saved, proceed with submitting the plan.
     if (!plan?.id) {
-      await handleSave();
+      // This case should be handled by handleSave, but for safety, we check again.
+      console.error("Plan ID is missing, cannot submit.");
       return;
     }
     
