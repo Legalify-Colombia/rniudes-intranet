@@ -131,7 +131,6 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       
       let currentPlan = plan;
       
-      // Validar si el título del plan está vacío
       if (!title.trim()) {
         toast({
           title: "Error de validación",
@@ -159,14 +158,14 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       }
       
       if (currentPlan) {
-        // CORRECCIÓN: Se actualiza solo el título para evitar el error 400
+        // CORRECCIÓN: Actualizar solo los campos del plan principal
         const updateResult = await updateCustomPlan(currentPlan.id, { title: title });
         if (updateResult.error) {
           console.error("Error al actualizar el título del plan:", updateResult.error);
           throw new Error(updateResult.error.message);
         }
         
-        // Log the data before sending to Supabase for debugging
+        // Guardar las asignaciones en la tabla 'custom_plan_assignments'
         console.log("Saving assignments for plan:", currentPlan.id);
         
         for (const [productId, hours] of Object.entries(assignments)) {
@@ -176,14 +175,12 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
               product_id: productId,
               assigned_hours: hours
             };
-            console.log("Upserting assignment:", assignmentData);
             const assignmentResult = await upsertCustomPlanAssignment(assignmentData);
             if (assignmentResult.error) {
               console.error("Error al guardar asignación:", assignmentResult.error);
               throw new Error(assignmentResult.error.message);
             }
           } else {
-            console.log("Deleting assignment for product:", productId);
             await deleteCustomPlanAssignment(currentPlan.id, productId);
           }
         }
@@ -208,32 +205,25 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
   };
 
   const handleSubmit = async () => {
-    // Primero, intenta guardar el plan. handleSave() se encargará de crear el plan si es nuevo.
     try {
       await handleSave();
-    } catch (error) {
-      console.error("Error durante el guardado previo al envío:", error);
-      toast({
-        title: "Error de guardado",
-        description: "No se pudo guardar el plan antes de enviarlo. Intenta de nuevo.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Asegurarse de que el plan ya tiene un ID después del guardado.
-    if (!plan?.id) {
-      toast({
-        title: "Error",
-        description: "No se pudo encontrar el plan para enviarlo.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
+      
+      if (!plan?.id) {
+        toast({
+          title: "Error",
+          description: "No se pudo encontrar el plan para enviarlo.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setIsLoading(true);
-      await submitCustomPlan(plan.id);
+      const submitResult = await submitCustomPlan(plan.id);
+      
+      if (submitResult.error) {
+        console.error("Error al enviar el plan:", submitResult.error);
+        throw new Error(submitResult.error.message);
+      }
       
       toast({
         title: "Éxito",
