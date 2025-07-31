@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { CustomPlan, Result } from "@/types/supabase";
 
@@ -11,6 +10,19 @@ export function useWorkPlans() {
         profiles:manager_id(*),
         plan_type:plan_type_id(*)
       `)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const fetchWorkPlansForManager = async (managerId: string): Promise<Result<CustomPlan[]>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .select(`
+        *,
+        profiles:manager_id(*),
+        plan_type:plan_type_id(*)
+      `)
+      .eq("manager_id", managerId)
       .order("created_at", { ascending: false });
     return { data, error };
   };
@@ -33,9 +45,7 @@ export function useWorkPlans() {
     
     if (error) return { data: [], error };
     
-    // Procesar los datos para incluir información adicional
     const processedData = await Promise.all((data || []).map(async (plan: any) => {
-      // Obtener información del campus
       let campusName = 'N/A';
       let programName = 'N/A';
       let facultyName = 'N/A';
@@ -49,7 +59,6 @@ export function useWorkPlans() {
         
         campusName = campusData?.name || 'N/A';
         
-        // Obtener información del programa académico
         const { data: programData } = await supabase
           .from("academic_programs")
           .select("name, faculties(name)")
@@ -63,7 +72,6 @@ export function useWorkPlans() {
         }
       }
       
-      // Obtener total de horas asignadas
       const { data: assignmentsData } = await supabase
         .from("custom_plan_assignments")
         .select("assigned_hours")
@@ -72,7 +80,6 @@ export function useWorkPlans() {
       const totalHours = assignmentsData?.reduce((sum, assignment) => 
         sum + (assignment.assigned_hours || 0), 0) || 0;
       
-      // Obtener objetivos de las respuestas
       const { data: objectivesData } = await supabase
         .from("custom_plan_responses")
         .select(`
@@ -122,6 +129,20 @@ export function useWorkPlans() {
       .single();
     return { data, error };
   };
+  
+  // NUEVA FUNCIÓN: Envía un plan para revisión
+  const submitCustomPlan = async (planId: string): Promise<Result<CustomPlan>> => {
+    const { data, error } = await supabase
+      .from("custom_plans")
+      .update({
+        status: "submitted",
+        submitted_date: new Date().toISOString(),
+      })
+      .eq("id", planId)
+      .select()
+      .single();
+    return { data, error };
+  };
 
   const createWorkPlan = async (workPlan: any): Promise<Result<CustomPlan>> => {
     const { data, error } = await supabase
@@ -153,8 +174,10 @@ export function useWorkPlans() {
 
   return {
     fetchWorkPlans,
+    fetchWorkPlansForManager,
     fetchPendingWorkPlans,
     approveWorkPlan,
+    submitCustomPlan, // Exportamos la nueva función
     createWorkPlan,
     updateWorkPlan,
     upsertWorkPlanAssignment,
