@@ -70,6 +70,7 @@ export function ManagerWorkPlan() {
     loadManagerData();
   };
 
+  // Lógica de renderizado condicional consolidada en un solo return
   if (loading) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
@@ -142,16 +143,16 @@ export function ManagerWorkPlan() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4">
-            {assignedPlans.length === 0 ? (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  No tienes planes de trabajo asignados. Contacta al administrador para que te asigne un plan de trabajo.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              assignedPlans.map((plan) => (
+          {assignedPlans.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No tienes planes de trabajo asignados. Contacta al administrador para que te asigne un plan de trabajo.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="grid gap-4">
+              {assignedPlans.map((plan) => (
                 <Card key={plan.id} className="border-l-4 border-l-blue-500">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -216,8 +217,9 @@ export function ManagerWorkPlan() {
                 </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
