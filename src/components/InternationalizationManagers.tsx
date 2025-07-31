@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ export function InternationalizationManagers() {
   useEffect(() => {
     loadManagers();
     loadAvailablePlanTypes();
-  }, []);
+  }, [profile]); // Added profile to the dependency array to reload when user changes
 
   const loadAvailablePlanTypes = async () => {
     try {
@@ -49,11 +48,13 @@ export function InternationalizationManagers() {
       setIsLoading(true);
       
       let campusIds: string[] | undefined;
-      if (profile?.role === 'Administrador' && profile.managed_campus_ids) {
+      // CORRECTED: For administrators, no campus filter is applied unless explicitly configured.
+      if (profile?.role === 'Administrador' && profile.managed_campus_ids && profile.managed_campus_ids.length > 0) {
         campusIds = profile.managed_campus_ids;
       }
-
+      // If no managed_campus_ids are present, pass undefined to fetch all managers
       const result = await fetchManagersByCampus(campusIds);
+
       if (result.error) {
         console.error("Error loading managers:", result.error);
         toast({
@@ -82,6 +83,7 @@ export function InternationalizationManagers() {
     
     // Load available plan types for this manager
     try {
+      // Assuming fetchAvailablePlanTypes is defined in your useManagers hook
       const planTypesResult = await fetchAvailablePlanTypes(manager.id);
       if (planTypesResult.data) {
         setManagerPlanTypes(planTypesResult.data);
