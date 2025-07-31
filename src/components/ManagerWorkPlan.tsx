@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
@@ -6,7 +5,7 @@ import { CustomPlanForm } from "./CustomPlanForm";
 import { StructuredWorkPlanForm } from "./StructuredWorkPlanForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, FileText, Clock, CheckCircle } from "lucide-react";
+import { AlertCircle, FileText, Clock, CheckCircle, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -17,7 +16,6 @@ export function ManagerWorkPlan() {
   const [assignedPlans, setAssignedPlans] = useState<any[]>([]);
   const [planTypes, setPlanTypes] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
-  const [showStructuredForm, setShowStructuredForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,6 +63,17 @@ export function ManagerWorkPlan() {
     }
   };
 
+  // Función para manejar la navegación hacia el formulario de edición
+  const handleEditPlan = (plan: any) => {
+    setSelectedPlan(plan);
+  };
+  
+  // Función para volver a la lista de planes
+  const handleBackToList = () => {
+    setSelectedPlan(null);
+    loadManagerData();
+  };
+
   if (loading) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
@@ -90,7 +99,7 @@ export function ManagerWorkPlan() {
       </Alert>
     );
   }
-
+  
   if (!managerData.total_hours || managerData.total_hours === 0) {
     return (
       <Alert>
@@ -102,44 +111,34 @@ export function ManagerWorkPlan() {
     );
   }
 
-  if (assignedPlans.length === 0) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Mi Plan de Trabajo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                No tienes planes de trabajo asignados. Contacta al administrador para que te asigne un plan de trabajo.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Si hay un plan seleccionado, renderizamos el formulario correspondiente
+  if (selectedPlan) {
+    const planType = planTypes.find(pt => pt.id === selectedPlan.plan_type_id);
+    const isStructured = planType?.uses_structured_elements;
+
+    if (isStructured) {
+      return (
+        <StructuredWorkPlanForm
+          planType={planType}
+          manager={managerData}
+          onClose={handleBackToList}
+          onSave={handleBackToList}
+        />
+      );
+    } else {
+      // Para planes de campos, renderizamos CustomPlanForm completo
+      return (
+        <CustomPlanForm
+          planId={selectedPlan.id}
+          planTypeId={selectedPlan.plan_type_id}
+          onSave={handleBackToList}
+          embedded={false} // IMPORTANTE: no incrustar para que sea editable
+        />
+      );
+    }
   }
 
-  if (showStructuredForm && selectedPlan) {
-    return (
-      <StructuredWorkPlanForm
-        planType={selectedPlan.planType}
-        manager={managerData}
-        onClose={() => {
-          setShowStructuredForm(false);
-          setSelectedPlan(null);
-        }}
-        onSave={() => {
-          loadManagerData();
-          setShowStructuredForm(false);
-          setSelectedPlan(null);
-        }}
-      />
-    );
-  }
-
+  // Vista predeterminada: lista de planes
   return (
     <div className="space-y-6">
       <Card>
@@ -151,96 +150,81 @@ export function ManagerWorkPlan() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
-            {assignedPlans.map((plan) => (
-              <Card key={plan.id} className="border-l-4 border-l-blue-500">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-lg">{plan.title}</h3>
-                      <p className="text-sm text-gray-600">{plan.plan_type?.name}</p>
-                    </div>
-                    {getStatusBadge(plan.status)}
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-700">{plan.plan_type?.description}</p>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+            {assignedPlans.length === 0 ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No tienes planes de trabajo asignados. Contacta al administrador para que te asigne un plan de trabajo.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              assignedPlans.map((plan) => (
+                <Card key={plan.id} className="border-l-4 border-l-blue-500">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-medium">Fecha de creación:</span>
-                        <p>{new Date(plan.created_at).toLocaleDateString()}</p>
+                        <h3 className="font-semibold text-lg">{plan.title}</h3>
+                        <p className="text-sm text-gray-600">{plan.plan_type?.name}</p>
                       </div>
-                      {plan.submitted_date && (
+                      {getStatusBadge(plan.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-700">{plan.plan_type?.description}</p>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="font-medium">Fecha de envío:</span>
-                          <p>{new Date(plan.submitted_date).toLocaleDateString()}</p>
+                          <span className="font-medium">Fecha de creación:</span>
+                          <p>{new Date(plan.created_at).toLocaleDateString()}</p>
+                        </div>
+                        {plan.submitted_date && (
+                          <div>
+                            <span className="font-medium">Fecha de envío:</span>
+                            <p>{new Date(plan.submitted_date).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                        {plan.approved_date && (
+                          <div>
+                            <span className="font-medium">Fecha de aprobación:</span>
+                            <p>{new Date(plan.approved_date).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {plan.approval_comments && (
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <span className="font-medium text-sm">Comentarios:</span>
+                          <p className="text-sm text-gray-700 mt-1">{plan.approval_comments}</p>
                         </div>
                       )}
-                      {plan.approved_date && (
-                        <div>
-                          <span className="font-medium">Fecha de aprobación:</span>
-                          <p>{new Date(plan.approved_date).toLocaleDateString()}</p>
-                        </div>
-                      )}
-                    </div>
 
-                    {plan.approval_comments && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium text-sm">Comentarios:</span>
-                        <p className="text-sm text-gray-700 mt-1">{plan.approval_comments}</p>
+                      <div className="pt-4">
+                        {(plan.status === 'draft' || plan.status === 'rejected') ? (
+                          <Button 
+                            onClick={() => handleEditPlan(plan)}
+                            className="w-full"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            {plan.status === 'rejected' ? 'Editar y Reenviar Plan' : 'Editar Plan'}
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant="outline"
+                            onClick={() => handleEditPlan(plan)}
+                            className="w-full"
+                          >
+                            Ver Plan
+                          </Button>
+                        )}
                       </div>
-                    )}
-
-                    <div className="pt-4">
-                      {(() => {
-                        const planType = planTypes.find(pt => pt.id === plan.plan_type_id);
-                        const isStructured = planType?.uses_structured_elements;
-                        
-                        if (isStructured && (plan.status === 'draft' || plan.status === 'rejected')) {
-                          return (
-                            <Button 
-                              onClick={() => {
-                                setSelectedPlan({ plan, planType });
-                                setShowStructuredForm(true);
-                              }}
-                              className="w-full"
-                            >
-                              {plan.status === 'rejected' ? 'Editar y Reenviar Plan' : 'Asignar Horas al Plan'}
-                            </Button>
-                          );
-                        } else if (isStructured) {
-                          return (
-                            <Button 
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedPlan({ plan, planType });
-                                setShowStructuredForm(true);
-                              }}
-                              className="w-full"
-                            >
-                              Ver Plan de Horas
-                            </Button>
-                          );
-                        } else {
-                          return (
-                            <CustomPlanForm
-                              planId={plan.id}
-                              planTypeId={plan.plan_type_id}
-                              onSave={() => loadManagerData()}
-                              embedded={true}
-                            />
-                          );
-                        }
-                      })()}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
   );
 }
