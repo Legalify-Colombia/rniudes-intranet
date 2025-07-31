@@ -1,695 +1,456 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { Mail, Settings, TestTube, History, Plus, Edit, Trash, Send } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Plus,
+  Edit,
+  Eye,
+  Trash2,
+  Mail,
+  ListFilter,
+  RefreshCcw,
+} from "lucide-react";
 
-interface EmailConfiguration {
+interface Campus {
   id: string;
-  campus_id: string;
-  resend_api_key: string;
-  from_email: string;
-  from_name: string;
-  is_active: boolean;
-  test_email: string;
-  campus?: { name: string };
+  name: string;
 }
 
+// Interfaz para la plantilla de email, con tipos corregidos
 interface EmailTemplate {
   id: string;
   name: string;
   description: string;
-  template_type: string;
   subject: string;
   html_content: string;
-  variables: string[];
+  template_type: string;
   is_active: boolean;
   campus_id: string;
-  campus?: { name: string };
+  variables: string[] | null;
+  created_at: string;
+  updated_at: string;
+  campus?: Campus;
 }
 
-interface EmailNotification {
-  id: string;
-  recipient_email: string;
-  subject: string;
-  status: string;
-  sent_at: string;
-  error_message: string;
-  template?: { name: string };
-}
+const tableHeaders = [
+  "Nombre",
+  "Tipo",
+  "Campus",
+  "Asunto",
+  "Estado",
+  "Acciones",
+];
 
 export function EmailNotificationManagement() {
-  const [configurations, setConfigurations] = useState<EmailConfiguration[]>([]);
-  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  const [notifications, setNotifications] = useState<EmailNotification[]>([]);
-  const [campuses, setCampuses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [editingConfig, setEditingConfig] = useState<EmailConfiguration | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
-  const [testEmail, setTestEmail] = useState("");
-
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currentTemplate, setCurrentTemplate] = useState<
+    Partial<EmailTemplate>
+  >({
+    name: "",
+    subject: "",
+    html_content: "",
+    template_type: "plan_approval",
+    description: "",
+    is_active: true,
+    campus_id: "",
+    variables: [],
+  });
   const { profile } = useAuth();
   const { toast } = useToast();
 
-  const templateTypes = [
-    { value: 'plan_submitted', label: 'Plan Presentado' },
-    { value: 'plan_approved', label: 'Plan Aprobado' },
-    { value: 'plan_rejected', label: 'Plan Rechazado' },
-    { value: 'report_submitted', label: 'Informe Presentado' },
-    { value: 'snies_report_submitted', label: 'Reporte SNIES Presentado' },
-  ];
-
   useEffect(() => {
-    loadData();
+    fetchData();
   }, []);
 
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      
-      const [configsResult, templatesResult, notificationsResult, campusResult] = await Promise.all([
-        supabase.from('email_configurations').select('*, campus(name)').order('created_at', { ascending: false }),
-        supabase.from('email_templates').select('*, campus(name)').order('created_at', { ascending: false }),
-        supabase.from('email_notifications').select('*, email_templates(name)').order('created_at', { ascending: false }).limit(50),
-        supabase.from('campus').select('*').order('name')
-      ]);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
 
-      if (configsResult.data) setConfigurations(configsResult.data);
-      if (templatesResult.data) setTemplates(templatesResult.data);
-      if (notificationsResult.data) setNotifications(notificationsResult.data);
-      if (campusResult.data) setCampuses(campusResult.data);
-    } catch (error) {
-      console.error('Error loading data:', error);
+    const { data: templatesData, error: templatesError } = await supabase
+      .from("email_templates")
+      .select(`*, campus:campus_id(name)`);
+
+    const { data: campusesData, error: campusesError } = await supabase
+      .from("campus")
+      .select("*");
+
+    if (templatesError) {
+      setError(templatesError.message);
       toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos",
+        title: "Error al cargar plantillas",
+        description: templatesError.message,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+    } else {
+      const processedTemplates: EmailTemplate[] = templatesData.map((template: any) => ({
+        ...template,
+        variables: template.variables ? template.variables : null,
+      }));
+      setEmailTemplates(processedTemplates);
     }
+
+    if (campusesError) {
+      setError(campusesError.message);
+      toast({
+        title: "Error al cargar campus",
+        description: campusesError.message,
+        variant: "destructive",
+      });
+    } else {
+      setCampuses(campusesData || []);
+    }
+
+    setLoading(false);
   };
 
-  const saveConfiguration = async (config: Partial<EmailConfiguration>) => {
+  const handleCreateOrUpdate = async () => {
+    const { id, ...templateData } = currentTemplate;
+    const { data: { user } } = await supabase.auth.getUser();
+
     try {
-      if (editingConfig?.id) {
-        await supabase
-          .from('email_configurations')
-          .update(config)
-          .eq('id', editingConfig.id);
+      if (isEditMode && id) {
+        // Actualizar plantilla existente
+        const { error } = await supabase
+          .from("email_templates")
+          .update(templateData)
+          .eq("id", id);
+
+        if (error) throw error;
+        toast({
+          title: "Éxito",
+          description: "Plantilla actualizada correctamente.",
+        });
       } else {
-        await supabase
-          .from('email_configurations')
-          .insert(config);
+        // Crear nueva plantilla
+        const newTemplate = {
+          ...templateData,
+          created_by: user?.id,
+          variables: currentTemplate.variables, // No se necesita JSON.stringify si el tipo es string[]
+        };
+        const { error } = await supabase
+          .from("email_templates")
+          .insert(newTemplate);
+
+        if (error) throw error;
+        toast({
+          title: "Éxito",
+          description: "Plantilla creada correctamente.",
+        });
       }
-      
-      toast({
-        title: "Éxito",
-        description: "Configuración guardada correctamente",
-      });
-      
-      setEditingConfig(null);
-      loadData();
-    } catch (error) {
+      setIsDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error(error);
       toast({
         title: "Error",
-        description: "No se pudo guardar la configuración",
+        description: `Error al guardar la plantilla: ${error.message}`,
         variant: "destructive",
       });
     }
   };
 
-  const saveTemplate = async (template: Partial<EmailTemplate>) => {
-    try {
-      if (editingTemplate?.id) {
-        await supabase
-          .from('email_templates')
-          .update(template)
-          .eq('id', editingTemplate.id);
-      } else {
-        await supabase
-          .from('email_templates')
-          .insert(template);
-      }
-      
-      toast({
-        title: "Éxito",
-        description: "Plantilla guardada correctamente",
-      });
-      
-      setEditingTemplate(null);
-      loadData();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo guardar la plantilla",
-        variant: "destructive",
-      });
-    }
+  const openNewTemplateDialog = () => {
+    setIsEditMode(false);
+    setCurrentTemplate({
+      name: "",
+      subject: "",
+      html_content: "",
+      template_type: "plan_approval",
+      description: "",
+      is_active: true,
+      campus_id: "",
+      variables: [],
+    });
+    setIsDialogOpen(true);
   };
 
-  const testEmailConfiguration = async (configId: string) => {
-    if (!testEmail) {
-      toast({
-        title: "Error",
-        description: "Ingresa un email para la prueba",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      
-      const config = configurations.find(c => c.id === configId);
-      
-      const { data, error } = await supabase.functions.invoke('test-email-config', {
-        body: {
-          campusId: config?.campus_id,
-          testEmail: testEmail,
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Éxito",
-        description: "Email de prueba enviado correctamente",
-      });
-      
-      setTestEmail("");
-      loadData();
-    } catch (error) {
-      console.error('Error testing email:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo enviar el email de prueba",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const openEditTemplateDialog = (template: EmailTemplate) => {
+    setIsEditMode(true);
+    setCurrentTemplate(template);
+    setIsDialogOpen(true);
   };
 
-  const deleteConfiguration = async (id: string) => {
-    try {
-      await supabase.from('email_configurations').delete().eq('id', id);
-      toast({
-        title: "Éxito",
-        description: "Configuración eliminada",
-      });
-      loadData();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la configuración",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteTemplate = async (id: string) => {
-    try {
-      await supabase.from('email_templates').delete().eq('id', id);
-      toast({
-        title: "Éxito",
-        description: "Plantilla eliminada",
-      });
-      loadData();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la plantilla",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (profile?.role !== 'Administrador' && profile?.role !== 'Coordinador') {
+  if (profile?.role !== "Administrador") {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No tienes permisos para acceder a esta sección.</p>
+        <p className="text-gray-500">
+          No tienes permisos para acceder a esta sección.
+        </p>
       </div>
     );
   }
 
+  if (loading) {
+    return <div className="flex justify-center p-8">Cargando...</div>;
+  }
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
+    <Card className="w-full">
+      <CardHeader>
+        <div className="flex justify-between items-center">
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Gestión de Notificaciones por Email
+            Gestión de Plantillas de Correo
           </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="configurations" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="configurations">Configuraciones</TabsTrigger>
-              <TabsTrigger value="templates">Plantillas</TabsTrigger>
-              <TabsTrigger value="history">Historial</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="configurations" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Configuraciones de Email</h3>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setEditingConfig({} as EmailConfiguration)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nueva Configuración
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingConfig?.id ? 'Editar' : 'Nueva'} Configuración de Email
-                      </DialogTitle>
-                    </DialogHeader>
-                    <EmailConfigurationForm
-                      config={editingConfig}
-                      campuses={campuses}
-                      onSave={saveConfiguration}
-                      onCancel={() => setEditingConfig(null)}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Campus</TableHead>
-                    <TableHead>Email Remitente</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {configurations.map((config) => (
-                    <TableRow key={config.id}>
-                      <TableCell>{config.campus?.name || 'Global'}</TableCell>
-                      <TableCell>{config.from_email}</TableCell>
-                      <TableCell>
-                        <Badge variant={config.is_active ? "default" : "secondary"}>
-                          {config.is_active ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingConfig(config)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            const email = prompt('Email para prueba:');
-                            if (email) {
-                              setTestEmail(email);
-                              testEmailConfiguration(config.id);
-                            }
-                          }}
-                        >
-                          <TestTube className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            if (confirm('¿Eliminar configuración?')) {
-                              deleteConfiguration(config.id);
-                            }
-                          }}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-
-            <TabsContent value="templates" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Plantillas de Email</h3>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setEditingTemplate({} as EmailTemplate)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nueva Plantilla
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingTemplate?.id ? 'Editar' : 'Nueva'} Plantilla de Email
-                      </DialogTitle>
-                    </DialogHeader>
-                    <EmailTemplateForm
-                      template={editingTemplate}
-                      campuses={campuses}
-                      templateTypes={templateTypes}
-                      onSave={saveTemplate}
-                      onCancel={() => setEditingTemplate(null)}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Campus</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {templates.map((template) => (
-                    <TableRow key={template.id}>
-                      <TableCell>{template.name}</TableCell>
-                      <TableCell>
-                        {templateTypes.find(t => t.value === template.template_type)?.label}
-                      </TableCell>
-                      <TableCell>{template.campus?.name || 'Global'}</TableCell>
-                      <TableCell>
-                        <Badge variant={template.is_active ? "default" : "secondary"}>
-                          {template.is_active ? 'Activo' : 'Inactivo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingTemplate(template)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            if (confirm('¿Eliminar plantilla?')) {
-                              deleteTemplate(template.id);
-                            }
-                          }}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-
-            <TabsContent value="history" className="space-y-4">
-              <h3 className="text-lg font-semibold">Historial de Notificaciones</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Destinatario</TableHead>
-                    <TableHead>Asunto</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Plantilla</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {notifications.map((notification) => (
-                    <TableRow key={notification.id}>
-                      <TableCell>{notification.recipient_email}</TableCell>
-                      <TableCell className="max-w-xs truncate">{notification.subject}</TableCell>
-                      <TableCell>
-                        <Badge variant={notification.status === 'sent' ? "default" : "destructive"}>
-                          {notification.status === 'sent' ? 'Enviado' : 'Fallido'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {notification.sent_at ? new Date(notification.sent_at).toLocaleString('es-CO') : '-'}
-                      </TableCell>
-                      <TableCell>{notification.template?.name || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// Formulario para configuración de email
-function EmailConfigurationForm({
-  config,
-  campuses,
-  onSave,
-  onCancel
-}: {
-  config: EmailConfiguration | null;
-  campuses: any[];
-  onSave: (config: Partial<EmailConfiguration>) => void;
-  onCancel: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    campus_id: config?.campus_id || '',
-    resend_api_key: config?.resend_api_key || '',
-    from_email: config?.from_email || 'no-reply@universidad.edu.co',
-    from_name: config?.from_name || 'Sistema Universitario',
-    is_active: config?.is_active ?? true,
-    test_email: config?.test_email || '',
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label>Campus</Label>
-        <Select
-          value={formData.campus_id}
-          onValueChange={(value) => setFormData({ ...formData, campus_id: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona campus (opcional para global)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Global (todos los campus)</SelectItem>
-            {campuses.map((campus) => (
-              <SelectItem key={campus.id} value={campus.id}>
-                {campus.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>API Key de Resend</Label>
-        <Input
-          type="password"
-          value={formData.resend_api_key}
-          onChange={(e) => setFormData({ ...formData, resend_api_key: e.target.value })}
-          placeholder="re_xxxxxxxxxxxx"
-          required
-        />
-      </div>
-
-      <div>
-        <Label>Email Remitente</Label>
-        <Input
-          type="email"
-          value={formData.from_email}
-          onChange={(e) => setFormData({ ...formData, from_email: e.target.value })}
-          required
-        />
-      </div>
-
-      <div>
-        <Label>Nombre Remitente</Label>
-        <Input
-          value={formData.from_name}
-          onChange={(e) => setFormData({ ...formData, from_name: e.target.value })}
-          required
-        />
-      </div>
-
-      <div>
-        <Label>Email de Prueba</Label>
-        <Input
-          type="email"
-          value={formData.test_email}
-          onChange={(e) => setFormData({ ...formData, test_email: e.target.value })}
-          placeholder="email@ejemplo.com"
-        />
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-        />
-        <Label>Configuración activa</Label>
-      </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button type="submit">Guardar</Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// Formulario para plantillas de email
-function EmailTemplateForm({
-  template,
-  campuses,
-  templateTypes,
-  onSave,
-  onCancel
-}: {
-  template: EmailTemplate | null;
-  campuses: any[];
-  templateTypes: any[];
-  onSave: (template: Partial<EmailTemplate>) => void;
-  onCancel: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    name: template?.name || '',
-    description: template?.description || '',
-    template_type: template?.template_type || '',
-    subject: template?.subject || '',
-    html_content: template?.html_content || '',
-    variables: template?.variables || [],
-    is_active: template?.is_active ?? true,
-    campus_id: template?.campus_id || '',
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Nombre</Label>
-          <Input
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={fetchData}>
+              <RefreshCcw className="w-4 h-4 mr-2" />
+              Actualizar
+            </Button>
+            <Button onClick={openNewTemplateDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Plantilla
+            </Button>
+          </div>
         </div>
-        <div>
-          <Label>Tipo de Plantilla</Label>
-          <Select
-            value={formData.template_type}
-            onValueChange={(value) => setFormData({ ...formData, template_type: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              {templateTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
+      </CardHeader>
+      <CardContent>
+        {emailTemplates.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No hay plantillas de correo electrónico registradas.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {tableHeaders.map((header) => (
+                  <TableHead key={header}>{header}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {emailTemplates.map((template) => (
+                <TableRow key={template.id}>
+                  <TableCell className="font-medium">{template.name}</TableCell>
+                  <TableCell>{template.template_type}</TableCell>
+                  <TableCell>{template.campus?.name || "Global"}</TableCell>
+                  <TableCell>{template.subject}</TableCell>
+                  <TableCell>
+                    {template.is_active ? (
+                      <Badge className="bg-green-500 hover:bg-green-500">
+                        Activa
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Inactiva</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditTemplateDialog(template)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
 
-      <div>
-        <Label>Campus</Label>
-        <Select
-          value={formData.campus_id}
-          onValueChange={(value) => setFormData({ ...formData, campus_id: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona campus (opcional para global)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Global (todos los campus)</SelectItem>
-            {campuses.map((campus) => (
-              <SelectItem key={campus.id} value={campus.id}>
-                {campus.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditMode ? "Editar Plantilla" : "Crear Nueva Plantilla"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre de la Plantilla</Label>
+                <Input
+                  id="name"
+                  value={currentTemplate.name}
+                  onChange={(e) =>
+                    setCurrentTemplate({
+                      ...currentTemplate,
+                      name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Asunto</Label>
+                <Input
+                  id="subject"
+                  value={currentTemplate.subject}
+                  onChange={(e) =>
+                    setCurrentTemplate({
+                      ...currentTemplate,
+                      subject: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
 
-      <div>
-        <Label>Descripción</Label>
-        <Textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          rows={2}
-        />
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Textarea
+                id="description"
+                value={currentTemplate.description}
+                onChange={(e) =>
+                  setCurrentTemplate({
+                    ...currentTemplate,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </div>
 
-      <div>
-        <Label>Asunto</Label>
-        <Input
-          value={formData.subject}
-          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-          placeholder="Puede usar variables como {{variable_name}}"
-          required
-        />
-      </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="template_type">Tipo de Plantilla</Label>
+                <Select
+                  value={currentTemplate.template_type}
+                  onValueChange={(value) =>
+                    setCurrentTemplate({
+                      ...currentTemplate,
+                      template_type: value,
+                    })
+                  }
+                >
+                  <SelectTrigger id="template_type">
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="plan_approval">
+                      Aprobación de Plan
+                    </SelectItem>
+                    <SelectItem value="plan_rejection">
+                      Rechazo de Plan
+                    </SelectItem>
+                    <SelectItem value="plan_submission">
+                      Envío de Plan
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="campus">Campus</Label>
+                <Select
+                  value={currentTemplate.campus_id || ""}
+                  onValueChange={(value) =>
+                    setCurrentTemplate({
+                      ...currentTemplate,
+                      campus_id: value,
+                    })
+                  }
+                >
+                  <SelectTrigger id="campus">
+                    <SelectValue placeholder="Selecciona un campus" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Global</SelectItem>
+                    {campuses.map((campus) => (
+                      <SelectItem key={campus.id} value={campus.id}>
+                        {campus.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-      <div>
-        <Label>Contenido HTML</Label>
-        <Textarea
-          value={formData.html_content}
-          onChange={(e) => setFormData({ ...formData, html_content: e.target.value })}
-          rows={10}
-          placeholder="Contenido HTML del email. Puede usar variables como {{variable_name}}"
-          required
-        />
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="html_content">Contenido HTML del Correo</Label>
+              <Textarea
+                id="html_content"
+                value={currentTemplate.html_content}
+                onChange={(e) =>
+                  setCurrentTemplate({
+                    ...currentTemplate,
+                    html_content: e.target.value,
+                  })
+                }
+                className="min-h-[200px]"
+              />
+            </div>
+            
+            <div className="space-y-2">
+                <Label htmlFor="variables">Variables de la Plantilla (separadas por coma)</Label>
+                <Input
+                    id="variables"
+                    value={currentTemplate.variables?.join(", ") || ""}
+                    onChange={(e) => 
+                        setCurrentTemplate({
+                            ...currentTemplate,
+                            variables: e.target.value.split(",").map(v => v.trim()),
+                        })
+                    }
+                    placeholder="Ej: {{manager_name}}, {{plan_title}}"
+                />
+            </div>
 
-      <div className="flex items-center space-x-2">
-        <Switch
-          checked={formData.is_active}
-          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-        />
-        <Label>Plantilla activa</Label>
-      </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button type="submit">Guardar</Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-      </div>
-    </form>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_active"
+                checked={currentTemplate.is_active}
+                onCheckedChange={(checked) =>
+                  setCurrentTemplate({
+                    ...currentTemplate,
+                    is_active: checked as boolean,
+                  })
+                }
+              />
+              <Label htmlFor="is_active">Activa</Label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateOrUpdate}>
+              {isEditMode ? "Guardar Cambios" : "Crear Plantilla"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }
