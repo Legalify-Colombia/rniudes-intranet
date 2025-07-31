@@ -55,7 +55,6 @@ export function useCustomPlans() {
     }
   };
 
-  // CORRECCIÓN: Se actualiza para obtener los detalles completos del plan
   const fetchCustomPlanDetails = async (planId: string): Promise<Result<any>> => {
     try {
       if (!planId) {
@@ -189,7 +188,7 @@ export function useCustomPlans() {
     }
   };
 
-  // CORRECCIÓN: Función simplificada y optimizada para evitar errores de upsert
+  // MOVIMIENTO: La función upsertCustomPlanAssignment se ha movido aquí
   const upsertCustomPlanAssignment = async (assignment: Database["public"]["Tables"]["custom_plan_assignments"]["Insert"]): Promise<Result<any>> => {
     try {
       if (!assignment.custom_plan_id || !assignment.product_id) {
@@ -199,7 +198,6 @@ export function useCustomPlans() {
         };
       }
       
-      // La lógica más segura es intentar un upsert sin fallback manual
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .upsert(assignment, {
@@ -223,7 +221,8 @@ export function useCustomPlans() {
       };
     }
   };
-
+  
+  // MOVIMIENTO: La función deleteCustomPlanAssignment se ha movido aquí
   const deleteCustomPlanAssignment = async (customPlanId: string, productId: string): Promise<Result<any>> => {
     try {
       if (!customPlanId || !productId) {
