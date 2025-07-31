@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
@@ -61,11 +60,33 @@ export function useWorkPlanAssignments() {
     return { data, error };
   };
 
+  // CORRECCIÓN: La función para guardar asignaciones ahora apunta a la tabla correcta
+  const upsertCustomPlanAssignment = async (assignment: any): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments") // Tabla corregida
+      .upsert(assignment)
+      .select()
+      .single();
+    return { data, error };
+  };
+
+  // NUEVA FUNCIÓN: Elimina una asignación de plan
+  const deleteCustomPlanAssignment = async (planId: string, productId: string): Promise<Result<any>> => {
+    const { data, error } = await supabase
+      .from("custom_plan_assignments") // Tabla corregida
+      .delete()
+      .eq("custom_plan_id", planId)
+      .eq("product_id", productId);
+    return { data, error };
+  };
+
   return {
     fetchWorkPlanAssignments,
     fetchProductProgressReports,
     upsertProductProgressReport,
     deleteProductProgressReport,
     fetchManagerReportsByManager,
+    upsertCustomPlanAssignment, // Exponemos la función corregida
+    deleteCustomPlanAssignment, // Exponemos la nueva función
   };
 }
