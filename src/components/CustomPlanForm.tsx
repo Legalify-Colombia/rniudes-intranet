@@ -36,13 +36,13 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
   const { toast } = useToast();
   const { 
     fetchCustomPlanDetails, 
-    fetchPlanFields, 
     updateCustomPlan, 
     submitCustomPlan, 
     upsertCustomPlanResponse,
     fetchStrategicAxes,
     fetchActions,
     fetchProducts,
+    fetchPlanFields,
     fetchPlanTypes,
     createCustomPlan
   } = useSupabaseData();
