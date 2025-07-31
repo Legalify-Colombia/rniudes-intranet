@@ -148,6 +148,8 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
           status: 'draft'
         };
         
+        console.log("Datos para crear un nuevo plan:", planData);
+        
         const result = await createCustomPlan(planData);
         if (result.error) {
           console.error("Error al crear el plan:", result.error);
@@ -197,6 +199,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
         description: `No se pudo guardar el plan: ${error.message}`,
         variant: "destructive",
       });
+      throw error; // Propagar el error para que handleSubmit lo maneje
     } finally {
       setIsLoading(false);
     }
@@ -216,6 +219,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       }
       
       setIsLoading(true);
+      
       const submitResult = await submitCustomPlan(plan.id);
       
       if (submitResult.error) {
@@ -230,9 +234,9 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       
       if (onSave) onSave();
     } catch (error) {
-      console.error("Error submitting plan:", error);
+      console.error("Error en el proceso de envío:", error);
       toast({
-        title: "Error",
+        title: "Error de envío",
         description: `No se pudo enviar el plan: ${error.message}`,
         variant: "destructive",
       });
@@ -379,4 +383,3 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
     </div>
   );
 }
-
