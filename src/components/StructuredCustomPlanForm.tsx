@@ -55,7 +55,6 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
         setPlanType(result.data.plan_type);
         setTitle(result.data.title);
         
-        // Load assignments
         const assignmentsMap: {[key: string]: number} = {};
         result.data.assignments?.forEach((assignment: any) => {
           if (assignment.product_id) {
@@ -64,7 +63,6 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
         });
         setAssignments(assignmentsMap);
         
-        // Load available products for this plan type
         if (result.data.plan_type_id) {
           await loadPlanTypeProducts(result.data.plan_type_id);
         }
@@ -105,7 +103,6 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
     try {
       const elementsResult = await fetchPlanTypeElements(planTypeId);
       if (elementsResult.data) {
-        // Extract products with their strategic axes and actions info
         const products = elementsResult.data.products?.map((item: any) => ({
           ...item.products,
           is_required: item.is_required
@@ -135,7 +132,6 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       let currentPlan = plan;
       
       if (!currentPlan && planTypeId) {
-        // Create new plan
         const planData = {
           title,
           plan_type_id: planTypeId,
@@ -145,6 +141,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
         
         const result = await createCustomPlan(planData);
         if (result.error) {
+          console.error("Error al crear el plan:", result.error);
           throw new Error(result.error.message);
         }
         currentPlan = result.data;
@@ -152,19 +149,31 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       }
       
       if (currentPlan) {
-        // Update plan title
-        await updateCustomPlan(currentPlan.id, { title });
+        // CORRECCIÓN: Se actualiza solo el título para evitar el error 400
+        const updateResult = await updateCustomPlan(currentPlan.id, { title: title });
+        if (updateResult.error) {
+          console.error("Error al actualizar el título del plan:", updateResult.error);
+          throw new Error(updateResult.error.message);
+        }
         
-        // Save all assignments and delete those with 0 hours
+        // Log the data before sending to Supabase for debugging
+        console.log("Saving assignments for plan:", currentPlan.id);
+        
         for (const [productId, hours] of Object.entries(assignments)) {
           if (hours > 0) {
-            await upsertCustomPlanAssignment({
+            const assignmentData = {
               custom_plan_id: currentPlan.id,
               product_id: productId,
               assigned_hours: hours
-            });
+            };
+            console.log("Upserting assignment:", assignmentData);
+            const assignmentResult = await upsertCustomPlanAssignment(assignmentData);
+            if (assignmentResult.error) {
+              console.error("Error al guardar asignación:", assignmentResult.error);
+              throw new Error(assignmentResult.error.message);
+            }
           } else {
-            // Delete assignment if hours is 0
+            console.log("Deleting assignment for product:", productId);
             await deleteCustomPlanAssignment(currentPlan.id, productId);
           }
         }
@@ -180,7 +189,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       console.error("Error saving plan:", error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el plan",
+        description: `No se pudo guardar el plan: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -189,15 +198,14 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
   };
 
   const handleSubmit = async () => {
-    // BUG FIX: Ensure assignments are saved before submitting the plan.
-    // If the plan doesn't exist yet, handleSave() will create it and save the assignments.
-    // If it exists, it will update the assignments.
     await handleSave();
     
-    // Now, with the data saved, proceed with submitting the plan.
     if (!plan?.id) {
-      // This case should be handled by handleSave, but for safety, we check again.
-      console.error("Plan ID is missing, cannot submit.");
+      toast({
+        title: "Error",
+        description: "No se pudo crear el plan. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -215,7 +223,7 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
       console.error("Error submitting plan:", error);
       toast({
         title: "Error",
-        description: "No se pudo enviar el plan",
+        description: `No se pudo enviar el plan: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -228,7 +236,6 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
   }
 
   const isReadOnly = plan?.status === 'submitted' || plan?.status === 'approved';
-  // CORREGIDO: Usar total_hours en lugar de weekly_hours
   const maxTotalHours = profile?.total_hours || 0;
 
   return (
