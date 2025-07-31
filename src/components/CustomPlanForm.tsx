@@ -1,171 +1,184 @@
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Send, FileText, PlusCircle, Trash2 } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Save, Send, FileText } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StructuredCustomPlanForm } from "./StructuredCustomPlanForm";
 
-interface StructuredCustomPlanFormProps {
+interface CustomPlanFormProps {
   planId?: string;
   planTypeId?: string;
   onSave?: () => void;
+  embedded?: boolean;
 }
 
-// Interfaz para definir la estructura de un elemento estructurado
-interface StructuredElement {
-  id: string; // Un ID único para la fila
-  strategic_axis_id: string;
-  action_id: string;
-  product_id: string;
-  target: string;
-  status: string;
-}
-
-export function StructuredCustomPlanForm({
-  planId,
-  planTypeId,
-  onSave,
-}: StructuredCustomPlanFormProps) {
+export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }: CustomPlanFormProps) {
   const [plan, setPlan] = useState<any>(null);
   const [planType, setPlanType] = useState<any>(null);
-  const [title, setTitle] = useState("");
-  const [structuredElements, setStructuredElements] = useState<StructuredElement[]>([]);
+  const [fields, setFields] = useState<any[]>([]);
+  const [responses, setResponses] = useState<{[key: string]: any}>({});
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
   const [actions, setActions] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(true); // Cambiado a true para que muestre el spinner inicial
+  const [title, setTitle] = useState("");
+    
   const { profile } = useAuth();
   const { toast } = useToast();
-  const {
-    fetchCustomPlanDetails,
-    updateCustomPlan,
-    submitCustomPlan,
+  const { 
+    fetchCustomPlanDetails, 
+    updateCustomPlan, 
+    submitCustomPlan, 
+    upsertCustomPlanResponse,
     fetchStrategicAxes,
     fetchActions,
     fetchProducts,
-    createCustomPlan,
-    upsertCustomPlanStructuredElements,
-    deleteCustomPlanStructuredElement,
+    fetchPlanFields,
+    fetchPlanTypes,
+    createCustomPlan
   } = useSupabaseData();
 
   useEffect(() => {
-    // Cargar los datos del plan si existe un planId
     const loadData = async () => {
       setIsLoading(true);
       try {
         if (planId) {
-          const result = await fetchCustomPlanDetails(planId);
-          if (result.data) {
-            setPlan(result.data);
-            setPlanType(result.data.plan_type);
-            setTitle(result.data.title);
-            // Asegurarse de que los elementos estructurados se carguen correctamente
-            if (result.data.structured_elements) {
-              setStructuredElements(
-                result.data.structured_elements.map((el: any) => ({
-                  ...el,
-                  id: el.id || crypto.randomUUID(), // Usar el id de supabase o generar uno nuevo
-                }))
-              );
-            }
-          }
+          await loadPlanDetails();
+        } else if (planTypeId) {
+          await loadPlanType();
         }
-        
-        // Cargar los datos maestros
-        const [axesResult, actionsResult, productsResult] = await Promise.all([
-          fetchStrategicAxes(),
-          fetchActions(),
-          fetchProducts(),
-        ]);
-
-        if (axesResult.data) setStrategicAxes(axesResult.data);
-        if (actionsResult.data) setActions(actionsResult.data);
-        if (productsResult.data) setProducts(productsResult.data);
-        
-      } catch (error) {
-        console.error("Error loading structured plan data:", error);
-        toast({
-          title: "Error",
-          description: "No se pudo cargar la información del plan.",
-          variant: "destructive",
-        });
+        await loadMasterData();
       } finally {
         setIsLoading(false);
       }
     };
     loadData();
-  }, [planId]);
+  }, [planId, planTypeId]);
 
-  const handleElementChange = (index: number, field: string, value: any) => {
-    setStructuredElements((prevElements) => {
-      const newElements = [...prevElements];
-      newElements[index] = { ...newElements[index], [field]: value };
-      return newElements;
-    });
+  const loadPlanDetails = async () => {
+    if (!planId) return;
+    
+    try {
+      const result = await fetchCustomPlanDetails(planId);
+      if (result.data) {
+        setPlan(result.data);
+        setPlanType(result.data.plan_type);
+        setTitle(result.data.title);
+        
+        // Convert responses array to object
+        const responsesMap: {[key: string]: any} = {};
+        result.data.responses?.forEach((response: any) => {
+          responsesMap[response.plan_field_id] = response.response_value;
+        });
+        setResponses(responsesMap);
+        
+        // Load fields for this plan type
+        if (result.data.plan_type_id) {
+          const fieldsResult = await fetchPlanFields(result.data.plan_type_id);
+          if (fieldsResult.data) {
+            setFields(fieldsResult.data);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading plan details:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo cargar el plan",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAddElement = () => {
-    setStructuredElements((prevElements) => [
-      ...prevElements,
-      {
-        id: crypto.randomUUID(),
-        strategic_axis_id: "",
-        action_id: "",
-        product_id: "",
-        target: "",
-        status: "draft",
-      },
-    ]);
+  const loadPlanType = async () => {
+    if (!planTypeId) return;
+    
+    try {
+      const { data: planTypes } = await fetchPlanTypes();
+      const foundPlanType = planTypes?.find(pt => pt.id === planTypeId);
+      if (foundPlanType) {
+        setPlanType(foundPlanType);
+        setTitle(`Plan de ${foundPlanType.name} - ${profile?.full_name}`);
+      }
+      
+      const fieldsResult = await fetchPlanFields(planTypeId);
+      if (fieldsResult.data) {
+        setFields(fieldsResult.data);
+      }
+    } catch (error) {
+      console.error("Error loading plan type:", error);
+    }
   };
 
-  const handleDeleteElement = async (elementId: string) => {
-    // Si el elemento ya existe en la base de datos, lo borramos de allí
-    if (planId) {
+  const loadMasterData = async () => {
+    try {
+      const [axesResult, actionsResult, productsResult] = await Promise.all([
+        fetchStrategicAxes(),
+        fetchActions(),
+        fetchProducts()
+      ]);
+      
+      if (axesResult.data) setStrategicAxes(axesResult.data);
+      if (actionsResult.data) setActions(actionsResult.data);
+      if (productsResult.data) setProducts(productsResult.data);
+    } catch (error) {
+      console.error("Error loading master data:", error);
+    }
+  };
+
+  // If it's a structured plan type, use the StructuredCustomPlanForm
+  // Esta es la condición clave que determina qué formulario renderizar.
+  // Si planType tiene la propiedad `uses_structured_elements` y es true, se delega al componente StructuredCustomPlanForm.
+  // De lo contrario, se renderiza el formulario simple con los campos definidos.
+  if (planType?.uses_structured_elements) {
+    return (
+      <StructuredCustomPlanForm
+        planId={planId}
+        planTypeId={planTypeId}
+        onSave={onSave}
+      />
+    );
+  }
+
+  const handleResponseChange = async (fieldId: string, value: any) => {
+    setResponses(prev => ({ ...prev, [fieldId]: value }));
+    
+    if (plan?.id) {
       try {
-        await deleteCustomPlanStructuredElement(elementId);
-        toast({
-          title: "Éxito",
-          description: "Elemento eliminado correctamente de la base de datos.",
+        await upsertCustomPlanResponse({
+          custom_plan_id: plan.id,
+          plan_field_id: fieldId,
+          response_value: value
         });
       } catch (error) {
-        console.error("Error deleting structured element:", error);
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar el elemento de la base de datos.",
-          variant: "destructive",
-        });
+        console.error("Error saving response:", error);
       }
     }
-    // Actualizar el estado para reflejar la eliminación
-    setStructuredElements((prevElements) =>
-      prevElements.filter((el) => el.id !== elementId)
-    );
   };
 
   const handleSave = async () => {
     try {
       setIsLoading(true);
-
+      
       let currentPlan = plan;
-
+      
       if (!currentPlan && planTypeId) {
+        // Create new plan
         const planData = {
           title,
           plan_type_id: planTypeId,
           manager_id: profile?.id,
-          status: "draft",
+          status: 'draft'
         };
+        
         const result = await createCustomPlan(planData);
         if (result.error) {
           throw new Error(result.error.message);
@@ -173,26 +186,34 @@ export function StructuredCustomPlanForm({
         currentPlan = result.data;
         setPlan(currentPlan);
       }
-
+      
       if (currentPlan) {
+        // Update plan title
         await updateCustomPlan(currentPlan.id, { title });
-        await upsertCustomPlanStructuredElements(
-          currentPlan.id,
-          structuredElements.map(({ id, ...rest }) => rest)
-        );
+        
+        // Save all responses
+        for (const [fieldId, value] of Object.entries(responses)) {
+          if (value !== null && value !== undefined && value !== '') {
+            await upsertCustomPlanResponse({
+              custom_plan_id: currentPlan.id,
+              plan_field_id: fieldId,
+              response_value: value
+            });
+          }
+        }
       }
-
+      
       toast({
         title: "Éxito",
-        description: "Plan guardado correctamente.",
+        description: "Plan guardado correctamente",
       });
-
+      
       if (onSave) onSave();
     } catch (error) {
-      console.error("Error saving structured plan:", error);
+      console.error("Error saving plan:", error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el plan.",
+        description: "No se pudo guardar el plan",
         variant: "destructive",
       });
     } finally {
@@ -205,27 +226,34 @@ export function StructuredCustomPlanForm({
       await handleSave();
       return;
     }
-
+    
     try {
       setIsLoading(true);
-      await upsertCustomPlanStructuredElements(
-        plan.id,
-        structuredElements.map(({ id, ...rest }) => rest)
-      );
+      
+      // Asegurar que todas las respuestas estén guardadas antes del envío
+      for (const [fieldId, value] of Object.entries(responses)) {
+        if (value !== null && value !== undefined && value !== '') {
+          await upsertCustomPlanResponse({
+            custom_plan_id: plan.id,
+            plan_field_id: fieldId,
+            response_value: value
+          });
+        }
+      }
+      
       await submitCustomPlan(plan.id);
-
+      
       toast({
         title: "Éxito",
-        description:
-          "Plan enviado para revisión con todas las asignaciones guardadas.",
+        description: "Plan enviado para revisión con todas las asignaciones guardadas",
       });
-
+      
       if (onSave) onSave();
     } catch (error) {
-      console.error("Error submitting structured plan:", error);
+      console.error("Error submitting plan:", error);
       toast({
         title: "Error",
-        description: "No se pudo enviar el plan.",
+        description: "No se pudo enviar el plan",
         variant: "destructive",
       });
     } finally {
@@ -233,34 +261,216 @@ export function StructuredCustomPlanForm({
     }
   };
 
-  const isReadOnly = plan?.status === "approved" && profile?.role !== "Administrador";
+  const renderField = (field: any) => {
+    const value = responses[field.id] || '';
+    
+    switch (field.field_type) {
+      case 'text':
+      case 'short_text':
+        return (
+          <Input
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, e.target.value)}
+            placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
+            disabled={isReadOnly}
+          />
+        );
+      
+      case 'textarea':
+      case 'long_text':
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, e.target.value)}
+            placeholder={`Describe ${field.field_name.toLowerCase()}`}
+            rows={4}
+            disabled={isReadOnly}
+          />
+        );
+      
+      case 'number':
+      case 'numeric':
+        return (
+          <Input
+            type="number"
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, parseInt(e.target.value) || 0)}
+            placeholder="0"
+            disabled={isReadOnly}
+          />
+        );
+      
+      case 'dropdown':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Selecciona ${field.field_name.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.dropdown_options?.map((option: string) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'strategic_axes':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona un eje estratégico" />
+            </SelectTrigger>
+            <SelectContent>
+              {strategicAxes.map((axis) => (
+                <SelectItem key={axis.id} value={axis.id}>
+                  {axis.code} - {axis.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'actions':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona una acción" />
+            </SelectTrigger>
+            <SelectContent>
+              {actions.map((action) => (
+                <SelectItem key={action.id} value={action.id}>
+                  {action.code} - {action.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'products':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona un producto" />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map((product) => (
+                <SelectItem key={product.id} value={product.id}>
+                  {product.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      default:
+        return (
+          <Input
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, e.target.value)}
+            placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
+            disabled={isReadOnly}
+          />
+        );
+    }
+  };
 
+  // El spinner de carga se muestra mientras se obtienen los datos.
+  // Cuando isLoading es false, se renderiza el formulario.
   if (isLoading) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
-  return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">
-            {plan ? "Editar Plan Estructurado" : "Crear Plan Estructurado"}
-          </h1>
-          <p className="text-gray-600">
-            {planType?.name} - {planType?.description}
-          </p>
-        </div>
+  // Permitir edición siempre que el gestor sea el propietario del plan
+  const isReadOnly = plan?.status === 'approved' && profile?.role !== 'Administrador';
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        {fields.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campo</TableHead>
+                <TableHead>Valor</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fields.map((field) => {
+                const value = responses[field.id];
+                let displayValue = value || 'Sin especificar';
+                
+                // Format display value based on field type
+                if (field.field_type === 'strategic_axes' && value) {
+                  const axis = strategicAxes.find(a => a.id === value);
+                  displayValue = axis ? `${axis.code} - ${axis.name}` : value;
+                } else if (field.field_type === 'actions' && value) {
+                  const action = actions.find(a => a.id === value);
+                  displayValue = action ? `${action.code} - ${action.name}` : value;
+                } else if (field.field_type === 'products' && value) {
+                  const product = products.find(p => p.id === value);
+                  displayValue = product ? product.name : value;
+                }
+                
+                return (
+                  <TableRow key={field.id}>
+                    <TableCell className="font-medium">{field.field_name}</TableCell>
+                    <TableCell>{displayValue}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            No hay campos configurados para este tipo de plan
+          </div>
+        )}
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      {!embedded && (
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => window.history.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {plan ? 'Editar Plan' : 'Crear Plan'}
+            </h1>
+            <p className="text-gray-600">
+              {planType?.name} - {planType?.description}
+            </p>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            {planType?.name || "Plan Estructurado"}
+            {planType?.name || 'Plan Personalizado'}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -275,155 +485,41 @@ export function StructuredCustomPlanForm({
             />
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Elementos del Plan</h3>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Eje Estratégico</TableHead>
-                    <TableHead>Acción</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Meta</TableHead>
-                    <TableHead className="w-[100px]">Estado</TableHead>
-                    {!isReadOnly && <TableHead className="w-[50px]">Acciones</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {structuredElements.length > 0 ? (
-                    structuredElements.map((element, index) => (
-                      <TableRow key={element.id}>
-                        <TableCell>
-                          <Select
-                            value={element.strategic_axis_id}
-                            onValueChange={(val) =>
-                              handleElementChange(index, "strategic_axis_id", val)
-                            }
-                            disabled={isReadOnly}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {strategicAxes.map((axis) => (
-                                <SelectItem key={axis.id} value={axis.id}>
-                                  {axis.code} - {axis.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={element.action_id}
-                            onValueChange={(val) =>
-                              handleElementChange(index, "action_id", val)
-                            }
-                            disabled={isReadOnly}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {actions.map((action) => (
-                                <SelectItem key={action.id} value={action.id}>
-                                  {action.code} - {action.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={element.product_id}
-                            onValueChange={(val) =>
-                              handleElementChange(index, "product_id", val)
-                            }
-                            disabled={isReadOnly}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="text"
-                            value={element.target}
-                            onChange={(e) =>
-                              handleElementChange(index, "target", e.target.value)
-                            }
-                            disabled={isReadOnly}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={element.status}
-                            onValueChange={(val) =>
-                              handleElementChange(index, "status", val)
-                            }
-                            disabled={isReadOnly}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="draft">Borrador</SelectItem>
-                              <SelectItem value="progress">En Progreso</SelectItem>
-                              <SelectItem value="completed">Completado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        {!isReadOnly && (
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteElement(element.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-500 py-4">
-                        No hay elementos estructurados, agrega uno para empezar.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+          {fields.length > 0 ? (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold">Campos del Plan</h3>
+              <div className="grid gap-6">
+                {fields.map((field) => (
+                  <div key={field.id}>
+                    <Label htmlFor={field.id} className="flex items-center gap-2">
+                      {field.field_name}
+                      {field.is_required && <Badge variant="secondary">Requerido</Badge>}
+                    </Label>
+                    {renderField(field)}
+                  </div>
+                ))}
+              </div>
             </div>
-            {!isReadOnly && (
-              <Button onClick={handleAddElement} variant="outline" className="w-full">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Agregar Elemento
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No hay campos configurados para este tipo de plan
+            </div>
+          )}
+
+          {!embedded && !isReadOnly && (
+            <div className="flex gap-4 pt-6">
+              <Button onClick={handleSave} disabled={isLoading}>
+                <Save className="h-4 w-4 mr-2" />
+                {isLoading ? 'Guardando...' : 'Guardar'}
               </Button>
-            )}
-          </div>
-          
-          <div className="flex gap-4 pt-6">
-            <Button onClick={handleSave} disabled={isLoading || isReadOnly}>
-              <Save className="h-4 w-4 mr-2" />
-              {isLoading ? "Guardando..." : "Guardar"}
-            </Button>
-            {plan?.status !== "submitted" && (
-              <Button onClick={handleSubmit} disabled={isLoading || isReadOnly || !title.trim()}>
-                <Send className="h-4 w-4 mr-2" />
-                {isLoading ? "Enviando..." : "Enviar para Revisión"}
-              </Button>
-            )}
-          </div>
+              {plan?.status !== 'submitted' && (
+                <Button onClick={handleSubmit} disabled={isLoading || !title.trim()}>
+                  <Send className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
