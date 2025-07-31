@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { CustomPlanForm } from "./CustomPlanForm"; // Importamos el componente CustomPlanForm
 
 export function InternationalizationManagers() {
   const [managers, setManagers] = useState<any[]>([]);
@@ -26,7 +27,7 @@ export function InternationalizationManagers() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { fetchManagersByCampus, fetchAvailablePlanTypes } = useManagers();
-  const { fetchPlanTypes, createCustomPlan, fetchWorkPlansForManager, deleteCustomPlan } = useSupabaseData(); // Agregamos deleteCustomPlan
+  const { fetchPlanTypes, createCustomPlan, fetchWorkPlansForManager, deleteCustomPlan, fetchCustomPlanDetails } = useSupabaseData();
 
   useEffect(() => {
     loadManagers();
@@ -365,43 +366,44 @@ export function InternationalizationManagers() {
                 )}
               </div>
 
+              {/* NUEVO: Sección para ver los planes asignados */}
               <div className="space-y-3">
                 <h4 className="font-medium text-gray-700 mb-3">Planes de Trabajo Asignados</h4>
                 {managerWorkPlans.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Título</TableHead>
-                        <TableHead>Tipo de Plan</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Acciones</TableHead> {/* Agregamos una columna para las acciones */}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {managerWorkPlans.map((plan: any) => (
-                        <TableRow key={plan.id}>
-                          <TableCell className="font-medium">{plan.title}</TableCell>
-                          <TableCell>{plan.plan_type?.name || 'N/A'}</TableCell>
-                          <TableCell>{getPlanStatusBadge(plan.status)}</TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeletePlan(plan.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  managerWorkPlans.map((plan: any) => (
+                    <Card key={plan.id} className="p-4 border-l-4 border-l-blue-500">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{plan.title}</p>
+                          <p className="text-sm text-gray-600">Tipo de plan: {plan.plan_type?.name || 'N/A'}</p>
+                          <p className="text-sm text-gray-600">Estado: {getPlanStatusBadge(plan.status)}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeletePlan(plan.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      {/* Componente para mostrar los detalles del plan */}
+                      <div className="mt-4">
+                        <CustomPlanForm
+                          planId={plan.id}
+                          planTypeId={plan.plan_type_id}
+                          embedded={true}
+                        />
+                      </div>
+                    </Card>
+                  ))
                 ) : (
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                     <p className="text-gray-600">No hay planes de trabajo asignados a este gestor.</p>
                   </div>
                 )}
               </div>
+              {/* FIN DE LA NUEVA SECCIÓN */}
 
               <div>
                 <h4 className="font-medium text-gray-700 mb-3">Tipos de Plan Disponibles</h4>
