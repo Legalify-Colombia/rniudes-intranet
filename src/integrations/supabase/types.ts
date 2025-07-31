@@ -493,6 +493,183 @@ export type Database = {
         }
         Relationships: []
       }
+      email_configurations: {
+        Row: {
+          campus_id: string | null
+          created_at: string | null
+          created_by: string | null
+          from_email: string
+          from_name: string
+          id: string
+          is_active: boolean | null
+          resend_api_key: string | null
+          test_email: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          campus_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          from_email?: string
+          from_name?: string
+          id?: string
+          is_active?: boolean | null
+          resend_api_key?: string | null
+          test_email?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          campus_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          from_email?: string
+          from_name?: string
+          id?: string
+          is_active?: boolean | null
+          resend_api_key?: string | null
+          test_email?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_configurations_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: true
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_notifications: {
+        Row: {
+          campus_id: string | null
+          content: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_name: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string
+          template_id: string | null
+        }
+        Insert: {
+          campus_id?: string | null
+          content: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_name?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+          template_id?: string | null
+        }
+        Update: {
+          campus_id?: string | null
+          content?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_notifications_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_notifications_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          campus_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          html_content: string
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          template_type: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          campus_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          html_content: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          template_type: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          campus_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          html_content?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          template_type?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faculties: {
         Row: {
           campus_id: string | null
@@ -3144,6 +3321,14 @@ export type Database = {
         }
         Returns: string
       }
+      get_administrators: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          admin_id: string
+          admin_email: string
+          admin_name: string
+        }[]
+      }
       get_available_plan_types_for_manager: {
         Args: { manager_profile_id: string }
         Returns: {
@@ -3153,6 +3338,14 @@ export type Database = {
           min_weekly_hours: number
           max_weekly_hours: number
           field_count: number
+        }[]
+      }
+      get_campus_coordinators: {
+        Args: { target_campus_id: string }
+        Returns: {
+          coordinator_id: string
+          coordinator_email: string
+          coordinator_name: string
         }[]
       }
       get_complete_work_plan_details: {
