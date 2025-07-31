@@ -161,6 +161,7 @@ export function useCustomPlans() {
     }
   };
 
+  // CORRECCIÓN: Se agrega la lógica para manejar JSONB correctamente
   const upsertCustomPlanResponse = async (response: Database["public"]["Tables"]["custom_plan_responses"]["Insert"]): Promise<Result<any>> => {
     try {
       if (!response.custom_plan_id || !response.plan_field_id) {
@@ -170,9 +171,14 @@ export function useCustomPlans() {
         };
       }
       
+      // Adaptar el valor si es un objeto JSON
+      const responseValue = typeof response.response_value === 'object' && response.response_value !== null
+        ? JSON.stringify(response.response_value)
+        : response.response_value;
+      
       const { data, error } = await supabase
         .from("custom_plan_responses")
-        .upsert(response, {
+        .upsert({ ...response, response_value: responseValue }, {
           onConflict: "custom_plan_id,plan_field_id"
         })
         .select()
@@ -188,7 +194,6 @@ export function useCustomPlans() {
     }
   };
 
-  // MOVIMIENTO: La función upsertCustomPlanAssignment se ha movido aquí
   const upsertCustomPlanAssignment = async (assignment: Database["public"]["Tables"]["custom_plan_assignments"]["Insert"]): Promise<Result<any>> => {
     try {
       if (!assignment.custom_plan_id || !assignment.product_id) {
@@ -222,7 +227,6 @@ export function useCustomPlans() {
     }
   };
   
-  // MOVIMIENTO: La función deleteCustomPlanAssignment se ha movido aquí
   const deleteCustomPlanAssignment = async (customPlanId: string, productId: string): Promise<Result<any>> => {
     try {
       if (!customPlanId || !productId) {
