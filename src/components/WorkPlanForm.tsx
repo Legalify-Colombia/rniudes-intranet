@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,11 +21,12 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     fetchStrategicAxes, 
     fetchActions, 
     fetchProducts, 
-    fetchCustomPlans,
+    fetchWorkPlans,
     fetchWorkPlanAssignments,
     createCustomPlan,
     updateCustomPlan,
-    upsertWorkPlanAssignment 
+    upsertWorkPlanAssignment,
+    submitCustomPlan // Asegúrate de que esta función esté disponible en useSupabaseData
   } = useSupabaseData();
   const { toast } = useToast();
 
@@ -34,7 +34,6 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const [actions, setActions] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [workPlan, setWorkPlan] = useState<any>(null);
-  const [assignments, setAssignments] = useState<any[]>([]);
   const [objectives, setObjectives] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [inputValues, setInputValues] = useState<{[key: string]: number}>({});
@@ -46,35 +45,27 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Cargar ejes estratégicos
-      const { data: axesData } = await fetchStrategicAxes();
-      const validAxes = (axesData || []).filter(axis => 
-        axis.id && 
-        typeof axis.id === 'string' && 
-        axis.id.trim().length > 0
-      );
+      const [
+        { data: axesData },
+        { data: actionsData },
+        { data: productsData },
+        { data: customPlansData }
+      ] = await Promise.all([
+        fetchStrategicAxes(),
+        fetchActions(),
+        fetchProducts(),
+        fetchWorkPlans(),
+      ]);
+
+      const validAxes = (axesData || []).filter(axis => axis.id && typeof axis.id === 'string' && axis.id.trim().length > 0);
       setStrategicAxes(validAxes);
 
-      // Cargar acciones
-      const { data: actionsData } = await fetchActions();
-      const validActions = (actionsData || []).filter(action => 
-        action.id && 
-        typeof action.id === 'string' && 
-        action.id.trim().length > 0
-      );
+      const validActions = (actionsData || []).filter(action => action.id && typeof action.id === 'string' && action.id.trim().length > 0);
       setActions(validActions);
 
-      // Cargar productos
-      const { data: productsData } = await fetchProducts();
-      const validProducts = (productsData || []).filter(product => 
-        product.id && 
-        typeof product.id === 'string' && 
-        product.id.trim().length > 0
-      );
+      const validProducts = (productsData || []).filter(product => product.id && typeof product.id === 'string' && product.id.trim().length > 0);
       setProducts(validProducts);
 
-      // Buscar plan de trabajo existente (custom plans)
-      const { data: customPlansData } = await fetchCustomPlans();
       const existingPlan = customPlansData?.find(
         (plan: any) => plan.manager_id === manager.id
       );
@@ -83,11 +74,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         setWorkPlan(existingPlan);
         const planObjectives = existingPlan.title || existingPlan.description || '';
         setObjectives(planObjectives);
-        // Cargar asignaciones existentes
-        const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
-        setAssignments(assignmentsData || []);
         
-        // Inicializar valores de input
+        const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
         const initialValues: {[key: string]: number} = {};
         assignmentsData?.forEach((assignment: any) => {
           initialValues[assignment.product_id] = assignment.assigned_hours;
@@ -96,86 +84,84 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      toast({ title: "Error", description: "No se pudieron cargar los datos", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (productId: string, value: string) => {
+  const handleHoursChange = (productId: string, value: string) => {
     const numericValue = parseInt(value) || 0;
     setInputValues(prev => ({ ...prev, [productId]: numericValue }));
   };
 
-  const handleInputBlur = async (productId: string, value: string) => {
-    const hours = parseInt(value) || 0;
-    await updateAssignment(productId, hours);
-  };
-
-  const handleObjectivesChange = async (value: string) => {
-    setObjectives(value);
-    if (workPlan) {
-      await updateCustomPlan(workPlan.id, { title: value });
-    }
-  };
-
-  const updateAssignment = async (productId: string, hours: number) => {
+  const handleSave = async () => {
     let currentWorkPlan = workPlan;
 
-    if (!currentWorkPlan) {
-      const newPlan = {
-        manager_id: manager.id,
-        plan_type_id: 'default',
-        title: objectives,
-        status: 'draft' as const
-      };
-      
-      const { data: createdPlan, error } = await createCustomPlan(newPlan);
-      if (error) {
-        toast({ title: "Error", description: "No se pudo crear el plan de trabajo", variant: "destructive" });
-        return;
+    try {
+      setLoading(true);
+      if (!currentWorkPlan) {
+        const newPlan = {
+          manager_id: manager.id,
+          plan_type_id: manager.plan_type_id || 'default_plan_type_id', // Asegúrate de tener un plan_type_id
+          title: objectives,
+          status: 'draft'
+        };
+        const { data: createdPlan, error } = await createCustomPlan(newPlan);
+        if (error) {
+          throw error;
+        }
+        currentWorkPlan = createdPlan;
+        setWorkPlan(createdPlan);
+      } else {
+        await updateCustomPlan(currentWorkPlan.id, { title: objectives });
       }
-      currentWorkPlan = createdPlan;
-      setWorkPlan(createdPlan);
+
+      await Promise.all(
+        Object.entries(inputValues).map(async ([productId, hours]) => {
+          if (hours > 0) {
+            await upsertWorkPlanAssignment({
+              work_plan_id: currentWorkPlan.id,
+              product_id: productId,
+              assigned_hours: hours
+            });
+          }
+        })
+      );
+
+      toast({ title: "Éxito", description: "Plan guardado correctamente" });
+    } catch (error) {
+      console.error('Error saving data:', error);
+      toast({ title: "Error", description: "No se pudo guardar el plan", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const assignment = {
-      work_plan_id: currentWorkPlan.id,
-      product_id: productId,
-      assigned_hours: hours
-    };
-
-    const { error } = await upsertWorkPlanAssignment(assignment);
-    if (error) {
-      toast({ title: "Error", description: "No se pudo actualizar la asignación", variant: "destructive" });
+  const submitForApproval = async () => {
+    if (!workPlan) {
+      toast({ title: "Error", description: "No hay plan de trabajo para enviar", variant: "destructive" });
+      return;
+    }
+    if (!objectives.trim()) {
+      toast({ title: "Error", description: "Debe agregar objetivos antes de enviar", variant: "destructive" });
+      return;
+    }
+    if (getAvailableHours() < 0) {
+      toast({ title: "Error", description: "Las horas asignadas superan las disponibles", variant: "destructive" });
       return;
     }
 
-    // Actualizar estado local de asignaciones
-    setAssignments(prev => {
-      const existing = prev.find(a => a.product_id === productId);
-      if (existing) {
-        return prev.map(a => 
-          a.product_id === productId 
-            ? { ...a, assigned_hours: hours }
-            : a
-        );
-      } else {
-        return [...prev, { ...assignment, id: Date.now().toString() }];
-      }
-    });
-
-    const updatedAssignments = assignments.map(a => 
-      a.product_id === productId ? { ...a, assigned_hours: hours } : a
-    );
-    if (!assignments.find(a => a.product_id === productId) && hours > 0) {
-      updatedAssignments.push({ product_id: productId, assigned_hours: hours });
-    }
-
-    const totalHours = updatedAssignments.reduce((sum, a) => sum + a.assigned_hours, 0);
-
-    if (currentWorkPlan) {
-      await updateCustomPlan(currentWorkPlan.id, { title: objectives });
-      setWorkPlan(prev => ({ ...prev, total_hours_assigned: totalHours }));
+    try {
+      setLoading(true);
+      await submitCustomPlan(workPlan.id);
+      toast({ title: "Éxito", description: "Plan enviado para aprobación" });
+      onSave();
+    } catch (error) {
+      console.error('Error submitting plan:', error);
+      toast({ title: "Error", description: "No se pudo enviar el plan para aprobación", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -188,38 +174,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   };
 
   const getAvailableHours = () => {
-    // CORREGIDO: Usar total_hours en lugar de weekly_hours
     const totalHours = manager.total_hours || 0;
-    console.log("Manager total_hours:", totalHours);
-    console.log("Total assigned hours:", getTotalAssignedHours());
     return totalHours - getTotalAssignedHours();
-  };
-
-  const submitForApproval = async () => {
-    if (!workPlan) {
-      toast({ title: "Error", description: "No hay plan de trabajo para enviar", variant: "destructive" });
-      return;
-    }
-
-    if (!objectives.trim()) {
-      toast({ title: "Error", description: "Debe agregar objetivos antes de enviar", variant: "destructive" });
-      return;
-    }
-
-    const { error } = await updateCustomPlan(workPlan.id, { 
-      status: 'submitted',
-      submitted_date: new Date().toISOString(),
-      title: objectives
-    });
-    
-    if (error) {
-      toast({ title: "Error", description: "No se pudo enviar para aprobación", variant: "destructive" });
-      return;
-    }
-
-    toast({ title: "Éxito", description: "Plan enviado para aprobación" });
-    setWorkPlan(prev => ({ ...prev, status: 'submitted', submitted_date: new Date().toISOString() }));
-    onSave();
   };
 
   const getStatusBadge = (status: string) => {
@@ -241,7 +197,6 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
-  // Organizar datos por eje estratégico
   const organizedData = strategicAxes.map(axis => ({
     ...axis,
     actions: actions
@@ -301,7 +256,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
           </label>
           <Textarea
             value={objectives}
-            onChange={(e) => handleObjectivesChange(e.target.value)}
+            onChange={(e) => setObjectives(e.target.value)}
             placeholder="Describe los objetivos principales de tu plan de trabajo..."
             className="min-h-[100px]"
             disabled={isReadOnly}
@@ -364,8 +319,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
                           type="number"
                           min="0"
                           value={getAssignedHours(product.id)}
-                          onChange={(e) => handleInputChange(product.id, e.target.value)}
-                          onBlur={(e) => handleInputBlur(product.id, e.target.value)}
+                          onChange={(e) => handleHoursChange(product.id, e.target.value)}
+                          onBlur={handleSave}
                           className="w-16 h-8 text-center"
                           disabled={isReadOnly}
                         />
