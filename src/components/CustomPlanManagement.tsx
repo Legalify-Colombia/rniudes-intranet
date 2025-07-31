@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,6 +60,7 @@ export function CustomPlanManagement() {
 
   const openPlanDetails = (plan: any) => {
     setSelectedPlan(plan);
+    setSelectedPlanType(plan.plan_type_id); // Asegurar que el planTypeId se pase correctamente
     setViewMode('form');
   };
 
@@ -72,9 +72,10 @@ export function CustomPlanManagement() {
     setViewMode('config');
   };
 
-  const handleCreatePlan = (planId: string, planType: string) => {
-    setSelectedPlan({ id: planId });
-    setSelectedPlanType(planType);
+  // Se ha mejorado la función para gestionar la creación del plan
+  const handleCreatePlan = (planTypeId: string) => {
+    setSelectedPlan(null); // Asegurarse de que no haya un plan seleccionado
+    setSelectedPlanType(planTypeId);
     setViewMode('form');
   };
 
