@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
@@ -15,7 +14,6 @@ export function usePlanTypes() {
     allow_custom_fields?: boolean;
     allow_structured_elements?: boolean;
   }): Promise<Result<any>> => {
-    // Get current user ID
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -101,14 +99,12 @@ export function usePlanTypes() {
     requiredProducts?: string[];
   }): Promise<Result<any>> => {
     try {
-      // Delete existing configurations
       await Promise.all([
         supabase.from("plan_type_strategic_axes").delete().eq("plan_type_id", planTypeId),
         supabase.from("plan_type_actions").delete().eq("plan_type_id", planTypeId),
         supabase.from("plan_type_products").delete().eq("plan_type_id", planTypeId)
       ]);
 
-      // Insert new configurations
       const insertPromises = [];
 
       if (config.strategicAxes?.length > 0) {
@@ -148,7 +144,49 @@ export function usePlanTypes() {
     }
   };
 
-  // Nuevas funciones para la configuración híbrida
+  // NUEVA FUNCIÓN: Obtiene los tipos de planes disponibles para un gestor
+  const getAvailablePlanTypesForManager = async (managerId: string): Promise<Result<any[]>> => {
+    try {
+      const { data: managerProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("academic_program_id")
+        .eq("id", managerId)
+        .single();
+    
+      if (profilesError) {
+        console.error("Error fetching manager profiles:", profilesError);
+        return { data: [], error: profilesError };
+      }
+    
+      if (!managerProfiles || !managerProfiles.academic_program_id) {
+        return { data: [], error: null };
+      }
+    
+      const { data: planTypes, error: planTypesError } = await supabase
+        .from("plan_type_academic_programs")
+        .select(`
+          plan_types (
+            id,
+            name,
+            uses_structured_elements
+          )
+        `)
+        .eq("academic_program_id", managerProfiles.academic_program_id);
+    
+      if (planTypesError) {
+        console.error("Error fetching available plan types:", planTypesError);
+        return { data: [], error: planTypesError };
+      }
+
+      const formattedData = planTypes.map(item => item.plan_types);
+    
+      return { data: formattedData, error: null };
+    } catch (error) {
+      console.error("Unexpected error in getAvailablePlanTypesForManager:", error);
+      return { data: [], error: { message: "Unexpected error", details: "Could not fetch plan types." } };
+    }
+  };
+
   const fetchPlanTypeTemplateFields = async (planTypeId: string, templateId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("plan_type_template_fields")
@@ -187,8 +225,10 @@ export function usePlanTypes() {
     deletePlanField,
     fetchPlanTypeElements,
     configurePlanTypeElements,
+    getAvailablePlanTypesForManager, // Exponemos la nueva función
     fetchPlanTypeTemplateFields,
     upsertPlanTypeTemplateField,
     deletePlanTypeTemplateField,
   };
 }
+
