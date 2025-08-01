@@ -162,10 +162,15 @@ export function EmailNotificationManagement() {
         });
       } else {
         // Crear nueva plantilla
+        const { campus, ...cleanedData } = templateData;
         const newTemplate = {
-          ...templateData,
+          ...cleanedData,
+          name: currentTemplate.name || "",
+          subject: currentTemplate.subject || "",
+          html_content: currentTemplate.html_content || "",
+          template_type: currentTemplate.template_type || "plan_approval",
           created_by: user?.id,
-          variables: currentTemplate.variables, // No se necesita JSON.stringify si el tipo es string[]
+          variables: currentTemplate.variables || [],
         };
         const { error } = await supabase
           .from("email_templates")

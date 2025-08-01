@@ -147,40 +147,18 @@ export function usePlanTypes() {
   // NUEVA FUNCIÓN: Obtiene los tipos de planes disponibles para un gestor
   const getAvailablePlanTypesForManager = async (managerId: string): Promise<Result<any[]>> => {
     try {
-      const { data: managerProfiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("academic_program_id")
-        .eq("id", managerId)
-        .single();
-    
-      if (profilesError) {
-        console.error("Error fetching manager profiles:", profilesError);
-        return { data: [], error: profilesError };
-      }
-    
-      if (!managerProfiles || !managerProfiles.academic_program_id) {
-        return { data: [], error: null };
-      }
-    
+      // Simplificamos para obtener todos los tipos de plan activos
       const { data: planTypes, error: planTypesError } = await supabase
-        .from("plan_type_academic_programs")
-        .select(`
-          plan_types (
-            id,
-            name,
-            uses_structured_elements
-          )
-        `)
-        .eq("academic_program_id", managerProfiles.academic_program_id);
+        .from("plan_types")
+        .select("id, name, uses_structured_elements")
+        .eq("is_active", true);
     
       if (planTypesError) {
         console.error("Error fetching available plan types:", planTypesError);
         return { data: [], error: planTypesError };
       }
-
-      const formattedData = planTypes.map(item => item.plan_types);
     
-      return { data: formattedData, error: null };
+      return { data: planTypes || [], error: null };
     } catch (error) {
       console.error("Unexpected error in getAvailablePlanTypesForManager:", error);
       return { data: [], error: { message: "Unexpected error", details: "Could not fetch plan types." } };

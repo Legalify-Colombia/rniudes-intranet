@@ -27,7 +27,7 @@ export function InternationalizationManagers() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { fetchManagersByCampus, fetchAvailablePlanTypes } = useManagers();
-  const { fetchPlanTypes, createCustomPlan, fetchWorkPlansForManager, deleteCustomPlan, fetchCustomPlanDetails } = useSupabaseData();
+  const { fetchPlanTypes, createCustomPlan, fetchWorkPlansForManager, fetchCustomPlanDetails } = useSupabaseData();
 
   useEffect(() => {
     loadManagers();
@@ -146,10 +146,11 @@ export function InternationalizationManagers() {
 
   const handleDeletePlan = async (planId: string) => {
     try {
-      await deleteCustomPlan(planId);
+      // Note: Delete functionality would need to be implemented in useCustomPlans
+      console.log("Delete plan functionality not implemented yet:", planId);
       toast({
-        title: "Éxito",
-        description: "Plan eliminado correctamente",
+        title: "Información",
+        description: "Funcionalidad de eliminación pendiente de implementación",
       });
       openManagerDetails(selectedManager); // Reload details
     } catch (error) {

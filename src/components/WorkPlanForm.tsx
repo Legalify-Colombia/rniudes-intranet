@@ -72,7 +72,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
 
       if (existingPlan) {
         setWorkPlan(existingPlan);
-        const planObjectives = existingPlan.title || existingPlan.description || '';
+        const planObjectives = existingPlan.title || '';
         setObjectives(planObjectives);
         
         const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
