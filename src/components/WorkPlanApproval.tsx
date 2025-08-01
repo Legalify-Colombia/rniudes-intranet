@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useWorkPlans } from "@/hooks/useWorkPlans";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { WorkPlanPreview } from "./WorkPlanPreview";
 import { useAuth } from "@/hooks/useAuth";
 
 export function WorkPlanApproval() {
-  const { fetchPendingWorkPlans, approveWorkPlan } = useSupabaseData();
+  const { fetchPendingWorkPlans, approveWorkPlan } = useWorkPlans();
   const { profile } = useAuth();
   const [workPlans, setWorkPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,10 +30,10 @@ export function WorkPlanApproval() {
       return;
     }
 
-    const allowedPositions = ['Director de Programa', 'Coordinador de Campus'];
-    const allowedRoles = ['Administrador'];
-    
-    if (!allowedPositions.includes(profile.position) && !allowedRoles.includes(profile.role)) {
+  const allowedPositions = ['Director de Programa', 'Coordinador de Campus'];
+  const allowedRoles = ['Administrador', 'Coordinador'];
+  
+  if (!allowedPositions.includes(profile.position) && !allowedRoles.includes(profile.role)) {
       console.log('Usuario sin permisos para ver planes:', profile.position, profile.role);
       setLoading(false);
       return;
@@ -171,8 +171,8 @@ export function WorkPlanApproval() {
   }
 
   const allowedPositions = ['Director de Programa', 'Coordinador de Campus'];
-  const allowedRoles = ['Administrador'];
-  const canApprove = profile.position === 'Director de Programa' || profile.role === 'Administrador';
+  const allowedRoles = ['Administrador', 'Coordinador'];
+  const canApprove = profile.position === 'Director de Programa' || profile.role === 'Administrador' || profile.role === 'Coordinador';
   const canObserve = profile.position === 'Coordinador de Campus' || canApprove;
 
   if (!allowedPositions.includes(profile.position) && !allowedRoles.includes(profile.role)) {

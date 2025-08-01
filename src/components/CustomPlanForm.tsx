@@ -226,9 +226,18 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
   };
 
   const handleSubmit = async () => {
-    if (!plan?.id) {
-      await handleSave();
-      if (!plan?.id) {
+    try {
+      let currentPlan = plan;
+      
+      if (!currentPlan?.id) {
+        // Si no hay plan, crearlo primero
+        await handleSave();
+        // Esperar un momento para que el estado se actualice
+        await new Promise(resolve => setTimeout(resolve, 100));
+        currentPlan = plan;
+      }
+      
+      if (!currentPlan?.id) {
         toast({
           title: "Error",
           description: "No se pudo crear el plan. Inténtalo de nuevo.",
@@ -236,23 +245,25 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
         });
         return;
       }
-    }
     
-    try {
       setIsLoading(true);
       
       // Ensure all responses are saved before submitting
       for (const [fieldId, value] of Object.entries(responses)) {
         if (value !== null && value !== undefined && value !== '') {
           await upsertCustomPlanResponse({
-            custom_plan_id: plan.id,
+            custom_plan_id: currentPlan.id,
             plan_field_id: fieldId,
             response_value: value
           });
         }
       }
       
-      await submitCustomPlan(plan.id);
+      const result = await submitCustomPlan(currentPlan.id);
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Error al enviar el plan');
+      }
       
       toast({
         title: "Éxito",
@@ -408,8 +419,9 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
-  // The `isReadOnly` flag is true only if the plan is approved AND the user is not an Admin.
-  const isReadOnly = plan?.status === 'approved' && profile?.role !== 'Administrador';
+  // El plan es solo lectura si está aprobado O si está enviado y el usuario no es admin/coordinador
+  const isReadOnly = (plan?.status === 'approved') || 
+                     (plan?.status === 'submitted' && !['Administrador', 'Coordinador'].includes(profile?.role || ''));
   console.log("Plan Status:", plan?.status);
   console.log("Is Read Only:", isReadOnly);
 

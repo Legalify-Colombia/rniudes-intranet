@@ -3348,6 +3348,14 @@ export type Database = {
           coordinator_name: string
         }[]
       }
+      get_campus_coordinators_for_manager: {
+        Args: { manager_id: string }
+        Returns: {
+          coordinator_id: string
+          coordinator_email: string
+          coordinator_name: string
+        }[]
+      }
       get_complete_work_plan_details: {
         Args: { plan_id: string }
         Returns: {
@@ -3414,6 +3422,10 @@ export type Database = {
           objectives: string
           assignments_data: Json
         }[]
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       is_campus_coordinator: {
         Args: { user_id: string }

@@ -116,18 +116,52 @@ export function useWorkPlans() {
   };
 
   const approveWorkPlan = async (planId: string, status: 'approved' | 'rejected', approvedBy: string, comments?: string): Promise<Result<CustomPlan>> => {
-    const { data, error } = await supabase
-      .from("custom_plans")
-      .update({
-        status: status,
-        approved_by: approvedBy,
-        approved_date: new Date().toISOString(),
-        approval_comments: comments
-      })
-      .eq("id", planId)
-      .select()
-      .single();
-    return { data, error };
+    try {
+      console.log('approveWorkPlan llamado con:', { planId, status, approvedBy, comments });
+      
+      // Primero verificar que el plan existe y está en estado submitted
+      const { data: existingPlan, error: fetchError } = await supabase
+        .from("custom_plans")
+        .select("*")
+        .eq("id", planId)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error al obtener el plan:', fetchError);
+        return { data: null, error: fetchError };
+      }
+      
+      if (!existingPlan) {
+        return { data: null, error: { message: 'Plan no encontrado' } };
+      }
+      
+      if (existingPlan.status !== 'submitted') {
+        return { data: null, error: { message: `El plan debe estar en estado 'submitted' para ser aprobado. Estado actual: ${existingPlan.status}` } };
+      }
+      
+      const { data, error } = await supabase
+        .from("custom_plans")
+        .update({
+          status: status,
+          approved_by: approvedBy,
+          approved_date: new Date().toISOString(),
+          approval_comments: comments
+        })
+        .eq("id", planId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error en approveWorkPlan:', error);
+        return { data: null, error };
+      }
+
+      console.log('Plan actualizado exitosamente:', data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error inesperado en approveWorkPlan:', error);
+      return { data: null, error: error as any };
+    }
   };
   
   // NUEVA FUNCIÓN: Envía un plan para revisión
