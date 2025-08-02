@@ -34,8 +34,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { EmailConfigurationForm } from "./EmailConfigurationForm";
 import {
   Plus,
   Edit,
@@ -44,6 +46,7 @@ import {
   Mail,
   ListFilter,
   RefreshCcw,
+  History,
 } from "lucide-react";
 
 interface Campus {
@@ -78,6 +81,7 @@ const tableHeaders = [
 
 export function EmailNotificationManagement() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +118,12 @@ export function EmailNotificationManagement() {
       .from("campus")
       .select("*");
 
+    const { data: notificationsData, error: notificationsError } = await supabase
+      .from("email_notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
     if (templatesError) {
       setError(templatesError.message);
       toast({
@@ -138,6 +148,10 @@ export function EmailNotificationManagement() {
       });
     } else {
       setCampuses(campusesData || []);
+    }
+
+    if (!notificationsError) {
+      setNotifications(notificationsData || []);
     }
 
     setLoading(false);
@@ -230,26 +244,39 @@ export function EmailNotificationManagement() {
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Gestión de Plantillas de Correo
-          </CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchData}>
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Actualizar
-            </Button>
-            <Button onClick={openNewTemplateDialog}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Plantilla
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-6">
+      <Tabs defaultValue="configuration" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="configuration">Configuración</TabsTrigger>
+          <TabsTrigger value="templates">Plantillas</TabsTrigger>
+          <TabsTrigger value="history">Historial</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="configuration">
+          <EmailConfigurationForm />
+        </TabsContent>
+        
+        <TabsContent value="templates">
+          <Card className="w-full">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Gestión de Plantillas de Correo
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={fetchData}>
+                    <RefreshCcw className="w-4 h-4 mr-2" />
+                    Actualizar
+                  </Button>
+                  <Button onClick={openNewTemplateDialog}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nueva Plantilla
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
         {emailTemplates.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No hay plantillas de correo electrónico registradas.
@@ -296,6 +323,58 @@ export function EmailNotificationManagement() {
           </Table>
         )}
       </CardContent>
+    </Card>
+  </TabsContent>
+        
+  <TabsContent value="history">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <History className="h-5 w-5" />
+          Historial de Notificaciones
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Destinatario</TableHead>
+              <TableHead>Asunto</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Tipo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {notifications.map((notification) => (
+              <TableRow key={notification.id}>
+                <TableCell>
+                  {new Date(notification.created_at).toLocaleDateString()}
+                </TableCell>
+                <TableCell>{notification.recipient_email}</TableCell>
+                <TableCell>{notification.subject}</TableCell>
+                <TableCell>
+                  <Badge 
+                    variant={
+                      notification.status === 'sent' ? "default" : 
+                      notification.status === 'failed' ? "destructive" : 
+                      "secondary"
+                    }
+                  >
+                    {notification.status === 'sent' ? 'Enviado' : 
+                     notification.status === 'failed' ? 'Fallido' : 
+                     'Pendiente'}
+                  </Badge>
+                </TableCell>
+                <TableCell>{notification.related_entity_type}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  </TabsContent>
+</Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl">
@@ -456,6 +535,6 @@ export function EmailNotificationManagement() {
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }
