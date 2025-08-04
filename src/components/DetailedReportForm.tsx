@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -37,49 +37,48 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
   const [uploadingFiles, setUploadingFiles] = useState<string | null>(null);
   const [errorState, setErrorState] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setErrorState(null);
-      try {
-        // Validación crucial: Asegúrate de que customPlanId no sea nulo o indefinido.
-        // Este valor debe ser pasado desde el componente padre, después de
-        // haber consultado la tabla 'manager_reports'
-        if (!customPlanId) {
-          setErrorState("El ID del plan de trabajo no es válido. No se puede cargar el informe.");
-          console.error("customPlanId is undefined, cannot load data.");
-          setLoading(false);
-          return;
-        }
-
-        console.log('Loading data for customPlanId:', customPlanId, 'reportId:', reportId);
-        
-        // La consulta de las asignaciones se hace usando el 'customPlanId'
-        const [assignmentsResult, progressResult] = await Promise.all([
-          fetchWorkPlanAssignments(customPlanId),
-          fetchProductProgressReports(reportId)
-        ]);
-
-        console.log('Assignments result:', assignmentsResult);
-        console.log('Progress result:', progressResult);
-
-        setAssignments(assignmentsResult.data || []);
-        setProgressReports(progressResult.data || []);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setErrorState("No se pudieron cargar los datos del informe. Revise su conexión o los permisos.");
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los datos del informe",
-          variant: "destructive",
-        });
-      } finally {
+  // Mover la función loadData fuera del useEffect para que sea accesible
+  // desde otras partes del componente, como en `updateProgressReport`.
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setErrorState(null);
+    try {
+      if (!customPlanId) {
+        setErrorState("El ID del plan de trabajo no es válido. No se puede cargar el informe.");
+        console.error("customPlanId is undefined, cannot load data.");
         setLoading(false);
+        return;
       }
-    };
 
+      console.log('Loading data for customPlanId:', customPlanId, 'reportId:', reportId);
+      
+      const [assignmentsResult, progressResult] = await Promise.all([
+        fetchWorkPlanAssignments(customPlanId),
+        fetchProductProgressReports(reportId)
+      ]);
+
+      console.log('Assignments result:', assignmentsResult);
+      console.log('Progress result:', progressResult);
+
+      setAssignments(assignmentsResult.data || []);
+      setProgressReports(progressResult.data || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setErrorState("No se pudieron cargar los datos del informe. Revise su conexión o los permisos.");
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos del informe",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [reportId, customPlanId, fetchWorkPlanAssignments, fetchProductProgressReports, toast]);
+
+  // Ahora el useEffect solo llama a la función
+  useEffect(() => {
     loadData();
-  }, [reportId, customPlanId]);
+  }, [loadData]);
 
   const getProgressReport = (productId: string, assignmentId: string) => {
     return progressReports.find(pr => pr.product_id === productId) || {
@@ -107,6 +106,7 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
         description: "Progreso guardado correctamente",
       });
       
+      // La llamada a loadData ahora funciona porque está definida en el ámbito del componente
       loadData();
     } catch (error) {
       console.error('Error saving progress:', error);
