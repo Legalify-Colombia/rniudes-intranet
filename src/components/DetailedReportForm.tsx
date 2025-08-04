@@ -12,16 +12,14 @@ import { useToast } from "@/hooks/use-toast";
 import { FileText, Upload, Trash2, Save, AlertCircle } from "lucide-react";
 
 interface DetailedReportFormProps {
-  // El ID del reporte, obtenido de la tabla 'manager_reports'
   reportId: string;
-  // El ID del plan de trabajo, obtenido de 'manager_reports.work_plan_id' que apunta a 'custom_plans'
   customPlanId: string;
   onSave: () => void;
 }
 
 export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedReportFormProps) {
   const {
-    fetchWorkPlanAssignments,
+    fetchCustomPlanAssignments, // <--- La función ahora se llama así
     fetchProductProgressReports,
     upsertProductProgressReport,
     deleteProductProgressReport,
@@ -37,8 +35,6 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
   const [uploadingFiles, setUploadingFiles] = useState<string | null>(null);
   const [errorState, setErrorState] = useState<string | null>(null);
 
-  // Mover la función loadData fuera del useEffect para que sea accesible
-  // desde otras partes del componente, como en `updateProgressReport`.
   const loadData = useCallback(async () => {
     setLoading(true);
     setErrorState(null);
@@ -53,7 +49,7 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
       console.log('Loading data for customPlanId:', customPlanId, 'reportId:', reportId);
       
       const [assignmentsResult, progressResult] = await Promise.all([
-        fetchWorkPlanAssignments(customPlanId),
+        fetchCustomPlanAssignments(customPlanId), // <--- La llamada se ha corregido aquí
         fetchProductProgressReports(reportId)
       ]);
 
@@ -73,9 +69,8 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
     } finally {
       setLoading(false);
     }
-  }, [reportId, customPlanId, fetchWorkPlanAssignments, fetchProductProgressReports, toast]);
+  }, [reportId, customPlanId, fetchCustomPlanAssignments, fetchProductProgressReports, toast]);
 
-  // Ahora el useEffect solo llama a la función
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -106,7 +101,6 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
         description: "Progreso guardado correctamente",
       });
       
-      // La llamada a loadData ahora funciona porque está definida en el ámbito del componente
       loadData();
     } catch (error) {
       console.error('Error saving progress:', error);
@@ -201,15 +195,15 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
         return;
       }
       
-      const action = product.action;
+      const action = assignment.action;
       if (!action) {
-        console.log('No action found in product:', product);
+        console.log('No action found in assignment:', assignment);
         return;
       }
       
-      const axis = action.strategic_axis;
+      const axis = assignment.strategic_axis;
       if (!axis) {
-        console.log('No strategic_axis found in action:', action);
+        console.log('No strategic_axis found in assignment:', assignment);
         return;
       }
       
