@@ -14,12 +14,12 @@ import { FileText, Upload, Trash2, Save, AlertCircle } from "lucide-react";
 interface DetailedReportFormProps {
   // El ID del reporte, obtenido de la tabla 'manager_reports'
   reportId: string;
-  // El ID del plan de trabajo, obtenido de 'manager_reports.work_plan_id'
-  workPlanId: string;
+  // El ID del plan de trabajo, obtenido de 'manager_reports.work_plan_id' que apunta a 'custom_plans'
+  customPlanId: string;
   onSave: () => void;
 }
 
-export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedReportFormProps) {
+export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedReportFormProps) {
   const {
     fetchWorkPlanAssignments,
     fetchProductProgressReports,
@@ -42,21 +42,21 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
       setLoading(true);
       setErrorState(null);
       try {
-        // Validación crucial: Asegúrate de que workPlanId no sea nulo o indefinido.
+        // Validación crucial: Asegúrate de que customPlanId no sea nulo o indefinido.
         // Este valor debe ser pasado desde el componente padre, después de
         // haber consultado la tabla 'manager_reports'
-        if (!workPlanId) {
+        if (!customPlanId) {
           setErrorState("El ID del plan de trabajo no es válido. No se puede cargar el informe.");
-          console.error("workPlanId is undefined, cannot load data.");
+          console.error("customPlanId is undefined, cannot load data.");
           setLoading(false);
           return;
         }
 
-        console.log('Loading data for workPlanId:', workPlanId, 'reportId:', reportId);
+        console.log('Loading data for customPlanId:', customPlanId, 'reportId:', reportId);
         
-        // La consulta de las asignaciones se hace usando el 'workPlanId'
+        // La consulta de las asignaciones se hace usando el 'customPlanId'
         const [assignmentsResult, progressResult] = await Promise.all([
-          fetchWorkPlanAssignments(workPlanId),
+          fetchWorkPlanAssignments(customPlanId),
           fetchProductProgressReports(reportId)
         ]);
 
@@ -79,7 +79,7 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
     };
 
     loadData();
-  }, [reportId, workPlanId]);
+  }, [reportId, customPlanId]);
 
   const getProgressReport = (productId: string, assignmentId: string) => {
     return progressReports.find(pr => pr.product_id === productId) || {
