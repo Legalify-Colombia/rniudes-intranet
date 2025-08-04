@@ -73,14 +73,12 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
         setPlanType(result.data.plan_type);
         setTitle(result.data.title);
         
-        // Convert responses array to object
         const responsesMap: {[key: string]: any} = {};
         result.data.responses?.forEach((response: any) => {
           responsesMap[response.plan_field_id] = response.response_value;
         });
         setResponses(responsesMap);
         
-        // Load fields for this plan type
         if (result.data.plan_type_id) {
           const fieldsResult = await fetchPlanFields(result.data.plan_type_id);
           if (fieldsResult.data) {
@@ -112,7 +110,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       const fieldsResult = await fetchPlanFields(planTypeId);
       if (fieldsResult.data) {
         setFields(fieldsResult.data);
-        // Initialize responses for a new plan
         const initialResponses: {[key: string]: any} = {};
         fieldsResult.data.forEach((field: any) => {
           initialResponses[field.id] = '';
@@ -140,7 +137,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     }
   };
 
-  // This is the key condition that determines which form to render.
   if (planType?.uses_structured_elements) {
     return (
       <StructuredCustomPlanForm
@@ -154,7 +150,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
   const handleResponseChange = async (fieldId: string, value: any) => {
     setResponses(prev => ({ ...prev, [fieldId]: value }));
     
-    // Auto-save the response if a plan ID exists
     if (plan?.id) {
       try {
         await upsertCustomPlanResponse({
@@ -168,6 +163,8 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     }
   };
 
+  // --- INICIO DE CAMBIOS ---
+  // Se modifica handleSave para que devuelva el plan creado o actualizado.
   const handleSave = async () => {
     try {
       setIsLoading(true);
@@ -175,7 +172,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       let currentPlan = plan;
       
       if (!currentPlan && planTypeId) {
-        // Create new plan if it doesn't exist
         const planData = {
           title,
           plan_type_id: planTypeId,
@@ -188,14 +184,12 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
           throw new Error(result.error.message);
         }
         currentPlan = result.data;
-        setPlan(currentPlan);
+        setPlan(currentPlan); // Actualizar estado para la UI
       }
       
       if (currentPlan) {
-        // Update plan title
         await updateCustomPlan(currentPlan.id, { title });
         
-        // Save all responses
         for (const [fieldId, value] of Object.entries(responses)) {
           if (value !== null && value !== undefined && value !== '') {
             await upsertCustomPlanResponse({
@@ -213,6 +207,10 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       });
       
       if (onSave) onSave();
+      
+      // Devolver el plan para que otras funciones puedan usarlo.
+      return currentPlan;
+
     } catch (error) {
       console.error("Error saving plan:", error);
       toast({
@@ -220,46 +218,34 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
         description: "No se pudo guardar el plan",
         variant: "destructive",
       });
+      // Devolver null en caso de error.
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Se modifica handleSubmit para que espere el resultado de handleSave.
   const handleSubmit = async () => {
     try {
-      let currentPlan = plan;
-      
-      if (!currentPlan?.id) {
-        // Si no hay plan, crearlo primero
-        await handleSave();
-        // Esperar un momento para que el estado se actualice
-        await new Promise(resolve => setTimeout(resolve, 100));
-        currentPlan = plan;
-      }
-      
-      if (!currentPlan?.id) {
-        toast({
-          title: "Error",
-          description: "No se pudo crear el plan. Inténtalo de nuevo.",
-          variant: "destructive",
-        });
-        return;
-      }
-    
       setIsLoading(true);
       
-      // Ensure all responses are saved before submitting
-      for (const [fieldId, value] of Object.entries(responses)) {
-        if (value !== null && value !== undefined && value !== '') {
-          await upsertCustomPlanResponse({
-            custom_plan_id: currentPlan.id,
-            plan_field_id: fieldId,
-            response_value: value
-          });
-        }
+      // 1. Guardar el plan y esperar el resultado.
+      const savedPlan = await handleSave();
+      
+      // 2. Comprobar si el guardado fue exitoso y si tenemos un ID.
+      if (!savedPlan?.id) {
+        toast({
+          title: "Error",
+          description: "No se pudo guardar el plan antes de enviar. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
       
-      const result = await submitCustomPlan(currentPlan.id);
+      // 3. Usar el ID del plan devuelto para enviarlo.
+      const result = await submitCustomPlan(savedPlan.id);
       
       if (result.error) {
         throw new Error(result.error.message || 'Error al enviar el plan');
@@ -267,10 +253,11 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       
       toast({
         title: "Éxito",
-        description: "Plan enviado para revisión con todas las asignaciones guardadas",
+        description: "Plan enviado para revisión",
       });
       
       if (onSave) onSave();
+
     } catch (error) {
       console.error("Error submitting plan:", error);
       toast({
@@ -282,9 +269,12 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       setIsLoading(false);
     }
   };
+  // --- FIN DE CAMBIOS ---
 
   const renderField = (field: any) => {
     const value = responses[field.id] || '';
+    const isReadOnly = (plan?.status === 'approved') || 
+                       (plan?.status === 'submitted' && !['Administrador', 'Coordinador'].includes(profile?.role || ''));
     
     switch (field.field_type) {
       case 'text':
@@ -414,16 +404,12 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     }
   };
 
-  // Show a loading spinner while data is being fetched
   if (isLoading) {
     return <div className="flex justify-center p-8">Cargando...</div>;
   }
 
-  // El plan es solo lectura si está aprobado O si está enviado y el usuario no es admin/coordinador
   const isReadOnly = (plan?.status === 'approved') || 
                      (plan?.status === 'submitted' && !['Administrador', 'Coordinador'].includes(profile?.role || ''));
-  console.log("Plan Status:", plan?.status);
-  console.log("Is Read Only:", isReadOnly);
 
   if (embedded) {
     return (
@@ -441,7 +427,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
                 const value = responses[field.id];
                 let displayValue = value || 'Sin especificar';
                 
-                // Format display value based on field type
                 if (field.field_type === 'strategic_axes' && value) {
                   const axis = strategicAxes.find(a => a.id === value);
                   displayValue = axis ? `${axis.code} - ${axis.name}` : value;
