@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useStrategicAxes } from "./useStrategicAxes";
 import { useActions } from "./useActions";
@@ -8,7 +7,7 @@ import { useFaculties } from "./useFaculties";
 import { useManagers } from "./useManagers";
 import { useReports } from "./useReports";
 import { useWorkPlans } from "./useWorkPlans";
-import { useWorkPlanAssignments } from "./useWorkPlanAssignments";
+import { useCustomPlanAssignments } from "./useCustomPlanAssignments"; // <- Renombrado
 import { useAcademicPrograms } from "./useAcademicPrograms";
 import { usePlanTypes } from "./usePlanTypes";
 import { useCustomPlans } from "./useCustomPlans";
@@ -25,62 +24,62 @@ import type { StrategicAxis, Action, Product, Result } from "@/types/supabase";
 export type { StrategicAxis, Action, Product };
 
 export interface DocumentTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_content: string;
-  template_type: string;
-  file_name?: string;
-  file_url?: string;
-  is_active: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  strategic_axes_ids?: string[];
-  actions_ids?: string[];
-  products_ids?: string[];
-  sharepoint_base_url?: string;
-  max_versions?: number;
+  id: string;
+  name: string;
+  description?: string;
+  template_content: string;
+  template_type: string;
+  file_name?: string;
+  file_url?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  strategic_axes_ids?: string[];
+  actions_ids?: string[];
+  products_ids?: string[];
+  sharepoint_base_url?: string;
+  max_versions?: number;
 }
 
 export interface ReportTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_content: string;
-  is_active: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  strategic_axes_ids?: string[];
-  actions_ids?: string[];
-  products_ids?: string[];
-  sharepoint_base_url?: string;
-  max_versions?: number;
+  id: string;
+  name: string;
+  description?: string;
+  template_content: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  strategic_axes_ids?: string[];
+  actions_ids?: string[];
+  products_ids?: string[];
+  sharepoint_base_url?: string;
+  max_versions?: number;
 }
 
 export interface ManagerReportVersion {
-  id: string;
-  manager_report_id: string;
-  template_id: string;
-  version_number: number;
-  content: any;
-  created_at: string;
-  progress_percentage?: number;
-  sharepoint_folder_url?: string;
-  evidence_links?: string[];
-  observations?: string;
-  submitted_at?: string;
+  id: string;
+  manager_report_id: string;
+  template_id: string;
+  version_number: number;
+  content: any;
+  created_at: string;
+  progress_percentage?: number;
+  sharepoint_folder_url?: string;
+  evidence_links?: string[];
+  observations?: string;
+  submitted_at?: string;
 }
 
 export interface SniesReportTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  template_structure: any;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  id: string;
+  name: string;
+  description?: string;
+  template_structure: any;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useSupabaseData() {
@@ -93,7 +92,7 @@ export function useSupabaseData() {
   const managers = useManagers();
   const reports = useReports();
   const workPlans = useWorkPlans();
-  const workPlanAssignments = useWorkPlanAssignments();
+  const customPlanAssignments = useCustomPlanAssignments(); // <- Se usa el nombre corregido aquí
   const academicPrograms = useAcademicPrograms();
   const planTypes = usePlanTypes();
   const customPlans = useCustomPlans();
@@ -127,64 +126,25 @@ export function useSupabaseData() {
   };
 
   return {
-    // Strategic Axes
     ...strategicAxes,
-    
-    // Actions
     ...actions,
-    
-    // Products
     ...products,
-    
-    // Campus
     ...campus,
-    
-    // Faculties
     ...faculties,
-    
-    // Managers
     ...managers,
-    
-    // Reports
     ...reports,
-    
-    // Work Plans
     ...workPlans,
-    
-    // Work Plan Assignments
-    ...workPlanAssignments,
-    
-    // Academic Programs
+    ...customPlanAssignments, // <- ¡Aquí se re-exporta!
     ...academicPrograms,
-    
-    // Plan Types
     ...planTypes,
-    
-    // Custom Plans
     ...customPlans,
-    
-    // Indicators
     ...indicators,
-    
-    // Document Templates
     ...documentTemplates,
-    
-    // Template Reports
     ...templateReports,
-    
-    // Report Periods
     ...reportPeriods,
-    
-    // Users
     ...users,
-    
-    // File Upload
     ...fileUpload,
-    
-    // SNIES
     ...snies,
-    
-    // Plan Element Order Management
     savePlanElementOrder,
     fetchPlanElementOrder,
   };
