@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Upload, Trash2, Save } from "lucide-react";
+import { FileText, Upload, Trash2, Save, AlertCircle } from "lucide-react";
 
 interface DetailedReportFormProps {
   reportId: string;
@@ -33,37 +33,48 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setErrorState(null);
+      try {
+        // Validación crucial: Asegúrate de que workPlanId no sea nulo o indefinido
+        if (!workPlanId) {
+          setErrorState("El ID del plan de trabajo no es válido. No se puede cargar el informe.");
+          console.error("workPlanId is undefined, cannot load data.");
+          setLoading(false);
+          return;
+        }
+
+        console.log('Loading data for workPlanId:', workPlanId, 'reportId:', reportId);
+        
+        const [assignmentsResult, progressResult] = await Promise.all([
+          fetchWorkPlanAssignments(workPlanId),
+          fetchProductProgressReports(reportId)
+        ]);
+
+        console.log('Assignments result:', assignmentsResult);
+        console.log('Progress result:', progressResult);
+
+        setAssignments(assignmentsResult.data || []);
+        setProgressReports(progressResult.data || []);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setErrorState("No se pudieron cargar los datos del informe. Revise su conexión o los permisos.");
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos del informe",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadData();
   }, [reportId, workPlanId]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      console.log('Loading data for workPlanId:', workPlanId, 'reportId:', reportId);
-      
-      const [assignmentsResult, progressResult] = await Promise.all([
-        fetchWorkPlanAssignments(workPlanId),
-        fetchProductProgressReports(reportId)
-      ]);
-
-      console.log('Assignments result:', assignmentsResult);
-      console.log('Progress result:', progressResult);
-
-      setAssignments(assignmentsResult.data || []);
-      setProgressReports(progressResult.data || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos del informe",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getProgressReport = (productId: string, assignmentId: string) => {
     return progressReports.find(pr => pr.product_id === productId) || {
@@ -167,7 +178,6 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
     }
   };
 
-  // Organizar asignaciones por eje estratégico
   const organizeAssignments = () => {
     console.log('Organizing assignments:', assignments);
     
@@ -180,28 +190,24 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
     assignments.forEach(assignment => {
       console.log('Processing assignment:', assignment);
       
-      // Obtener el producto desde la asignación
       const product = assignment.product;
       if (!product) {
         console.log('No product found in assignment:', assignment);
         return;
       }
       
-      // Obtener la acción desde el producto
       const action = product.action;
       if (!action) {
         console.log('No action found in product:', product);
         return;
       }
       
-      // Obtener el eje estratégico desde la acción
       const axis = action.strategic_axis;
       if (!axis) {
         console.log('No strategic_axis found in action:', action);
         return;
       }
       
-      // Organizar por eje estratégico
       if (!organized[axis.id]) {
         organized[axis.id] = {
           ...axis,
@@ -209,7 +215,6 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
         };
       }
       
-      // Organizar por acción
       if (!organized[axis.id].actions[action.id]) {
         organized[axis.id].actions[action.id] = {
           ...action,
@@ -217,7 +222,6 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
         };
       }
       
-      // Agregar el producto con su reporte de progreso
       organized[axis.id].actions[action.id].products.push({
         ...assignment,
         progressReport: getProgressReport(product.id, assignment.id)
@@ -231,6 +235,18 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
 
   if (loading) {
     return <div className="flex justify-center p-8">Cargando formulario de informe...</div>;
+  }
+
+  if (errorState) {
+    return (
+      <div className="p-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error al cargar el informe</AlertTitle>
+          <AlertDescription>{errorState}</AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   const organizedData = organizeAssignments();
