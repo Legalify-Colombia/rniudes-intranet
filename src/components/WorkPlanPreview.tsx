@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,55 +10,63 @@ interface WorkPlanPreviewProps {
   workPlanId: string;
 }
 
+// Interfaz para definir la estructura de los datos del plan, mejorando la legibilidad
+interface Profile {
+  full_name: string;
+  email: string;
+  position?: string; // Asumiendo que 'position' puede existir en el perfil
+  campus?: { name: string };
+  program?: { name: string };
+  faculty?: { name: string };
+}
+
+interface Plan {
+  status: string;
+  manager: Profile;
+  plan_type: { name: string };
+  objectives?: string;
+  submitted_date?: string;
+  total_hours_assigned?: number;
+}
+
 export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
-  const { fetchCustomPlanDetails, fetchCustomPlanAssignments, fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
-  const [workPlan, setWorkPlan] = useState<any>(null);
+  const { fetchCustomPlanDetails, fetchCustomPlanAssignments } = useSupabaseData();
+  const [workPlan, setWorkPlan] = useState<Plan | null>(null);
   const [assignments, setAssignments] = useState<any[]>([]);
-  const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
-  const [actions, setActions] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadWorkPlanData();
-  }, [workPlanId]);
+    const loadWorkPlanData = async () => {
+      setLoading(true);
+      try {
+        // Cargar datos del plan de trabajo (la consulta ya fue corregida en el hook)
+        const { data: planData, error: planError } = await fetchCustomPlanDetails(workPlanId);
+        if (planError) throw planError;
+        setWorkPlan(planData);
 
-  const loadWorkPlanData = async () => {
-    setLoading(true);
-    try {
-      // Cargar datos del plan de trabajo usando la función optimizada
-      const { data: planData, error: planError } = await fetchCustomPlanDetails(workPlanId);
-      if (planError) throw planError;
-      setWorkPlan(planData);
+        // Cargar asignaciones con datos completos
+        const { data: assignmentsData, error: assignmentsError } = await fetchCustomPlanAssignments(workPlanId);
+        if (assignmentsError) throw assignmentsError;
+        setAssignments(assignmentsData || []);
 
-      // Cargar asignaciones con datos completos
-      const { data: assignmentsData, error: assignmentsError } = await fetchCustomPlanAssignments(workPlanId);
-      if (assignmentsError) throw assignmentsError;
-      setAssignments(assignmentsData || []);
+      } catch (error) {
+        console.error('Error loading work plan data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      // Cargar datos de referencia
-      const [axesRes, actionsRes, productsRes] = await Promise.all([
-        fetchStrategicAxes(),
-        fetchActions(),
-        fetchProducts()
-      ]);
-
-      setStrategicAxes(axesRes.data || []);
-      setActions(actionsRes.data || []);
-      setProducts(productsRes.data || []);
-    } catch (error) {
-      console.error('Error loading work plan data:', error);
-    } finally {
-      setLoading(false);
+    if (workPlanId) {
+      loadWorkPlanData();
     }
-  };
+  }, [workPlanId]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Borrador</Badge>;
-      case 'pending':
-        return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
+      case 'submitted': // Añadido para que coincida con el estado real
+        return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Enviado</Badge>;
       case 'approved':
         return <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Aprobado</Badge>;
       case 'rejected':
@@ -69,60 +76,34 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
     }
   };
 
-  // Organizar asignaciones por eje estratégico
   const organizeAssignments = () => {
     if (!assignments || assignments.length === 0) {
       return [];
     }
-
-    // Crear mapa de asignaciones por producto
-    const assignmentMap = new Map();
-    assignments.forEach(assignment => {
-      if (assignment.product_id && assignment.assigned_hours > 0) {
-        assignmentMap.set(assignment.product_id, assignment.assigned_hours);
-      }
-    });
-
-    // Organizar usando los datos relacionados de las asignaciones
     const axesMap = new Map();
-    
     assignments.forEach(assignment => {
-      if (assignment.product?.action?.strategic_axis && assignment.assigned_hours > 0) {
+      if (assignment.product?.action?.strategic_axis && (assignment.assigned_hours || 0) > 0) {
         const axis = assignment.product.action.strategic_axis;
         const action = assignment.product.action;
         const product = assignment.product;
 
         if (!axesMap.has(axis.id)) {
-          axesMap.set(axis.id, {
-            ...axis,
-            actions: new Map()
-          });
+          axesMap.set(axis.id, { ...axis, actions: new Map() });
         }
-
         const axisData = axesMap.get(axis.id);
         
         if (!axisData.actions.has(action.id)) {
-          axisData.actions.set(action.id, {
-            ...action,
-            products: []
-          });
+          axisData.actions.set(action.id, { ...action, products: [] });
         }
-
         const actionData = axisData.actions.get(action.id);
-        actionData.products.push({
-          ...product,
-          assigned_hours: assignment.assigned_hours
-        });
+
+        actionData.products.push({ ...product, assigned_hours: assignment.assigned_hours });
       }
     });
-
-    // Convertir Maps a arrays
-    const organized = Array.from(axesMap.values()).map(axis => ({
+    return Array.from(axesMap.values()).map(axis => ({
       ...axis,
       actions: Array.from(axis.actions.values())
     }));
-
-    return organized;
   };
 
   if (loading) {
@@ -136,14 +117,14 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
   }
 
   if (!workPlan) {
-    return <div className="text-center text-gray-500">No se pudo cargar el plan de trabajo</div>;
+    return <div className="text-center text-gray-500">No se pudo cargar el plan de trabajo.</div>;
   }
 
   const organizedData = organizeAssignments();
+  const totalHours = assignments?.reduce((sum, assignment) => sum + (assignment.assigned_hours || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
-      {/* Información básica del plan */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -152,32 +133,35 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* --- INICIO DE CORRECCIONES --- */}
+          {/* Se accede a los datos anidados del gestor y tipo de plan */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="font-medium">Gestor:</span> {workPlan.manager_name || 'N/A'}
+              <span className="font-medium">Gestor:</span> {workPlan.manager?.full_name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Email:</span> {workPlan.manager_email || 'N/A'}
+              <span className="font-medium">Email:</span> {workPlan.manager?.email || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Cargo:</span> {workPlan.manager_position || 'N/A'}
+              <span className="font-medium">Cargo:</span> {workPlan.manager?.position || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Tipo de Plan:</span> {workPlan.plan_type_name || 'N/A'}
+              <span className="font-medium">Tipo de Plan:</span> {workPlan.plan_type?.name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Campus:</span> {workPlan.campus_name || 'N/A'}
+              <span className="font-medium">Campus:</span> {workPlan.manager?.campus?.name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Programa:</span> {workPlan.program_name || 'N/A'}
+              <span className="font-medium">Programa:</span> {workPlan.manager?.program?.name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Facultad:</span> {workPlan.faculty_name || 'N/A'}
+              <span className="font-medium">Facultad:</span> {workPlan.manager?.faculty?.name || 'N/A'}
             </div>
             <div>
-              <span className="font-medium">Total Horas:</span> {workPlan.total_hours_assigned || assignments?.reduce((sum, assignment) => sum + (assignment.assigned_hours || 0), 0) || 0}
+              <span className="font-medium">Total Horas:</span> {totalHours}
             </div>
           </div>
+          {/* --- FIN DE CORRECCIONES --- */}
           
           {workPlan.objectives && (
             <div>
@@ -196,7 +180,6 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
         </CardContent>
       </Card>
 
-      {/* Detalle de asignaciones */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Asignación de Horas por Producto</CardTitle>
@@ -207,19 +190,11 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
           ) : (
             <Table className="border">
               <TableHeader>
-                <TableRow className="bg-blue-600">
-                  <TableHead className="text-white font-bold border border-gray-300 text-center">
-                    EJE ESTRATÉGICO
-                  </TableHead>
-                  <TableHead className="text-white font-bold border border-gray-300 text-center">
-                    ACCIÓN
-                  </TableHead>
-                  <TableHead className="text-white font-bold border border-gray-300 text-center">
-                    PRODUCTO
-                  </TableHead>
-                  <TableHead className="text-white font-bold border border-gray-300 text-center w-24">
-                    HORAS
-                  </TableHead>
+                <TableRow className="bg-blue-600 hover:bg-blue-700">
+                  <TableHead className="text-white font-bold border-r text-center">EJE ESTRATÉGICO</TableHead>
+                  <TableHead className="text-white font-bold border-r text-center">ACCIÓN</TableHead>
+                  <TableHead className="text-white font-bold border-r text-center">PRODUCTO</TableHead>
+                  <TableHead className="text-white font-bold text-center w-24">HORAS</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -232,45 +207,27 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
                       const actionRowspan = action.products.length;
 
                       return (
-                        <TableRow key={product.id} className="border">
+                        <TableRow key={product.id}>
                           {isFirstAxisRow && (
-                            <TableCell 
-                              rowSpan={axisRowspan}
-                              className="border border-gray-300 text-center font-medium bg-blue-50 align-middle"
-                            >
-                              <div className="text-sm font-bold">
-                                {axis.code} - {axis.name}
-                              </div>
+                            <TableCell rowSpan={axisRowspan} className="border-r align-middle text-center font-medium bg-blue-50">
+                              <div className="text-sm font-bold">{axis.code} - {axis.name}</div>
                             </TableCell>
                           )}
                           {isFirstActionRow && (
-                            <TableCell 
-                              rowSpan={actionRowspan}
-                              className="border border-gray-300 text-sm p-2 align-middle"
-                            >
-                              <div className="font-medium text-gray-800">
-                                {action.code} {action.name}
-                              </div>
+                            <TableCell rowSpan={actionRowspan} className="border-r align-middle text-sm p-2">
+                              <div className="font-medium text-gray-800">{action.code} {action.name}</div>
                             </TableCell>
                           )}
-                          <TableCell className="border border-gray-300 text-sm p-2">
-                            {product.name}
-                          </TableCell>
-                          <TableCell className="border border-gray-300 text-center p-2 font-medium">
-                            {product.assigned_hours}
-                          </TableCell>
+                          <TableCell className="border-r text-sm p-2">{product.name}</TableCell>
+                          <TableCell className="text-center p-2 font-medium">{product.assigned_hours}</TableCell>
                         </TableRow>
                       );
                     })
                   )
                 )}
-                <TableRow className="bg-gray-100">
-                  <TableCell colSpan={3} className="border border-gray-300 text-right font-bold">
-                    TOTAL:
-                  </TableCell>
-                  <TableCell className="border border-gray-300 text-center font-bold text-lg">
-                    {assignments?.reduce((sum, assignment) => sum + (assignment.assigned_hours || 0), 0) || 0}
-                  </TableCell>
+                <TableRow className="bg-gray-100 font-bold">
+                  <TableCell colSpan={3} className="text-right p-2">TOTAL:</TableCell>
+                  <TableCell className="text-center text-lg p-2">{totalHours}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

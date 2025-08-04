@@ -3,7 +3,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 // Define las cabeceras CORS para permitir solicitudes desde cualquier origen.
-// En producción, es recomendable restringirlo a tu dominio: 'https://tu-dominio.com'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -27,17 +26,12 @@ const supabase = createClient(
 
 // Inicia el servidor para escuchar las solicitudes
 serve(async (req: Request) => {
-  console.log(`Función invocada con método: ${req.method}`);
-
   // --- MANEJO DE CORS PREFLIGHT ---
-  // Esta es la parte crucial. Responde inmediatamente a las solicitudes OPTIONS
-  // con un status 200 OK y las cabeceras correctas.
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Extrae y valida los datos del cuerpo de la solicitud
     const {
       templateType,
       recipientEmails,
@@ -51,22 +45,22 @@ serve(async (req: Request) => {
         throw new Error("Faltan parámetros requeridos: templateType o recipientEmails.");
     }
 
-    console.log('Procesando notificación para:', { templateType, campusId });
-
     // --- OBTENER CONFIGURACIÓN DE EMAIL ---
     let emailConfig = null;
     if (campusId) {
+      // CORRECTO: .single() se usa después de .select()
       const { data, error } = await supabase
         .from('email_configurations')
-        .select('*')
+        .select('*') 
         .eq('campus_id', campusId)
         .eq('is_active', true)
         .single();
-      if (error && error.code !== 'PGRST116') throw error; // Ignora el error "no rows found"
+      if (error && error.code !== 'PGRST116') throw error;
       emailConfig = data;
     }
 
     if (!emailConfig) {
+      // CORRECTO: .single() se usa después de .select()
       const { data, error } = await supabase
         .from('email_configurations')
         .select('*')
@@ -82,6 +76,7 @@ serve(async (req: Request) => {
     }
 
     // --- OBTENER PLANTILLA DE EMAIL ---
+    // CORRECTO: .single() se usa después de .select()
     const { data: template, error: templateError } = await supabase
       .from('email_templates')
       .select('*')
@@ -92,7 +87,10 @@ serve(async (req: Request) => {
       .limit(1)
       .single();
 
-    if (templateError) throw templateError;
+    // Se maneja el error de "no rows" para dar un mensaje más claro.
+    if (templateError && templateError.code !== 'PGRST116') {
+        throw templateError;
+    }
     if (!template) {
       throw new Error(`No se encontró una plantilla activa para el tipo: ${templateType}`);
     }
@@ -112,7 +110,6 @@ serve(async (req: Request) => {
       headers: {
         'Authorization': `Bearer ${emailConfig.resend_api_key}`,
         'Content-Type': 'application/json',
-        ...corsHeaders
       },
       body: JSON.stringify({
         from: `${emailConfig.from_name} <${emailConfig.from_email}>`,
@@ -134,7 +131,7 @@ serve(async (req: Request) => {
       recipient_email: email,
       recipient_name: variables.recipient_name || '',
       subject: subject,
-      content: 'Contenido del email enviado.', // Evita guardar todo el HTML si es muy largo
+      content: 'Contenido del email enviado.',
       status: 'sent',
       sent_at: new Date().toISOString(),
       related_entity_type: relatedEntityType,
@@ -145,10 +142,7 @@ serve(async (req: Request) => {
     const { error: insertError } = await supabase.from('email_notifications').insert(notifications);
     if (insertError) {
         console.error("Error al guardar notificación en DB:", insertError);
-        // No lanzamos un error aquí para no fallar si el email ya se envió.
     }
-
-    console.log('Notificación por email enviada exitosamente.');
 
     return new Response(JSON.stringify({ success: true, message: 'Notificación enviada correctamente', resendId: emailResult.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -159,7 +153,7 @@ serve(async (req: Request) => {
     console.error('Error en la función send-email-notification:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500, // Usar 500 para errores internos del servidor
+      status: 500,
     });
   }
 });
