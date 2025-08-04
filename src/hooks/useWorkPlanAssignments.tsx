@@ -2,19 +2,15 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
 
-export function useWorkPlanAssignments() {
-  const fetchWorkPlanAssignments = async (customPlanId: string): Promise<Result<any[]>> => {
-    console.log("DEBUG: Fetching work plan assignments for customPlanId:", customPlanId);
+export function useCustomPlanAssignments() {
+  const fetchCustomPlanAssignments = async (customPlanId: string): Promise<Result<any[]>> => {
+    console.log("DEBUG: Fetching custom plan assignments for customPlanId:", customPlanId);
     
     try {
-      // Se ha simplificado la consulta para evitar errores de relación.
-      // Ahora se trae cada tabla relacionada al mismo nivel.
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .select(`
-          id,
-          assigned_hours,
-          created_at,
+          *,
           product:products (id, name),
           action:actions (id, name),
           strategic_axis:strategic_axes (id, name)
@@ -32,7 +28,7 @@ export function useWorkPlanAssignments() {
 
       return { data, error };
     } catch (e) {
-      console.error("DEBUG: Unexpected error during fetchWorkPlanAssignments:", e);
+      console.error("DEBUG: Unexpected error during fetchCustomPlanAssignments:", e);
       return { data: null, error: { message: "Unexpected error" } };
     }
   };
@@ -99,7 +95,7 @@ export function useWorkPlanAssignments() {
   };
 
   return {
-    fetchWorkPlanAssignments,
+    fetchCustomPlanAssignments,
     fetchProductProgressReports,
     upsertProductProgressReport,
     deleteProductProgressReport,
