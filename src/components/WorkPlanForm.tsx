@@ -1,42 +1,240 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, XCircle } from "lucide-react";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { useToast } from "@/hooks/use-toast";
+// Se simulan los componentes de shadcn/ui y los hooks para hacer el código autocontenido
+// En una aplicación real, importarías estos desde tus propias rutas.
 
-interface WorkPlanFormProps {
-  manager: any;
-  onClose: () => void;
-  onSave: () => void;
+const Button = ({ children, onClick, className, variant, disabled, ...props }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`px-4 py-2 rounded-md transition-colors duration-200 ${
+      variant === "outline" ? "border border-gray-300 bg-white hover:bg-gray-100" :
+      variant === "secondary" ? "bg-gray-200 hover:bg-gray-300" :
+      variant === "destructive" ? "bg-red-500 text-white hover:bg-red-600" :
+      "bg-blue-600 text-white hover:bg-blue-700"
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+    {...props}
+  >
+    {children}
+  </button>
+);
+
+const Input = ({ value, onChange, className, type = "text", ...props }) => (
+  <input
+    type={type}
+    value={value}
+    onChange={onChange}
+    className={`w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+    {...props}
+  />
+);
+
+const Textarea = ({ value, onChange, className, ...props }) => (
+  <textarea
+    value={value}
+    onChange={onChange}
+    className={`w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+    {...props}
+  />
+);
+
+const Card = ({ children, className }) => <div className={`bg-white shadow-lg rounded-xl overflow-hidden ${className}`}>{children}</div>;
+const CardHeader = ({ children, className }) => <div className={`p-6 border-b border-gray-200 ${className}`}>{children}</div>;
+const CardContent = ({ children, className }) => <div className={`p-6 ${className}`}>{children}</div>;
+const CardTitle = ({ children, className }) => <h2 className={`text-2xl font-bold ${className}`}>{children}</h2>;
+
+const Table = ({ children, className }) => <div className="overflow-x-auto"><table className={`min-w-full divide-y divide-gray-200 ${className}`}>{children}</table></div>;
+const TableHeader = ({ children, className }) => <thead className={`bg-gray-50 ${className}`}>{children}</thead>;
+const TableBody = ({ children, className }) => <tbody className={`divide-y divide-gray-200 ${className}`}>{children}</tbody>;
+const TableHead = ({ children, className }) => <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>{children}</th>;
+const TableRow = ({ children, className }) => <tr className={`bg-white ${className}`}>{children}</tr>;
+const TableCell = ({ children, className, ...props }) => <td className={`px-6 py-4 whitespace-nowrap ${className}`} {...props}>{children}</td>;
+
+const Alert = ({ children, className }) => <div className={`p-4 rounded-md border ${className}`}>{children}</div>;
+const AlertDescription = ({ children, className }) => <p className={`text-sm ${className}`}>{children}</p>;
+
+const Badge = ({ children, className, variant }) => (
+  <span
+    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      variant === "secondary" ? "bg-gray-100 text-gray-800" :
+      variant === "outline" ? "border border-gray-300 text-gray-600" :
+      variant === "destructive" ? "bg-red-100 text-red-800" :
+      "bg-blue-100 text-blue-800"
+    } ${className}`}
+  >
+    {children}
+  </span>
+);
+
+const CheckCircle = (props) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
+const Clock = (props) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+const XCircle = (props) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="15" y1="9" x2="9" y2="15" />
+    <line x1="9" y1="9" x2="15" y2="15" />
+  </svg>
+);
+
+const useToast = () => {
+  return {
+    toast: ({ title, description, variant }) => {
+      console.log(`[Toast - ${variant}] ${title}: ${description}`);
+      // Aquí se mostraría una notificación real en la interfaz.
+    },
+  };
+};
+
+const mockData = {
+  strategicAxes: [
+    { id: "eje-1", code: "EJE 1", name: "Eje Estratégico 1" },
+    { id: "eje-2", code: "EJE 2", name: "Eje Estratégico 2" },
+  ],
+  actions: [
+    { id: "accion-a", strategic_axis_id: "eje-1", code: "ACC 1.1", name: "Acción A" },
+    { id: "accion-b", strategic_axis_id: "eje-1", code: "ACC 1.2", name: "Acción B" },
+    { id: "accion-c", strategic_axis_id: "eje-2", code: "ACC 2.1", name: "Acción C" },
+  ],
+  products: [
+    { id: "prod-1", action_id: "accion-a", name: "Producto 1.1.1" },
+    { id: "prod-2", action_id: "accion-a", name: "Producto 1.1.2" },
+    { id: "prod-3", action_id: "accion-b", name: "Producto 1.2.1" },
+    { id: "prod-4", action_id: "accion-c", name: "Producto 2.1.1" },
+  ],
+  workPlans: [
+    { id: "plan-1", manager_id: "manager-1", plan_type_id: "plan-type-A", title: "Objetivos Iniciales del Manager 1", status: "draft" },
+    { id: "plan-2", manager_id: "manager-2", plan_type_id: "plan-type-B", title: "Plan aprobado para el Manager 2", status: "approved" },
+    { id: "plan-3", manager_id: "manager-3", plan_type_id: "plan-type-C", title: "Plan rechazado por falta de detalle", status: "rejected", approval_comments: "Se requiere mayor especificidad en los objetivos." },
+  ],
+  assignments: [
+    { work_plan_id: "plan-1", product_id: "prod-1", assigned_hours: 10 },
+    { work_plan_id: "plan-1", product_id: "prod-2", assigned_hours: 5 },
+  ],
+};
+
+const useSupabaseData = () => {
+  const [db, setDb] = useState(mockData);
+
+  const mockApiCall = (data, error = null) =>
+    new Promise((resolve) => setTimeout(() => resolve({ data, error }), 500));
+
+  return {
+    fetchStrategicAxes: () => mockApiCall(db.strategicAxes),
+    fetchActions: () => mockApiCall(db.actions),
+    fetchProducts: () => mockApiCall(db.products),
+    fetchWorkPlans: () => mockApiCall(db.workPlans),
+    fetchWorkPlanAssignments: (planId) =>
+      mockApiCall(db.assignments.filter((a) => a.work_plan_id === planId)),
+    createCustomPlan: (newPlan) => {
+      const createdPlan = { ...newPlan, id: `plan-${Date.now()}` };
+      setDb((prev) => ({ ...prev, workPlans: [...prev.workPlans, createdPlan] }));
+      return mockApiCall(createdPlan);
+    },
+    updateCustomPlan: (planId, updateData) => {
+      setDb((prev) => ({
+        ...prev,
+        workPlans: prev.workPlans.map((plan) =>
+          plan.id === planId ? { ...plan, ...updateData } : plan
+        ),
+      }));
+      return mockApiCall(null);
+    },
+    upsertWorkPlanAssignment: (assignmentData) => {
+      setDb((prev) => {
+        const existingIndex = prev.assignments.findIndex(
+          (a) => a.work_plan_id === assignmentData.work_plan_id && a.product_id === assignmentData.product_id
+        );
+        let newAssignments;
+        if (existingIndex > -1) {
+          newAssignments = prev.assignments.map((a, index) =>
+            index === existingIndex ? assignmentData : a
+          );
+        } else {
+          newAssignments = [...prev.assignments, assignmentData];
+        }
+        return { ...prev, assignments: newAssignments };
+      });
+      return mockApiCall(null);
+    },
+    submitCustomPlan: (planId) => {
+      setDb((prev) => ({
+        ...prev,
+        workPlans: prev.workPlans.map((plan) =>
+          plan.id === planId ? { ...plan, status: "submitted" } : plan
+        ),
+      }));
+      return mockApiCall(null);
+    },
+  };
+};
+
+// Componente principal de la aplicación
+export default function App() {
+  const manager = {
+    id: "manager-1",
+    full_name: "John Doe",
+    total_hours: 160,
+    weekly_hours: 10,
+    number_of_weeks: 16,
+    academic_programs: [{ name: "Ingeniería de Sistemas" }],
+  };
+
+  const [showForm, setShowForm] = useState(true);
+
+  if (!showForm) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+        <h1 className="text-3xl font-bold mb-4">Plan de Trabajo</h1>
+        <p className="text-gray-600 mb-6">El formulario ha sido guardado y cerrado.</p>
+        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+          Abrir Formulario
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <WorkPlanForm
+        manager={manager}
+        onClose={() => setShowForm(false)}
+        onSave={() => console.log("Guardado!")}
+      />
+    </div>
+  );
 }
 
-export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
-  const { 
-    fetchStrategicAxes, 
-    fetchActions, 
-    fetchProducts, 
-    fetchWorkPlans, // Para buscar custom plans
+// El componente principal con los cambios corregidos
+function WorkPlanForm({ manager, onClose, onSave }) {
+  const {
+    fetchStrategicAxes,
+    fetchActions,
+    fetchProducts,
+    fetchWorkPlans,
     fetchWorkPlanAssignments,
     createCustomPlan,
     updateCustomPlan,
     upsertWorkPlanAssignment,
-    submitCustomPlan
+    submitCustomPlan,
   } = useSupabaseData();
   const { toast } = useToast();
 
-  const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
-  const [actions, setActions] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [workPlan, setWorkPlan] = useState<any>(null);
-  const [objectives, setObjectives] = useState<string>('');
+  const [strategicAxes, setStrategicAxes] = useState([]);
+  const [actions, setActions] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [workPlan, setWorkPlan] = useState(null);
+  const [objectives, setObjectives] = useState('');
   const [loading, setLoading] = useState(true);
-  const [inputValues, setInputValues] = useState<{[key: string]: number}>({});
+  const [inputValues, setInputValues] = useState({});
 
   useEffect(() => {
     loadData();
@@ -45,79 +243,55 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log('Loading data for manager:', manager);
-      
       const [
         { data: axesData },
         { data: actionsData },
-        { data: productsData }
+        { data: productsData },
       ] = await Promise.all([
         fetchStrategicAxes(),
         fetchActions(),
-        fetchProducts()
+        fetchProducts(),
       ]);
 
-      console.log('Strategic axes:', axesData);
-      console.log('Actions:', actionsData);
-      console.log('Products:', productsData);
-
-      const validAxes = (axesData || []).filter(axis => axis.id && typeof axis.id === 'string' && axis.id.trim().length > 0);
+      const validAxes = (axesData || []).filter(axis => axis?.id && typeof axis.id === 'string');
       setStrategicAxes(validAxes);
-
-      const validActions = (actionsData || []).filter(action => action.id && typeof action.id === 'string' && action.id.trim().length > 0);
+      const validActions = (actionsData || []).filter(action => action?.id && typeof action.id === 'string');
       setActions(validActions);
-
-      const validProducts = (productsData || []).filter(product => product.id && typeof product.id === 'string' && product.id.trim().length > 0);
+      const validProducts = (productsData || []).filter(product => product?.id && typeof product.id === 'string');
       setProducts(validProducts);
 
-      // Buscar plan existente específicamente para este manager
-      console.log('Searching for existing plan for manager_id:', manager.id);
       const { data: workPlansData } = await fetchWorkPlans();
-      console.log('All work plans:', workPlansData);
-      
       const existingPlan = workPlansData?.find(
-        (plan: any) => {
-          console.log('Comparing plan manager_id:', plan.manager_id, 'with manager.id:', manager.id);
-          return plan.manager_id === manager.id;
-        }
+        (plan) => plan.manager_id === manager.id
       );
-
-      console.log('Existing plan found:', existingPlan);
 
       if (existingPlan) {
         setWorkPlan(existingPlan);
-        const planObjectives = existingPlan.title || existingPlan.objectives || '';
-        setObjectives(planObjectives);
-        
-        // Cargar asignaciones de horas
-        console.log('Loading assignments for plan:', existingPlan.id);
+        // Usar 'title' en lugar de 'objectives' para corregir el error
+        setObjectives(existingPlan.title || '');
+
         const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
-        console.log('Assignments data:', assignmentsData);
-        
-        const initialValues: {[key: string]: number} = {};
-        assignmentsData?.forEach((assignment: any) => {
+        const initialValues = {};
+        assignmentsData?.forEach((assignment) => {
           initialValues[assignment.product_id] = assignment.assigned_hours;
         });
         setInputValues(initialValues);
-        console.log('Initial input values:', initialValues);
-      } else {
-        console.log('No existing plan found, will create new one when saving');
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      toast({ 
-        title: "Error", 
-        description: `No se pudieron cargar los datos: ${error.message}`, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: `No se pudieron cargar los datos.`,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleHoursChange = (productId: string, value: string) => {
+  const handleHoursChange = (productId, value) => {
     const numericValue = parseInt(value) || 0;
-    setInputValues(prev => ({ ...prev, [productId]: numericValue }));
+    setInputValues((prev) => ({ ...prev, [productId]: numericValue }));
   };
 
   const handleSave = async () => {
@@ -125,78 +299,52 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
 
     try {
       setLoading(true);
-      console.log('Saving plan. Current workPlan:', currentWorkPlan);
-      
+
       if (!currentWorkPlan) {
-        console.log('Creating new plan for manager:', manager.id);
-        
-        // Validar que tenemos un plan_type_id válido
         const planTypeId = manager.plan_type_id || 'default_plan_type_id';
-        console.log('Using plan_type_id:', planTypeId);
-        
         const newPlan = {
           manager_id: manager.id,
           plan_type_id: planTypeId,
+          // Usar 'title' para guardar el objetivo
           title: objectives || `Plan de ${manager.full_name}`,
-          objectives: objectives,
-          status: 'draft'
+          status: 'draft',
         };
-        
-        console.log('Creating plan with data:', newPlan);
+
         const { data: createdPlan, error } = await createCustomPlan(newPlan);
-        
-        if (error) {
-          console.error('Error creating plan:', error);
-          throw new Error(`Error creating plan: ${error.message}`);
-        }
-        
-        console.log('Plan created successfully:', createdPlan);
+        if (error) throw new Error(`Error creando plan: ${error.message}`);
+
         currentWorkPlan = createdPlan;
         setWorkPlan(createdPlan);
       } else {
-        console.log('Updating existing plan:', currentWorkPlan.id);
-        const updateData = { 
+        const updateData = {
+          // Usar 'title' para actualizar el objetivo
           title: objectives || currentWorkPlan.title,
-          objectives: objectives 
         };
-        console.log('Update data:', updateData);
-        
         const { error } = await updateCustomPlan(currentWorkPlan.id, updateData);
-        if (error) {
-          console.error('Error updating plan:', error);
-          throw new Error(`Error updating plan: ${error.message}`);
-        }
+        if (error) throw new Error(`Error actualizando plan: ${error.message}`);
       }
 
-      // Guardar asignaciones de horas
-      console.log('Saving hour assignments:', inputValues);
       const assignmentPromises = Object.entries(inputValues).map(async ([productId, hours]) => {
         if (hours > 0) {
-          console.log(`Assigning ${hours} hours to product ${productId}`);
           const assignmentData = {
             work_plan_id: currentWorkPlan.id,
             product_id: productId,
-            assigned_hours: hours
+            assigned_hours: hours,
           };
-          
           const { error } = await upsertWorkPlanAssignment(assignmentData);
-          if (error) {
-            console.error('Error upserting assignment:', error);
-            throw new Error(`Error saving assignment: ${error.message}`);
-          }
+          if (error) throw new Error(`Error guardando asignación: ${error.message}`);
         }
       });
 
       await Promise.all(assignmentPromises);
-      console.log('All assignments saved successfully');
-
       toast({ title: "Éxito", description: "Plan guardado correctamente" });
+      onSave();
     } catch (error) {
       console.error('Error saving data:', error);
-      toast({ 
-        title: "Error", 
-        description: `No se pudo guardar el plan: ${error.message}`, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: `No se pudo guardar el plan: ${error.message}`,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -204,96 +352,69 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   };
 
   const submitForApproval = async () => {
-    console.log('Submitting plan for approval:', workPlan);
-    
     if (!workPlan) {
-      toast({ title: "Error", description: "Debe guardar el plan antes de enviarlo para aprobación", variant: "destructive" });
+      toast({ title: "Error", description: "Debe guardar el plan antes de enviarlo.", variant: "destructive" });
       return;
     }
     if (!objectives.trim()) {
-      toast({ title: "Error", description: "Debe agregar objetivos antes de enviar", variant: "destructive" });
+      toast({ title: "Error", description: "Debe agregar objetivos antes de enviar.", variant: "destructive" });
       return;
     }
     if (getAvailableHours() < 0) {
-      toast({ title: "Error", description: "Las horas asignadas superan las disponibles", variant: "destructive" });
+      toast({ title: "Error", description: "Las horas asignadas superan las disponibles.", variant: "destructive" });
       return;
     }
     if (getTotalAssignedHours() === 0) {
-      toast({ title: "Error", description: "Debe asignar al menos una hora a algún producto", variant: "destructive" });
+      toast({ title: "Error", description: "Debe asignar al menos una hora a algún producto.", variant: "destructive" });
       return;
     }
 
-    // Guardar antes de enviar
     await handleSave();
 
     try {
       setLoading(true);
-      console.log('Submitting plan:', workPlan.id);
       const { error } = await submitCustomPlan(workPlan.id);
-      
-      if (error) {
-        console.error('Error submitting plan:', error);
-        throw new Error(`Error submitting plan: ${error.message}`);
-      }
-      
-      console.log('Plan submitted successfully');
-      toast({ title: "Éxito", description: "Plan enviado para aprobación" });
-      
-      // Recargar datos para actualizar el estado
+      if (error) throw new Error(`Error enviando plan: ${error.message}`);
+
+      toast({ title: "Éxito", description: "Plan enviado para aprobación." });
       await loadData();
       onSave();
     } catch (error) {
       console.error('Error submitting plan:', error);
-      toast({ 
-        title: "Error", 
-        description: `No se pudo enviar el plan para aprobación: ${error.message}`, 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: `No se pudo enviar el plan para aprobación: ${error.message}`,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const getAssignedHours = (productId: string) => {
-    return inputValues[productId] || 0;
-  };
-
-  const getTotalAssignedHours = () => {
-    return Object.values(inputValues).reduce((sum, hours) => sum + hours, 0);
-  };
-
-  const getAvailableHours = () => {
-    const totalHours = manager.total_hours || 0;
-    return totalHours - getTotalAssignedHours();
-  };
-
-  const getStatusBadge = (status: string) => {
+  const getAssignedHours = (productId) => inputValues[productId] || 0;
+  const getTotalAssignedHours = () => Object.values(inputValues).reduce((sum, hours) => sum + hours, 0);
+  const getAvailableHours = () => (manager.total_hours || 0) - getTotalAssignedHours();
+  const getStatusBadge = (status) => {
     switch (status) {
-      case 'draft':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Borrador</Badge>;
-      case 'submitted':
-        return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
-      case 'approved':
-        return <Badge className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Aprobado</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rechazado</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+      case 'draft': return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Borrador</Badge>;
+      case 'submitted': return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />Pendiente</Badge>;
+      case 'approved': return <Badge className="bg-green-600 text-white"><CheckCircle className="h-3 w-3 mr-1" />Aprobado</Badge>;
+      case 'rejected': return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rechazado</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8">Cargando...</div>;
+    return <div className="flex justify-center p-8 text-gray-700">Cargando...</div>;
   }
 
-  // Validar que tenemos datos antes de renderizar
   if (strategicAxes.length === 0) {
     return (
       <Card className="w-full max-w-7xl">
         <CardContent className="p-8 text-center">
           <Alert>
             <AlertDescription>
-              No se encontraron ejes estratégicos. Contacte al administrador.
+              No se encontraron ejes estratégicos.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -314,7 +435,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const isReadOnly = workPlan?.status === 'submitted' || workPlan?.status === 'approved';
 
   return (
-    <Card className="w-full max-w-7xl">
+    <Card className="w-full max-w-7xl border-gray-200 shadow-md">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl font-bold">
@@ -335,8 +456,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         </div>
 
         {workPlan?.status === 'rejected' && workPlan?.approval_comments && (
-          <Alert className="border-red-200 bg-red-50">
-            <XCircle className="h-4 w-4 text-red-600" />
+          <Alert className="border-red-200 bg-red-50 flex items-center">
+            <XCircle className="h-4 w-4 text-red-600 mr-2" />
             <AlertDescription className="text-red-800">
               <strong>Plan rechazado:</strong> {workPlan.approval_comments}
             </AlertDescription>
@@ -344,18 +465,18 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         )}
 
         {workPlan?.status === 'approved' && workPlan?.approval_comments && (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
+          <Alert className="border-green-200 bg-green-50 flex items-center">
+            <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
             <AlertDescription className="text-green-800">
               <strong>Plan aprobado:</strong> {workPlan.approval_comments}
             </AlertDescription>
           </Alert>
         )}
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium mb-2 text-gray-700">
             Objetivos del Plan de Trabajo:
           </label>
           <Textarea
@@ -367,9 +488,9 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
           />
         </div>
 
-        <Table className="border">
+        <Table className="border rounded-lg overflow-hidden">
           <TableHeader>
-            <TableRow className="bg-blue-600">
+            <TableRow className="bg-blue-600 hover:bg-blue-600">
               <TableHead className="text-white font-bold border border-gray-300 text-center w-20">
                 EJE ESTRATÉGICO
               </TableHead>
@@ -385,28 +506,28 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {organizedData.map(axis => 
-              axis.actions.map((action: any, actionIndex: number) => 
-                action.products.map((product: any, productIndex: number) => {
+            {organizedData.map(axis =>
+              axis.actions.map((action, actionIndex) =>
+                action.products.map((product, productIndex) => {
                   const isFirstActionRow = productIndex === 0;
                   const isFirstAxisRow = actionIndex === 0 && productIndex === 0;
-                  const axisRowspan = axis.actions.reduce((sum: number, a: any) => sum + a.products.length, 0);
+                  const axisRowspan = axis.actions.reduce((sum, a) => sum + a.products.length, 0);
                   const actionRowspan = action.products.length;
 
                   return (
-                    <TableRow key={product.id} className="border">
+                    <TableRow key={product.id} className="border-b border-gray-200">
                       {isFirstAxisRow && (
-                        <TableCell 
+                        <TableCell
                           rowSpan={axisRowspan}
                           className="border border-gray-300 text-center font-medium bg-blue-50 align-middle"
                         >
-                          <div className="writing-vertical text-sm font-bold">
+                          <div className="text-sm font-bold [writing-mode:vertical-rl] transform rotate-180 text-gray-800">
                             {axis.code} - {axis.name}
                           </div>
                         </TableCell>
                       )}
                       {isFirstActionRow && (
-                        <TableCell 
+                        <TableCell
                           rowSpan={actionRowspan}
                           className="border border-gray-300 text-sm p-2 align-middle"
                         >
@@ -425,7 +546,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
                           value={getAssignedHours(product.id)}
                           onChange={(e) => handleHoursChange(product.id, e.target.value)}
                           onBlur={handleSave}
-                          className="w-16 h-8 text-center"
+                          className="w-20 h-10 text-center"
                           disabled={isReadOnly}
                         />
                       </TableCell>
@@ -437,45 +558,45 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
           </TableBody>
         </Table>
 
-        <div className="flex justify-between items-center mt-6 p-4 bg-gray-50 rounded">
-          <div className="space-x-4">
-            <span className="text-sm">
+        <div className="flex flex-col md:flex-row justify-between items-center mt-6 p-4 bg-gray-100 rounded-lg shadow-inner">
+          <div className="space-y-2 md:space-y-0 md:space-x-4 mb-4 md:mb-0">
+            <span className="text-sm text-gray-700">
               <strong>Total Horas:</strong> {getTotalAssignedHours()} / {manager.total_hours || 0}
             </span>
             <span className={`text-sm font-bold ${getAvailableHours() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               Balance: {getAvailableHours()}
             </span>
           </div>
-          
-          <div className="space-x-2">
-            <Button variant="outline" onClick={onClose}>
+
+          <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
+            <Button variant="outline" onClick={onClose} className="w-full md:w-auto">
               Cerrar
             </Button>
-            
+
             {!isReadOnly && (
-              <Button 
+              <Button
                 onClick={handleSave}
                 variant="outline"
-                className="bg-gray-100 hover:bg-gray-200"
+                className="bg-gray-200 hover:bg-gray-300 w-full md:w-auto"
               >
                 Guardar Borrador
               </Button>
             )}
-            
+
             {(workPlan?.status === 'draft' || !workPlan) && (
-              <Button 
+              <Button
                 onClick={submitForApproval}
                 disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
               >
                 Enviar para Aprobación
               </Button>
             )}
             {workPlan?.status === 'rejected' && (
-              <Button 
+              <Button
                 onClick={submitForApproval}
                 disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
               >
                 Reenviar para Aprobación
               </Button>
