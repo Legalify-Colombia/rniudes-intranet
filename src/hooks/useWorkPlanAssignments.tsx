@@ -3,17 +3,22 @@ import type { Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
 
 export function useWorkPlanAssignments() {
-  const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
+  const fetchWorkPlanAssignments = async (customPlanId: string): Promise<Result<any[]>> => {
+    // La consulta ha sido corregida para traer las relaciones anidadas
     const { data, error } = await supabase
-      .from("work_plan_assignments")
+      .from("custom_plan_assignments")
       .select(`
         *,
-        strategic_axis:strategic_axes(*),
-        action:actions(*),
-        product:products(*)
+        product:products (
+          *,
+          action:actions (
+            *,
+            strategic_axis:strategic_axes (*)
+          )
+        )
       `)
-      .eq("work_plan_id", workPlanId)
-      .order("created_at");
+      .eq("custom_plan_id", customPlanId)
+      .order("created_at", { ascending: true });
     return { data, error };
   };
 
@@ -23,10 +28,10 @@ export function useWorkPlanAssignments() {
       .select(`
         *,
         product:products(*),
-        work_plan_assignment:work_plan_assignments(*)
+        work_plan_assignment:custom_plan_assignments(*)
       `)
       .eq("manager_report_id", reportId)
-      .order("created_at");
+      .order("created_at", { ascending: false });
     return { data, error };
   };
 
