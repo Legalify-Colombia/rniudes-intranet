@@ -7,25 +7,15 @@ export function useWorkPlanAssignments() {
     console.log("DEBUG: Fetching work plan assignments for customPlanId:", customPlanId);
     
     try {
+      // La consulta ha sido modificada para coincidir con tus claves foráneas
+      // en la tabla 'custom_plan_assignments'
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .select(`
           *,
-          product:products (
-            id,
-            name,
-            code,
-            action:actions (
-              id,
-              name,
-              code,
-              strategic_axis:strategic_axes (
-                id,
-                name,
-                code
-              )
-            )
-          )
+          product:products (id, name, code),
+          action:actions (id, name, code),
+          strategic_axis:strategic_axes (id, name, code)
         `)
         .eq("custom_plan_id", customPlanId)
         .order("created_at", { ascending: true });
