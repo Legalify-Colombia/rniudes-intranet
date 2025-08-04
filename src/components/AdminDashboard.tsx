@@ -15,8 +15,11 @@ import {
   Activity,
   Package,
   TrendingUp,
-  School
+  School,
+  Settings,
+  Mail
 } from "lucide-react";
+import { EmailConfigurationForm } from "@/components/EmailConfigurationForm";
 
 export function AdminDashboard() {
   const { profile } = useAuth();
@@ -40,6 +43,7 @@ export function AdminDashboard() {
   const [campusList, setCampusList] = useState<any[]>([]);
   const [selectedCampus, setSelectedCampus] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState("dashboard");
 
   useEffect(() => {
     loadAdminData();
@@ -139,29 +143,61 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header con filtro */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Administrativo</h1>
-        <p className="text-gray-600 mb-4">Panel de control para administradores</p>
-        
-        <div className="flex justify-center">
-          <div className="w-64">
-            <Select value={selectedCampus} onValueChange={setSelectedCampus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por campus" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los Campus</SelectItem>
-                {campusList.map((campus) => (
-                  <SelectItem key={campus.id} value={campus.id}>
-                    {campus.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Navigation */}
+      <div className="flex justify-center mb-8">
+        <div className="flex gap-2 p-2 bg-gray-100 rounded-lg">
+          <button
+            onClick={() => setActiveSection("dashboard")}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeSection === "dashboard" 
+                ? "bg-white shadow-sm text-blue-600" 
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Target className="h-4 w-4 inline mr-2" />
+            Dashboard
+          </button>
+          <button
+            onClick={() => setActiveSection("email")}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeSection === "email" 
+                ? "bg-white shadow-sm text-blue-600" 
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Mail className="h-4 w-4 inline mr-2" />
+            Configuración Email
+          </button>
         </div>
       </div>
+
+      {activeSection === "email" ? (
+        <EmailConfigurationForm />
+      ) : (
+        <>
+          {/* Header con filtro */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Administrativo</h1>
+            <p className="text-gray-600 mb-4">Panel de control para administradores</p>
+            
+            <div className="flex justify-center">
+              <div className="w-64">
+                <Select value={selectedCampus} onValueChange={setSelectedCampus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por campus" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los Campus</SelectItem>
+                    {campusList.map((campus) => (
+                      <SelectItem key={campus.id} value={campus.id}>
+                        {campus.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
 
       {/* Indicadores Administrativos */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -289,17 +325,19 @@ export function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Notificaciones */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-center text-xl font-semibold text-gray-800">
-            Notificaciones de Actividad
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <NotificationFeed />
-        </CardContent>
-      </Card>
+          {/* Notificaciones */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center text-xl font-semibold text-gray-800">
+                Notificaciones de Actividad
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NotificationFeed />
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

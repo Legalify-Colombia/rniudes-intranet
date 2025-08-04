@@ -161,7 +161,6 @@ export function useCustomPlans() {
     }
   };
 
-  // CORRECCIÓN: Se agrega la lógica para manejar JSONB correctamente
   const upsertCustomPlanResponse = async (response: Database["public"]["Tables"]["custom_plan_responses"]["Insert"]): Promise<Result<any>> => {
     try {
       if (!response.custom_plan_id || !response.plan_field_id) {
@@ -171,20 +170,44 @@ export function useCustomPlans() {
         };
       }
       
-      // Adaptar el valor si es un objeto JSON
-      const responseValue = typeof response.response_value === 'object' && response.response_value !== null
-        ? JSON.stringify(response.response_value)
-        : response.response_value;
+      // Handle JSONB properly - database now expects proper JSON
+      let processedValue = response.response_value;
+      
+      // Convert to proper JSONB format if needed
+      if (typeof processedValue === 'string' && processedValue !== '') {
+        try {
+          // Try to parse as JSON first
+          JSON.parse(processedValue);
+          // If successful, keep as is (it's already valid JSON string)
+        } catch {
+          // If not valid JSON, wrap in quotes to make it a JSON string
+          processedValue = JSON.stringify(processedValue);
+        }
+      } else if (typeof processedValue === 'object' && processedValue !== null) {
+        // Convert object to JSON string
+        processedValue = JSON.stringify(processedValue);
+      } else if (processedValue === null || processedValue === undefined) {
+        processedValue = null;
+      }
       
       const { data, error } = await supabase
         .from("custom_plan_responses")
-        .upsert({ ...response, response_value: responseValue }, {
+        .upsert({ 
+          ...response, 
+          response_value: processedValue 
+        }, {
           onConflict: "custom_plan_id,plan_field_id"
         })
         .select()
         .single();
       
-      return { data, error };
+      if (error) {
+        console.error('Supabase error in upsertCustomPlanResponse:', error);
+        return { data: null, error };
+      }
+      
+      console.log('Response upserted successfully:', data);
+      return { data, error: null };
     } catch (error) {
       console.error("Error upserting custom plan response:", error);
       return { 
