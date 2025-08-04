@@ -4,22 +4,45 @@ import type { Database } from "@/integrations/supabase/types";
 
 export function useWorkPlanAssignments() {
   const fetchWorkPlanAssignments = async (customPlanId: string): Promise<Result<any[]>> => {
-    // La consulta ha sido corregida para traer las relaciones anidadas
-    const { data, error } = await supabase
-      .from("custom_plan_assignments")
-      .select(`
-        *,
-        product:products (
+    console.log("DEBUG: Fetching work plan assignments for customPlanId:", customPlanId);
+    
+    try {
+      const { data, error } = await supabase
+        .from("custom_plan_assignments")
+        .select(`
           *,
-          action:actions (
-            *,
-            strategic_axis:strategic_axes (*)
+          product:products (
+            id,
+            name,
+            code,
+            action:actions (
+              id,
+              name,
+              code,
+              strategic_axis:strategic_axes (
+                id,
+                name,
+                code
+              )
+            )
           )
-        )
-      `)
-      .eq("custom_plan_id", customPlanId)
-      .order("created_at", { ascending: true });
-    return { data, error };
+        `)
+        .eq("custom_plan_id", customPlanId)
+        .order("created_at", { ascending: true });
+      
+      console.log("DEBUG: Supabase query result:", { data, error });
+
+      if (error) {
+        console.error("DEBUG: Supabase query error:", error);
+      } else if (!data || data.length === 0) {
+        console.warn("DEBUG: No assignments found for this customPlanId.");
+      }
+
+      return { data, error };
+    } catch (e) {
+      console.error("DEBUG: Unexpected error during fetchWorkPlanAssignments:", e);
+      return { data: null, error: { message: "Unexpected error" } };
+    }
   };
 
   const fetchProductProgressReports = async (reportId: string): Promise<Result<any[]>> => {
@@ -65,20 +88,18 @@ export function useWorkPlanAssignments() {
     return { data, error };
   };
 
-  // CORRECCIÓN: La función para guardar asignaciones ahora apunta a la tabla correcta
   const upsertCustomPlanAssignment = async (assignment: any): Promise<Result<any>> => {
     const { data, error } = await supabase
-      .from("custom_plan_assignments") // Tabla corregida
+      .from("custom_plan_assignments")
       .upsert(assignment)
       .select()
       .single();
     return { data, error };
   };
 
-  // NUEVA FUNCIÓN: Elimina una asignación de plan
   const deleteCustomPlanAssignment = async (planId: string, productId: string): Promise<Result<any>> => {
     const { data, error } = await supabase
-      .from("custom_plan_assignments") // Tabla corregida
+      .from("custom_plan_assignments")
       .delete()
       .eq("custom_plan_id", planId)
       .eq("product_id", productId);
@@ -91,7 +112,7 @@ export function useWorkPlanAssignments() {
     upsertProductProgressReport,
     deleteProductProgressReport,
     fetchManagerReportsByManager,
-    upsertCustomPlanAssignment, // Exponemos la función corregida
-    deleteCustomPlanAssignment, // Exponemos la nueva función
+    upsertCustomPlanAssignment,
+    deleteCustomPlanAssignment,
   };
 }
