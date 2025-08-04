@@ -12,7 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { FileText, Upload, Trash2, Save, AlertCircle } from "lucide-react";
 
 interface DetailedReportFormProps {
+  // El ID del reporte, obtenido de la tabla 'manager_reports'
   reportId: string;
+  // El ID del plan de trabajo, obtenido de 'manager_reports.work_plan_id'
   workPlanId: string;
   onSave: () => void;
 }
@@ -40,7 +42,9 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
       setLoading(true);
       setErrorState(null);
       try {
-        // Validación crucial: Asegúrate de que workPlanId no sea nulo o indefinido
+        // Validación crucial: Asegúrate de que workPlanId no sea nulo o indefinido.
+        // Este valor debe ser pasado desde el componente padre, después de
+        // haber consultado la tabla 'manager_reports'
         if (!workPlanId) {
           setErrorState("El ID del plan de trabajo no es válido. No se puede cargar el informe.");
           console.error("workPlanId is undefined, cannot load data.");
@@ -50,6 +54,7 @@ export function DetailedReportForm({ reportId, workPlanId, onSave }: DetailedRep
 
         console.log('Loading data for workPlanId:', workPlanId, 'reportId:', reportId);
         
+        // La consulta de las asignaciones se hace usando el 'workPlanId'
         const [assignmentsResult, progressResult] = await Promise.all([
           fetchWorkPlanAssignments(workPlanId),
           fetchProductProgressReports(reportId)
