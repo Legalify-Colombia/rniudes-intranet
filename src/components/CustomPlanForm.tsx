@@ -163,8 +163,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
     }
   };
 
-  // --- INICIO DE CAMBIOS ---
-  // Se modifica handleSave para que devuelva el plan creado o actualizado.
   const handleSave = async () => {
     try {
       setIsLoading(true);
@@ -179,12 +177,16 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
           status: 'draft'
         };
         
+        // --- LÍNEA DE DEPURACIÓN AÑADIDA AQUÍ ---
+        console.log("Creando nuevo plan con los datos:", planData); 
+        // ------------------------------------------
+
         const result = await createCustomPlan(planData);
         if (result.error) {
           throw new Error(result.error.message);
         }
         currentPlan = result.data;
-        setPlan(currentPlan); // Actualizar estado para la UI
+        setPlan(currentPlan);
       }
       
       if (currentPlan) {
@@ -208,32 +210,27 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       
       if (onSave) onSave();
       
-      // Devolver el plan para que otras funciones puedan usarlo.
       return currentPlan;
 
     } catch (error) {
       console.error("Error saving plan:", error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el plan",
+        description: `No se pudo guardar el plan: ${error.message}`,
         variant: "destructive",
       });
-      // Devolver null en caso de error.
       return null;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Se modifica handleSubmit para que espere el resultado de handleSave.
   const handleSubmit = async () => {
     try {
       setIsLoading(true);
       
-      // 1. Guardar el plan y esperar el resultado.
       const savedPlan = await handleSave();
       
-      // 2. Comprobar si el guardado fue exitoso y si tenemos un ID.
       if (!savedPlan?.id) {
         toast({
           title: "Error",
@@ -244,7 +241,6 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
         return;
       }
       
-      // 3. Usar el ID del plan devuelto para enviarlo.
       const result = await submitCustomPlan(savedPlan.id);
       
       if (result.error) {
@@ -262,14 +258,13 @@ export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }:
       console.error("Error submitting plan:", error);
       toast({
         title: "Error",
-        description: "No se pudo enviar el plan",
+        description: `No se pudo enviar el plan: ${error.message}`,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  // --- FIN DE CAMBIOS ---
 
   const renderField = (field: any) => {
     const value = responses[field.id] || '';
