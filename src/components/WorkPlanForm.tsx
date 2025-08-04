@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
-// Se simulan los componentes de shadcn/ui y los hooks para hacer el código autocontenido
-// En una aplicación real, importarías estos desde tus propias rutas.
 
+// --- SIMULACIÓN DE COMPONENTES Y HOOKS PARA DEMOSTRACIÓN ---
+// En tu aplicación real, reemplazarías esto con tus importaciones de Shadcn UI y tus propios hooks.
 const Button = ({ children, onClick, className, variant, disabled, ...props }) => (
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-      variant === "outline" ? "border border-gray-300 bg-white hover:bg-gray-100" :
-      variant === "secondary" ? "bg-gray-200 hover:bg-gray-300" :
+    className={`px-4 py-2 rounded-lg transition-colors duration-200 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 active:ring-4
+      ${variant === "outline" ? "border border-gray-300 bg-white text-gray-800 hover:bg-gray-100" :
+      variant === "secondary" ? "bg-gray-200 text-gray-800 hover:bg-gray-300" :
       variant === "destructive" ? "bg-red-500 text-white hover:bg-red-600" :
-      "bg-blue-600 text-white hover:bg-blue-700"
-    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+      "bg-blue-600 text-white hover:bg-blue-700"}
+      ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
     {...props}
   >
     {children}
@@ -23,7 +23,7 @@ const Input = ({ value, onChange, className, type = "text", ...props }) => (
     type={type}
     value={value}
     onChange={onChange}
-    className={`w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+    className={`w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${className}`}
     {...props}
   />
 );
@@ -32,34 +32,34 @@ const Textarea = ({ value, onChange, className, ...props }) => (
   <textarea
     value={value}
     onChange={onChange}
-    className={`w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+    className={`w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${className}`}
     {...props}
   />
 );
 
-const Card = ({ children, className }) => <div className={`bg-white shadow-lg rounded-xl overflow-hidden ${className}`}>{children}</div>;
+const Card = ({ children, className }) => <div className={`bg-white shadow-xl rounded-xl overflow-hidden ${className}`}>{children}</div>;
 const CardHeader = ({ children, className }) => <div className={`p-6 border-b border-gray-200 ${className}`}>{children}</div>;
 const CardContent = ({ children, className }) => <div className={`p-6 ${className}`}>{children}</div>;
 const CardTitle = ({ children, className }) => <h2 className={`text-2xl font-bold ${className}`}>{children}</h2>;
 
-const Table = ({ children, className }) => <div className="overflow-x-auto"><table className={`min-w-full divide-y divide-gray-200 ${className}`}>{children}</table></div>;
+const Table = ({ children, className }) => <div className="overflow-x-auto rounded-lg"><table className={`min-w-full divide-y divide-gray-200 ${className}`}>{children}</table></div>;
 const TableHeader = ({ children, className }) => <thead className={`bg-gray-50 ${className}`}>{children}</thead>;
 const TableBody = ({ children, className }) => <tbody className={`divide-y divide-gray-200 ${className}`}>{children}</tbody>;
 const TableHead = ({ children, className }) => <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>{children}</th>;
 const TableRow = ({ children, className }) => <tr className={`bg-white ${className}`}>{children}</tr>;
 const TableCell = ({ children, className, ...props }) => <td className={`px-6 py-4 whitespace-nowrap ${className}`} {...props}>{children}</td>;
 
-const Alert = ({ children, className }) => <div className={`p-4 rounded-md border ${className}`}>{children}</div>;
-const AlertDescription = ({ children, className }) => <p className={`text-sm ${className}`}>{children}</p>;
+const Alert = ({ children, className }) => <div className={`p-4 rounded-lg border flex items-start ${className}`}>{children}</div>;
+const AlertDescription = ({ children, className }) => <p className={`text-sm ml-2 ${className}`}>{children}</p>;
 
 const Badge = ({ children, className, variant }) => (
   <span
-    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-      variant === "secondary" ? "bg-gray-100 text-gray-800" :
+    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium shadow-sm
+      ${variant === "secondary" ? "bg-gray-100 text-gray-800" :
       variant === "outline" ? "border border-gray-300 text-gray-600" :
-      variant === "destructive" ? "bg-red-100 text-red-800" :
-      "bg-blue-100 text-blue-800"
-    } ${className}`}
+      variant === "destructive" ? "bg-red-500 text-white" :
+      "bg-blue-600 text-white"}
+      ${className}`}
   >
     {children}
   </span>
@@ -89,7 +89,6 @@ const useToast = () => {
   return {
     toast: ({ title, description, variant }) => {
       console.log(`[Toast - ${variant}] ${title}: ${description}`);
-      // Aquí se mostraría una notificación real en la interfaz.
     },
   };
 };
@@ -111,29 +110,30 @@ const mockData = {
     { id: "prod-4", action_id: "accion-c", name: "Producto 2.1.1" },
   ],
   workPlans: [
-    { id: "plan-1", manager_id: "manager-1", plan_type_id: "plan-type-A", title: "Objetivos Iniciales del Manager 1", status: "draft" },
-    { id: "plan-2", manager_id: "manager-2", plan_type_id: "plan-type-B", title: "Plan aprobado para el Manager 2", status: "approved" },
+    { id: "plan-1", manager_id: "manager-1", plan_type_id: "plan-type-A", title: "Objetivos Iniciales del Manager 1", status: "draft", approval_comments: null },
+    { id: "plan-2", manager_id: "manager-2", plan_type_id: "plan-type-B", title: "Plan aprobado para el Manager 2", status: "approved", approval_comments: "Excelente plan. Aprobado por el coordinador." },
     { id: "plan-3", manager_id: "manager-3", plan_type_id: "plan-type-C", title: "Plan rechazado por falta de detalle", status: "rejected", approval_comments: "Se requiere mayor especificidad en los objetivos." },
   ],
   assignments: [
     { work_plan_id: "plan-1", product_id: "prod-1", assigned_hours: 10 },
     { work_plan_id: "plan-1", product_id: "prod-2", assigned_hours: 5 },
+    { work_plan_id: "plan-2", product_id: "prod-1", assigned_hours: 20 },
+    { work_plan_id: "plan-2", product_id: "prod-2", assigned_hours: 20 },
+    { work_plan_id: "plan-2", product_id: "prod-3", assigned_hours: 40 },
+    { work_plan_id: "plan-2", product_id: "prod-4", assigned_hours: 40 },
   ],
 };
 
 const useSupabaseData = () => {
   const [db, setDb] = useState(mockData);
-
-  const mockApiCall = (data, error = null) =>
-    new Promise((resolve) => setTimeout(() => resolve({ data, error }), 500));
+  const mockApiCall = (data, error = null) => new Promise((resolve) => setTimeout(() => resolve({ data, error }), 500));
 
   return {
     fetchStrategicAxes: () => mockApiCall(db.strategicAxes),
     fetchActions: () => mockApiCall(db.actions),
     fetchProducts: () => mockApiCall(db.products),
     fetchWorkPlans: () => mockApiCall(db.workPlans),
-    fetchWorkPlanAssignments: (planId) =>
-      mockApiCall(db.assignments.filter((a) => a.work_plan_id === planId)),
+    fetchWorkPlanAssignments: (planId) => mockApiCall(db.assignments.filter((a) => a.work_plan_id === planId)),
     createCustomPlan: (newPlan) => {
       const createdPlan = { ...newPlan, id: `plan-${Date.now()}` };
       setDb((prev) => ({ ...prev, workPlans: [...prev.workPlans, createdPlan] }));
@@ -177,17 +177,15 @@ const useSupabaseData = () => {
   };
 };
 
-// Componente principal de la aplicación
+// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
 export default function App() {
-  const manager = {
-    id: "manager-1",
-    full_name: "John Doe",
-    total_hours: 160,
-    weekly_hours: 10,
-    number_of_weeks: 16,
-    academic_programs: [{ name: "Ingeniería de Sistemas" }],
-  };
+  const managers = [
+    { id: "manager-1", full_name: "John Doe (Borrador)", total_hours: 160, weekly_hours: 10, number_of_weeks: 16, academic_programs: [{ name: "Ingeniería de Sistemas" }] },
+    { id: "manager-2", full_name: "Jane Smith (Aprobado)", total_hours: 120, weekly_hours: 8, number_of_weeks: 15, academic_programs: [{ name: "Administración de Empresas" }] },
+    { id: "manager-3", full_name: "Peter Jones (Rechazado)", total_hours: 180, weekly_hours: 11.25, number_of_weeks: 16, academic_programs: [{ name: "Ciencias de la Computación" }] },
+  ];
 
+  const [selectedManager, setSelectedManager] = useState(managers[0]);
   const [showForm, setShowForm] = useState(true);
 
   if (!showForm) {
@@ -195,17 +193,28 @@ export default function App() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
         <h1 className="text-3xl font-bold mb-4">Plan de Trabajo</h1>
         <p className="text-gray-600 mb-6">El formulario ha sido guardado y cerrado.</p>
-        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-          Abrir Formulario
-        </Button>
+        <div className="flex space-x-4">
+          <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+            Abrir Formulario
+          </Button>
+          <select
+            className="p-2 border rounded-lg"
+            onChange={(e) => setSelectedManager(managers.find(m => m.id === e.target.value))}
+            value={selectedManager.id}
+          >
+            {managers.map(manager => (
+              <option key={manager.id} value={manager.id}>{manager.full_name}</option>
+            ))}
+          </select>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
       <WorkPlanForm
-        manager={manager}
+        manager={selectedManager}
         onClose={() => setShowForm(false)}
         onSave={() => console.log("Guardado!")}
       />
@@ -213,7 +222,7 @@ export default function App() {
   );
 }
 
-// El componente principal con los cambios corregidos
+// --- COMPONENTE PRINCIPAL CON LOS CAMBIOS CORREGIDOS ---
 function WorkPlanForm({ manager, onClose, onSave }) {
   const {
     fetchStrategicAxes,
@@ -253,21 +262,19 @@ function WorkPlanForm({ manager, onClose, onSave }) {
         fetchProducts(),
       ]);
 
-      const validAxes = (axesData || []).filter(axis => axis?.id && typeof axis.id === 'string');
+      const validAxes = (axesData || []).filter(axis => axis?.id);
       setStrategicAxes(validAxes);
-      const validActions = (actionsData || []).filter(action => action?.id && typeof action.id === 'string');
+      const validActions = (actionsData || []).filter(action => action?.id);
       setActions(validActions);
-      const validProducts = (productsData || []).filter(product => product?.id && typeof product.id === 'string');
+      const validProducts = (productsData || []).filter(product => product?.id);
       setProducts(validProducts);
 
       const { data: workPlansData } = await fetchWorkPlans();
-      const existingPlan = workPlansData?.find(
-        (plan) => plan.manager_id === manager.id
-      );
+      const existingPlan = workPlansData?.find((plan) => plan.manager_id === manager.id);
 
       if (existingPlan) {
         setWorkPlan(existingPlan);
-        // Usar 'title' en lugar de 'objectives' para corregir el error
+        // Usar 'title' en lugar de 'objectives' para corregir el error de tipo.
         setObjectives(existingPlan.title || '');
 
         const { data: assignmentsData } = await fetchWorkPlanAssignments(existingPlan.id);
@@ -276,6 +283,10 @@ function WorkPlanForm({ manager, onClose, onSave }) {
           initialValues[assignment.product_id] = assignment.assigned_hours;
         });
         setInputValues(initialValues);
+      } else {
+        setWorkPlan(null);
+        setObjectives('');
+        setInputValues({});
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -312,7 +323,6 @@ function WorkPlanForm({ manager, onClose, onSave }) {
 
         const { data: createdPlan, error } = await createCustomPlan(newPlan);
         if (error) throw new Error(`Error creando plan: ${error.message}`);
-
         currentWorkPlan = createdPlan;
         setWorkPlan(createdPlan);
       } else {
@@ -443,7 +453,7 @@ function WorkPlanForm({ manager, onClose, onSave }) {
           </CardTitle>
           {workPlan?.status && getStatusBadge(workPlan.status)}
         </div>
-        <div className="text-sm text-gray-600 space-y-1">
+        <div className="text-sm text-gray-600 space-y-1 mt-2">
           <p>Programa: {manager.academic_programs?.[0]?.name}</p>
           <p>Horas Totales Disponibles: <span className="font-bold text-blue-600">{manager.total_hours || 0}</span></p>
           <p>Horas Asignadas: <span className="font-bold text-green-600">{getTotalAssignedHours()}</span></p>
@@ -456,8 +466,8 @@ function WorkPlanForm({ manager, onClose, onSave }) {
         </div>
 
         {workPlan?.status === 'rejected' && workPlan?.approval_comments && (
-          <Alert className="border-red-200 bg-red-50 flex items-center">
-            <XCircle className="h-4 w-4 text-red-600 mr-2" />
+          <Alert className="border-red-200 bg-red-50 mt-4">
+            <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
             <AlertDescription className="text-red-800">
               <strong>Plan rechazado:</strong> {workPlan.approval_comments}
             </AlertDescription>
@@ -465,8 +475,8 @@ function WorkPlanForm({ manager, onClose, onSave }) {
         )}
 
         {workPlan?.status === 'approved' && workPlan?.approval_comments && (
-          <Alert className="border-green-200 bg-green-50 flex items-center">
-            <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+          <Alert className="border-green-200 bg-green-50 mt-4">
+            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
             <AlertDescription className="text-green-800">
               <strong>Plan aprobado:</strong> {workPlan.approval_comments}
             </AlertDescription>
@@ -491,16 +501,16 @@ function WorkPlanForm({ manager, onClose, onSave }) {
         <Table className="border rounded-lg overflow-hidden">
           <TableHeader>
             <TableRow className="bg-blue-600 hover:bg-blue-600">
-              <TableHead className="text-white font-bold border border-gray-300 text-center w-20">
+              <TableHead className="text-white font-bold border border-gray-300 text-center w-20 min-w-[5rem] max-w-[5rem]">
                 EJE ESTRATÉGICO
               </TableHead>
-              <TableHead className="text-white font-bold border border-gray-300 text-center">
+              <TableHead className="text-white font-bold border border-gray-300 text-center min-w-[10rem]">
                 ACCIÓN
               </TableHead>
-              <TableHead className="text-white font-bold border border-gray-300 text-center">
+              <TableHead className="text-white font-bold border border-gray-300 text-center min-w-[10rem]">
                 PRODUCTO
               </TableHead>
-              <TableHead className="text-white font-bold border border-gray-300 text-center w-24">
+              <TableHead className="text-white font-bold border border-gray-300 text-center w-24 min-w-[6rem] max-w-[6rem]">
                 HORAS
               </TableHead>
             </TableRow>
@@ -521,7 +531,7 @@ function WorkPlanForm({ manager, onClose, onSave }) {
                           rowSpan={axisRowspan}
                           className="border border-gray-300 text-center font-medium bg-blue-50 align-middle"
                         >
-                          <div className="text-sm font-bold [writing-mode:vertical-rl] transform rotate-180 text-gray-800">
+                          <div className="text-sm font-bold [writing-mode:vertical-rl] transform rotate-180 text-gray-800 p-2">
                             {axis.code} - {axis.name}
                           </div>
                         </TableCell>
@@ -583,22 +593,13 @@ function WorkPlanForm({ manager, onClose, onSave }) {
               </Button>
             )}
 
-            {(workPlan?.status === 'draft' || !workPlan) && (
+            {(workPlan?.status === 'draft' || !workPlan || workPlan?.status === 'rejected') && (
               <Button
                 onClick={submitForApproval}
                 disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
                 className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
               >
-                Enviar para Aprobación
-              </Button>
-            )}
-            {workPlan?.status === 'rejected' && (
-              <Button
-                onClick={submitForApproval}
-                disabled={getAvailableHours() < 0 || getTotalAssignedHours() === 0 || !objectives.trim()}
-                className="bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
-              >
-                Reenviar para Aprobación
+                {workPlan?.status === 'rejected' ? 'Reenviar para Aprobación' : 'Enviar para Aprobación'}
               </Button>
             )}
           </div>
