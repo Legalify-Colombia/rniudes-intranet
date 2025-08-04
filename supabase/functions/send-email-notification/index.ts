@@ -81,21 +81,16 @@ serve(async (req: Request) => {
       throw new Error('No se encontró una configuración de email válida o activa.');
     }
 
-    // --- OBTENER PLANTILLA DE EMAIL ---
-    const { data: template, error: templateError } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('template_type', templateType)
-      .eq('is_active', true)
-      .or(`campus_id.eq.${campusId},campus_id.is.null`)
-      .order('campus_id', { ascending: false, nullsFirst: false })
-      .limit(1)
-      .single();
+  // --- OBTENER PLANTILLA DE EMAIL ---
+const { data: template, error: templateError } = await supabase
+  .from('email_templates')
+  // ... (condiciones de la búsqueda)
+  .single();
 
-    if (templateError) throw templateError;
-    if (!template) {
-      throw new Error(`No se encontró una plantilla activa para el tipo: ${templateType}`);
-    }
+if (templateError) throw templateError; // <-- ¡AQUÍ ESTÁ EL FALLO!
+if (!template) {
+  throw new Error(`No se encontró una plantilla activa para el tipo: ${templateType}`);
+}
 
     // --- REEMPLAZAR VARIABLES EN LA PLANTILLA ---
     let subject = template.subject;
