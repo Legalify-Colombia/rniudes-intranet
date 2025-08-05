@@ -96,11 +96,13 @@ export function useCustomPlanAssignments() {
 
   return {
     fetchCustomPlanAssignments,
+    fetchWorkPlanAssignments: fetchCustomPlanAssignments, // Alias for backward compatibility
     fetchProductProgressReports,
     upsertProductProgressReport,
     deleteProductProgressReport,
     fetchManagerReportsByManager,
     upsertCustomPlanAssignment,
+    upsertWorkPlanAssignment: upsertCustomPlanAssignment, // Alias for backward compatibility
     deleteCustomPlanAssignment,
   };
 }

@@ -7,7 +7,7 @@ import { useFaculties } from "./useFaculties";
 import { useManagers } from "./useManagers";
 import { useReports } from "./useReports";
 import { useWorkPlans } from "./useWorkPlans";
-import { useCustomPlanAssignments } from "./useCustomPlanAssignments"; // <- Renombrado
+import { useCustomPlanAssignments } from "./useWorkPlanAssignments";
 import { useAcademicPrograms } from "./useAcademicPrograms";
 import { usePlanTypes } from "./usePlanTypes";
 import { useCustomPlans } from "./useCustomPlans";
