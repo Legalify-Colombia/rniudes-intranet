@@ -45,7 +45,6 @@ export function EditableReportForm({ 
   const [overallProgress, setOverallProgress] = useState(0);
 
   useEffect(() => {
-    // 💡 CORRECCIÓN: Si workPlanId no existe, desactivamos la carga inmediatamente.
     if (workPlanId) {
       loadData();
     } else {
@@ -62,7 +61,7 @@ export function EditableReportForm({ 
     try {
       console.log('Cargando datos para reportId:', reportId, 'workPlanId (custom_plan_id):', workPlanId);
       const [assignmentsResult, progressResult] = await Promise.all([
-        fetchWorkPlanAssignments(workPlanId), // workPlanId es en realidad custom_plan_id
+        fetchWorkPlanAssignments(workPlanId),
         fetchProductProgressReports(reportId)
       ]);
 
@@ -84,7 +83,6 @@ export function EditableReportForm({ 
   const calculateOverallProgress = () => {
     const allReports = [...progressReports];
     
-    // Aplicar cambios locales
     Object.keys(localChanges).forEach(productId => {
       const existingIndex = allReports.findIndex(r => r.product_id === productId);
       if (existingIndex >= 0) {
