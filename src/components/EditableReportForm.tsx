@@ -339,6 +339,18 @@ export function EditableReportForm({ 
   if (loading) {
     return <div className="flex justify-center p-8">Cargando formulario de informe...</div>;
   }
+  
+  // 💡 CORRECCIÓN: Si no hay un workPlanId, mostramos un mensaje en lugar de un estado de carga.
+  if (!workPlanId) {
+    return (
+      <Alert className="mt-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          No se ha especificado un plan de trabajo. Selecciona uno para ver el informe.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   const organizedData = organizeAssignments();
   const canEdit = !isReadOnly && reportStatus === 'draft';
@@ -570,8 +582,8 @@ export function EditableReportForm({ 
                           })}
                         </TableBody>
                       </Table>
-                    </div>
                   </div>
+                </div>
                 ))}
               </CardContent>
             </Card>
