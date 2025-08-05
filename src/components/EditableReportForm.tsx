@@ -44,18 +44,6 @@ export function EditableReportForm({
   const [submitting, setSubmitting] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
 
-  useEffect(() => {
-    if (workPlanId) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, [reportId, workPlanId, loadData]);
-
-  useEffect(() => {
-    calculateOverallProgress();
-  }, [progressReports, localChanges]);
-
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -80,7 +68,7 @@ export function EditableReportForm({
     }
   }, [reportId, workPlanId, fetchWorkPlanAssignments, fetchProductProgressReports, toast]);
 
-  const calculateOverallProgress = () => {
+  const calculateOverallProgress = useCallback(() => {
     const allReports = [...progressReports];
     
     Object.keys(localChanges).forEach(productId => {
@@ -103,7 +91,19 @@ export function EditableReportForm({
     );
     const average = totalProgress / allReports.length;
     setOverallProgress(Math.round(average));
-  };
+  }, [progressReports, localChanges]);
+
+  useEffect(() => {
+    if (workPlanId) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [reportId, workPlanId, loadData]);
+
+  useEffect(() => {
+    calculateOverallProgress();
+  }, [progressReports, localChanges, calculateOverallProgress]);
 
   const getProgressReport = (productId: string, assignmentId: string) => {
     const localChange = localChanges[productId];
