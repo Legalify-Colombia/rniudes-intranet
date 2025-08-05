@@ -277,8 +277,10 @@ export function useCustomPlans() {
 
   const fetchCustomPlanAssignments = async (planId: string): Promise<Result<any[]>> => {
     try {
+      // 💡 CAMBIO APLICADO AQUÍ
       if (!planId) {
-        return { data: [], error: new Error("Plan ID is required") };
+        console.warn("DEBUG: planId es nulo o indefinido. No se realizará la consulta.");
+        return { data: [], error: null };
       }
       
       const { data, error } = await supabase
