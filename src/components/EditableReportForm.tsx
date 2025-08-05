@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -50,13 +50,13 @@ export function EditableReportForm({
     } else {
       setLoading(false);
     }
-  }, [reportId, workPlanId]);
+  }, [reportId, workPlanId, loadData]);
 
   useEffect(() => {
     calculateOverallProgress();
   }, [progressReports, localChanges]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       console.log('Cargando datos para reportId:', reportId, 'workPlanId (custom_plan_id):', workPlanId);
@@ -78,7 +78,7 @@ export function EditableReportForm({
     } finally {
       setLoading(false);
     }
-  };
+  }, [reportId, workPlanId, fetchWorkPlanAssignments, fetchProductProgressReports, toast]);
 
   const calculateOverallProgress = () => {
     const allReports = [...progressReports];
