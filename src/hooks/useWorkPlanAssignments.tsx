@@ -11,9 +11,16 @@ export function useCustomPlanAssignments() {
         .from("custom_plan_assignments")
         .select(`
           *,
-          product:products (id, name),
-          action:actions (id, name),
-          strategic_axis:strategic_axes (id, name)
+          product:products (
+            id, 
+            name,
+            action:actions (
+              id, 
+              name, 
+              code,
+              strategic_axis:strategic_axes (id, name, code)
+            )
+          )
         `)
         .eq("custom_plan_id", customPlanId)
         .order("created_at", { ascending: true });
@@ -38,8 +45,7 @@ export function useCustomPlanAssignments() {
       .from("product_progress_reports")
       .select(`
         *,
-        product:products(*),
-        work_plan_assignment:custom_plan_assignments(*)
+        product:products(*)
       `)
       .eq("manager_report_id", reportId)
       .order("created_at", { ascending: false });

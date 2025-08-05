@@ -90,7 +90,7 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
       const reportData = {
         manager_report_id: reportId,
         product_id: productId,
-        work_plan_assignment_id: assignmentId,
+        custom_plan_assignment_id: assignmentId,
         ...updates
       };
 
@@ -195,15 +195,15 @@ export function DetailedReportForm({ reportId, customPlanId, onSave }: DetailedR
         return;
       }
       
-      const action = assignment.action;
+      const action = product.action;
       if (!action) {
-        console.log('No action found in assignment:', assignment);
+        console.log('No action found in product:', product);
         return;
       }
       
-      const axis = assignment.strategic_axis;
+      const axis = action.strategic_axis;
       if (!axis) {
-        console.log('No strategic_axis found in assignment:', assignment);
+        console.log('No strategic_axis found in action:', action);
         return;
       }
       
