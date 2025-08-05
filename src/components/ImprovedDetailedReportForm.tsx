@@ -50,11 +50,13 @@ export function ImprovedDetailedReportForm({
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('Cargando datos para reportId:', reportId, 'workPlanId (custom_plan_id):', workPlanId);
       const [assignmentsResult, progressResult] = await Promise.all([
-        fetchWorkPlanAssignments(workPlanId),
+        fetchWorkPlanAssignments(workPlanId), // workPlanId es en realidad custom_plan_id
         fetchProductProgressReports(reportId)
       ]);
 
+      console.log('Datos de asignaciones cargados:', assignmentsResult);
       setAssignments(assignmentsResult.data || []);
       setProgressReports(progressResult.data || []);
     } catch (error) {
@@ -98,7 +100,7 @@ export function ImprovedDetailedReportForm({
       const reportData = {
         manager_report_id: reportId,
         product_id: productId,
-        work_plan_assignment_id: assignmentId,
+        custom_plan_assignment_id: assignmentId,
         ...updates
       };
 

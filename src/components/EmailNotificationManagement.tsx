@@ -79,6 +79,30 @@ const tableHeaders = [
   "Acciones",
 ];
 
+const templateTypes = [
+  { value: "plan_submitted", label: "Plan Enviado" },
+  { value: "plan_approved", label: "Plan Aprobado" },
+  { value: "plan_rejected", label: "Plan Rechazado" },
+  { value: "report_submitted", label: "Informe Enviado" },
+  { value: "snies_report_submitted", label: "Informe SNIES Enviado" },
+  { value: "user_creation", label: "Creación de Usuario" },
+  { value: "password_reset", label: "Restablecimiento de Contraseña" },
+  { value: "welcome_message", label: "Mensaje de Bienvenida" },
+  { value: "custom", label: "Personalizada" }
+];
+
+const defaultVariables = {
+  plan_submitted: ["manager_name", "plan_title", "plan_type_name", "campus_name", "submitted_date"],
+  plan_approved: ["manager_name", "plan_title", "approved_by", "campus_name", "approval_date"],
+  plan_rejected: ["manager_name", "plan_title", "rejected_by", "campus_name", "rejection_reason"],
+  report_submitted: ["manager_name", "report_title", "template_name", "report_period", "campus_name"],
+  snies_report_submitted: ["manager_name", "report_title", "campus_name", "submitted_date"],
+  user_creation: ["user_name", "user_email", "temporary_password", "campus_name", "role", "login_url"],
+  password_reset: ["user_name", "temporary_password", "login_url", "campus_name"],
+  welcome_message: ["user_name", "user_email", "role", "campus_name", "contact_email"],
+  custom: []
+};
+
 export function EmailNotificationManagement() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -214,11 +238,11 @@ export function EmailNotificationManagement() {
       name: "",
       subject: "",
       html_content: "",
-      template_type: "plan_approval",
+      template_type: "plan_submitted",
       description: "",
       is_active: true,
       campus_id: "",
-      variables: [],
+      variables: defaultVariables.plan_submitted,
     });
     setIsDialogOpen(true);
   };
@@ -432,26 +456,24 @@ export function EmailNotificationManagement() {
                 <Label htmlFor="template_type">Tipo de Plantilla</Label>
                 <Select
                   value={currentTemplate.template_type}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
+                    const variables = defaultVariables[value as keyof typeof defaultVariables] || [];
                     setCurrentTemplate({
                       ...currentTemplate,
                       template_type: value,
-                    })
-                  }
+                      variables: variables
+                    });
+                  }}
                 >
                   <SelectTrigger id="template_type">
                     <SelectValue placeholder="Selecciona un tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="plan_approval">
-                      Aprobación de Plan
-                    </SelectItem>
-                    <SelectItem value="plan_rejection">
-                      Rechazo de Plan
-                    </SelectItem>
-                    <SelectItem value="plan_submission">
-                      Envío de Plan
-                    </SelectItem>
+                    {templateTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -483,6 +505,9 @@ export function EmailNotificationManagement() {
 
             <div className="space-y-2">
               <Label htmlFor="html_content">Contenido HTML del Correo</Label>
+              <div className="text-sm text-gray-600 mb-2">
+                Variables disponibles: {currentTemplate.variables?.map(v => `{{${v}}}`).join(", ") || "Ninguna"}
+              </div>
               <Textarea
                 id="html_content"
                 value={currentTemplate.html_content}
@@ -492,23 +517,38 @@ export function EmailNotificationManagement() {
                     html_content: e.target.value,
                   })
                 }
-                className="min-h-[200px]"
+                className="min-h-[300px] font-mono text-sm"
+                placeholder={`Ejemplo de contenido HTML:
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{subject}}</title>
+</head>
+<body>
+    <h1>¡Hola {{user_name}}!</h1>
+    <p>Este es un mensaje desde {{campus_name}}.</p>
+    <p>Saludos cordiales,<br/>El equipo administrativo</p>
+</body>
+</html>`}
               />
             </div>
             
             <div className="space-y-2">
-                <Label htmlFor="variables">Variables de la Plantilla (separadas por coma)</Label>
-                <Input
-                    id="variables"
-                    value={currentTemplate.variables?.join(", ") || ""}
-                    onChange={(e) => 
-                        setCurrentTemplate({
-                            ...currentTemplate,
-                            variables: e.target.value.split(",").map(v => v.trim()),
-                        })
-                    }
-                    placeholder="Ej: {{manager_name}}, {{plan_title}}"
-                />
+              <Label htmlFor="variables">Variables Personalizadas (separadas por coma)</Label>
+              <Input
+                id="variables"
+                value={currentTemplate.variables?.join(", ") || ""}
+                onChange={(e) => 
+                  setCurrentTemplate({
+                    ...currentTemplate,
+                    variables: e.target.value.split(",").map(v => v.trim()).filter(v => v),
+                  })
+                }
+                placeholder="Ej: custom_field, special_note, deadline_date"
+              />
+              <div className="text-xs text-gray-500">
+                Agregue variables adicionales si necesita campos personalizados más allá de las variables por defecto del tipo seleccionado.
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
