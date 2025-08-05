@@ -45,9 +45,11 @@ export function EditableReportForm({ 
   const [overallProgress, setOverallProgress] = useState(0);
 
   useEffect(() => {
-    // Corregido: Solo se llama a loadData si workPlanId existe.
+    // 💡 CORRECCIÓN: Si workPlanId no existe, desactivamos la carga inmediatamente.
     if (workPlanId) {
       loadData();
+    } else {
+      setLoading(false);
     }
   }, [reportId, workPlanId]);
 
@@ -544,7 +546,6 @@ export function EditableReportForm({ 
                                       }}
                                       placeholder="Observaciones sobre el progreso..."
                                       className="min-h-[60px] resize-none"
-                                    />
                                   ) : (
                                     <div className="text-sm text-gray-600 max-w-xs">
                                       {progressReport.observations || 'Sin observaciones'}
