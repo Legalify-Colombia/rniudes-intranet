@@ -276,14 +276,26 @@ export function EditableReportForm({
   const organizeAssignments = () => {
     const organized: any = {};
     
+    console.log('Organizando asignaciones:', assignments);
+    
     assignments.forEach(assignment => {
       const product = assignment.product;
-      if (!product) return;
+      if (!product) {
+        console.warn('Asignación sin producto:', assignment);
+        return;
+      }
       
       const action = product.action;
-      const axis = action?.strategic_axis;
+      if (!action) {
+        console.warn('Producto sin acción:', product);
+        return;
+      }
       
-      if (!axis) return;
+      const axis = action.strategic_axis;
+      if (!axis) {
+        console.warn('Acción sin eje estratégico:', action);
+        return;
+      }
       
       if (!organized[axis.id]) {
         organized[axis.id] = {
@@ -305,6 +317,7 @@ export function EditableReportForm({
       });
     });
     
+    console.log('Datos organizados:', organized);
     return Object.values(organized);
   };
 

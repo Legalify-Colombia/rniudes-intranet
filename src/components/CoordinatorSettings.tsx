@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings, ArrowUp, ArrowDown, Mail, CheckSquare } from "lucide-react";
 import { PlanElementOrderManagement } from "./PlanElementOrderManagement";
-import { EmailNotificationManagement } from "./EmailNotificationManagement";
-import { EmailConfigurationForm } from "./EmailConfigurationForm";
+import { EmailManagementSettings } from "./EmailManagementSettings";
 import { WorkPlanApproval } from "./WorkPlanApproval";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -41,21 +40,12 @@ export function CoordinatorSettings() {
             </Button>
             
             <Button
-              variant={activeSection === "config" ? "default" : "outline"}
-              onClick={() => setActiveSection("config")}
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Configuración Email
-            </Button>
-            
-            <Button
-              variant={activeSection === "notifications" ? "default" : "outline"}
-              onClick={() => setActiveSection("notifications")}
+              variant={activeSection === "email" ? "default" : "outline"}
+              onClick={() => setActiveSection("email")}
               className="flex items-center gap-2"
             >
               <Mail className="h-4 w-4" />
-              Plantillas Email
+              Gestión de Email
             </Button>
             
             <Button
@@ -70,8 +60,7 @@ export function CoordinatorSettings() {
           </div>
 
           {activeSection === "approval" && <WorkPlanApproval />}
-          {activeSection === "config" && <EmailConfigurationForm />}
-          {activeSection === "notifications" && <EmailNotificationManagement />}
+          {activeSection === "email" && <EmailManagementSettings />}
           {activeSection === "order" && <PlanElementOrderManagement />}
         </CardContent>
       </Card>

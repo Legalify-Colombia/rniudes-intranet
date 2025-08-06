@@ -241,14 +241,26 @@ export function ImprovedDetailedReportForm({
   const organizeAssignments = () => {
     const organized: any = {};
     
+    console.log('ImprovedForm - Organizando asignaciones:', assignments);
+    
     assignments.forEach(assignment => {
       const product = assignment.product;
-      if (!product) return;
+      if (!product) {
+        console.warn('ImprovedForm - Asignación sin producto:', assignment);
+        return;
+      }
       
       const action = product.action;
-      const axis = action?.strategic_axis;
+      if (!action) {
+        console.warn('ImprovedForm - Producto sin acción:', product);
+        return;
+      }
       
-      if (!axis) return;
+      const axis = action.strategic_axis;
+      if (!axis) {
+        console.warn('ImprovedForm - Acción sin eje estratégico:', action);
+        return;
+      }
       
       if (!organized[axis.id]) {
         organized[axis.id] = {
@@ -270,6 +282,7 @@ export function ImprovedDetailedReportForm({
       });
     });
     
+    console.log('ImprovedForm - Datos organizados:', organized);
     return Object.values(organized);
   };
 
