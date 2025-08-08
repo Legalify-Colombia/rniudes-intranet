@@ -1,35 +1,84 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationFeed } from "@/components/NotificationFeed";
+import { EmailConfigurationForm } from "@/components/EmailConfigurationForm";
 import { supabase } from "@/integrations/supabase/client";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
   Building2,
-  GraduationCap,
+  School,
   Users,
   Target,
   Activity,
   Package,
   TrendingUp,
-  School,
   Settings,
-  Mail
+  Mail,
+  LayoutDashboard
 } from "lucide-react";
-import { EmailConfigurationForm } from "@/components/EmailConfigurationForm";
+
+// --- COMPONENTES REFACTORIZADOS ---
+
+// Componente para las tarjetas de estadísticas principales
+const StatCard = ({ icon: Icon, title, value, subtitle, colorClass }) => (
+  <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
+      <Icon className={`h-5 w-5 ${colorClass}`} />
+    </CardHeader>
+    <CardContent>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
+      <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+    </CardContent>
+  </Card>
+);
+
+// Componente para el gráfico de progreso circular
+const ProgressCircle = ({ progress }) => {
+  const data = [
+    { name: 'Completed', value: progress },
+    { name: 'Remaining', value: 100 - progress },
+  ];
+  const COLORS = ['#3b82f6', '#e5e7eb']; // blue-500, gray-200
+
+  return (
+    <div className="relative w-40 h-40 mx-auto">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={70}
+            startAngle={90}
+            endAngle={450}
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="absolute inset-0 flex items-center justify-center flex-col">
+        <span className="text-3xl font-bold text-blue-600">{`${progress}%`}</span>
+        <span className="text-sm text-gray-500">Completado</span>
+      </div>
+    </div>
+  );
+};
+
+// --- COMPONENTE PRINCIPAL DEL DASHBOARD ---
 
 export function AdminDashboard() {
   const { profile } = useAuth();
-  const { 
-    fetchCampus,
-    fetchFaculties,
-    fetchStrategicAxes,
-    fetchActions,
-    fetchProducts
-  } = useSupabaseData();
+  const { fetchCampus, fetchFaculties, fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
   
   const [adminStats, setAdminStats] = useState({
     totalCampus: 0,
@@ -40,8 +89,8 @@ export function AdminDashboard() {
     totalProducts: 0,
     overallProgress: 0
   });
-  const [campusList, setCampusList] = useState<any[]>([]);
-  const [selectedCampus, setSelectedCampus] = useState<string>("all");
+  const [campusList, setCampusList] = useState([]);
+  const [selectedCampus, setSelectedCampus] = useState("all");
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("dashboard");
 
@@ -51,10 +100,7 @@ export function AdminDashboard() {
 
   const fetchProfiles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
-      
+      const { data, error } = await supabase.from('profiles').select('*');
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
@@ -91,7 +137,6 @@ export function AdminDashboard() {
 
       setCampusList(allCampus);
 
-      // Filtrar por campus si está seleccionado
       let filteredFaculties = allFaculties;
       let filteredProfiles = allProfiles;
 
@@ -99,11 +144,8 @@ export function AdminDashboard() {
         filteredFaculties = allFaculties.filter(faculty => faculty.campus_id === selectedCampus);
         filteredProfiles = allProfiles.filter(profile => profile.campus_id === selectedCampus);
       }
-
-      // Contar solo gestores
+      
       const managers = filteredProfiles.filter(profile => profile.role === 'Gestor');
-
-      // Calcular progreso simulado
       const totalElements = allAxes.length + allActions.length + allProducts.length;
       const progressSimulated = totalElements > 0 ? Math.min(100, (totalElements * 8) + Math.random() * 30) : 0;
 
@@ -118,7 +160,7 @@ export function AdminDashboard() {
       });
     } catch (error) {
       console.error('Error loading admin data:', error);
-      // Datos de ejemplo para demostración
+      // Datos de ejemplo para demostración si falla la carga
       setAdminStats({
         totalCampus: 5,
         totalFaculties: 12,
@@ -133,57 +175,34 @@ export function AdminDashboard() {
     }
   };
 
+  const strategicData = [
+    { name: 'Ejes', total: adminStats.totalAxes, fill: '#3b82f6' },
+    { name: 'Acciones', total: adminStats.totalActions, fill: '#10b981' },
+    { name: 'Productos', total: adminStats.totalProducts, fill: '#8b5cf6' },
+  ];
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Navigation */}
-      <div className="flex justify-center mb-8">
-        <div className="flex gap-2 p-2 bg-gray-100 rounded-lg">
-          <button
-            onClick={() => setActiveSection("dashboard")}
-            className={`px-4 py-2 rounded-md transition-colors ${
-              activeSection === "dashboard" 
-                ? "bg-white shadow-sm text-blue-600" 
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <Target className="h-4 w-4 inline mr-2" />
-            Dashboard
-          </button>
-          <button
-            onClick={() => setActiveSection("email")}
-            className={`px-4 py-2 rounded-md transition-colors ${
-              activeSection === "email" 
-                ? "bg-white shadow-sm text-blue-600" 
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <Mail className="h-4 w-4 inline mr-2" />
-            Configuración Email
-          </button>
-        </div>
-      </div>
-
-      {activeSection === "email" ? (
-        <EmailConfigurationForm />
-      ) : (
-        <>
-          {/* Header con filtro */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Administrativo</h1>
-            <p className="text-gray-600 mb-4">Panel de control para administradores</p>
-            
-            <div className="flex justify-center">
-              <div className="w-64">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <header className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard Administrativo</h1>
+              <p className="text-gray-500 mt-1">Vista general del estado institucional.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-56">
                 <Select value={selectedCampus} onValueChange={setSelectedCampus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue placeholder="Filtrar por campus" />
                   </SelectTrigger>
                   <SelectContent>
@@ -198,146 +217,114 @@ export function AdminDashboard() {
               </div>
             </div>
           </div>
+        </header>
 
-      {/* Indicadores Administrativos */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Campus */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardHeader className="text-center pb-3">
-            <div className="mx-auto w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-purple-700 transition-colors duration-300">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-gray-800">Campus</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-4xl font-bold text-purple-600 mb-2 animate-pulse">
-              {adminStats.totalCampus}
-            </div>
-            <p className="text-sm text-gray-600">
-              {selectedCampus === "all" ? "Campus totales" : "Campus seleccionado"}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Facultades */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100">
-          <CardHeader className="text-center pb-3">
-            <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-indigo-700 transition-colors duration-300">
-              <School className="h-6 w-6 text-white" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-gray-800">Facultades</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-4xl font-bold text-indigo-600 mb-2 animate-pulse">
-              {adminStats.totalFaculties}
-            </div>
-            <p className="text-sm text-gray-600">
-              Facultades activas
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Gestores */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100">
-          <CardHeader className="text-center pb-3">
-            <div className="mx-auto w-12 h-12 bg-emerald-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-emerald-700 transition-colors duration-300">
-              <Users className="h-6 w-6 text-white" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-gray-800">Gestores</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-4xl font-bold text-emerald-600 mb-2 animate-pulse">
-              {adminStats.totalManagers}
-            </div>
-            <p className="text-sm text-gray-600">
-              Gestores activos
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Progreso General */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100">
-          <CardHeader className="text-center pb-3">
-            <div className="mx-auto w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center mb-3 group-hover:bg-orange-700 transition-colors duration-300">
-              <TrendingUp className="h-6 w-6 text-white" />
-            </div>
-            <CardTitle className="text-lg font-semibold text-gray-800">Progreso General</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-4xl font-bold text-orange-600 mb-2 animate-pulse">
-              {adminStats.overallProgress}%
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-              <div 
-                className="bg-orange-600 h-2 rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${adminStats.overallProgress}%` }}
-              ></div>
-            </div>
-            <p className="text-sm text-gray-600">
-              Avance institucional
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Indicadores de Ejes Estratégicos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-center text-xl font-semibold text-gray-800">
-            Elementos Estratégicos Numéricos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {/* Ejes Estratégicos */}
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center justify-center mb-2">
-                <Target className="h-8 w-8 text-blue-600 mr-2" />
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">{adminStats.totalAxes}</div>
-                  <p className="text-sm text-gray-600">Ejes Estratégicos</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Acciones */}
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center justify-center mb-2">
-                <Activity className="h-8 w-8 text-green-600 mr-2" />
-                <div>
-                  <div className="text-2xl font-bold text-green-600">{adminStats.totalActions}</div>
-                  <p className="text-sm text-gray-600">Acciones Definidas</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Productos */}
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="flex items-center justify-center mb-2">
-                <Package className="h-8 w-8 text-purple-600 mr-2" />
-                <div>
-                  <div className="text-2xl font-bold text-purple-600">{adminStats.totalProducts}</div>
-                  <p className="text-sm text-gray-600">Productos</p>
-                </div>
-              </div>
-            </div>
+        {/* Navigation */}
+        <div className="mb-8">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveSection("dashboard")}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                activeSection === "dashboard"
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveSection("email")}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                activeSection === "email"
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <Mail className="h-4 w-4" />
+              Configuración Email
+            </button>
           </div>
-        </CardContent>
-      </Card>
-
-          {/* Notificaciones */}
-          <Card>
+        </div>
+        
+        {activeSection === "email" ? (
+          <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-center text-xl font-semibold text-gray-800">
-                Notificaciones de Actividad
-              </CardTitle>
+                <CardTitle>Configuración de Correo Electrónico</CardTitle>
             </CardHeader>
             <CardContent>
-              <NotificationFeed />
+                <EmailConfigurationForm />
             </CardContent>
           </Card>
-        </>
-      )}
+        ) : (
+          <main className="space-y-8">
+            {/* Fila de Estadísticas Principales */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard icon={Building2} title="Campus" value={adminStats.totalCampus} subtitle={selectedCampus === "all" ? "Campus totales" : "Campus seleccionado"} colorClass="text-violet-500" />
+              <StatCard icon={School} title="Facultades" value={adminStats.totalFaculties} subtitle="Facultades activas" colorClass="text-sky-500" />
+              <StatCard icon={Users} title="Gestores" value={adminStats.totalManagers} subtitle="Gestores activos" colorClass="text-emerald-500" />
+              <StatCard icon={TrendingUp} title="Progreso" value={`${adminStats.overallProgress}%`} subtitle="Avance institucional" colorClass="text-amber-500" />
+            </div>
+
+            {/* Fila de Gráficos y Notificaciones */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Columna de Gráficos */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Gráfico de Elementos Estratégicos */}
+                <Card className="shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-800">Resumen de Elementos Estratégicos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={strategicData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                          <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                              backdropFilter: 'blur(5px)',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '0.5rem',
+                              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                            }}
+                            cursor={{ fill: 'rgba(229, 231, 235, 0.5)' }}
+                          />
+                          <Bar dataKey="total" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Columna de Progreso y Notificaciones */}
+              <div className="space-y-8">
+                {/* Progreso General */}
+                <Card className="shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-800 text-center">Progreso General</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ProgressCircle progress={adminStats.overallProgress} />
+                  </CardContent>
+                </Card>
+                
+                {/* Notificaciones */}
+                <Card className="shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-800">Actividad Reciente</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <NotificationFeed />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </main>
+        )}
+      </div>
     </div>
   );
 }
