@@ -142,8 +142,22 @@ export function EditableReportForm({
         }
       }
 
+      // *** CORRECCIÓN: Manejo de errores detallado ***
       if (saveErrors.length > 0) {
-        throw new Error(`No se pudo guardar el progreso para algunos productos.`);
+        const firstError = saveErrors[0];
+        // El objeto de error de Supabase tiene información valiosa.
+        const detailedMessage = `Error en Producto ID ${firstError.productId}: ${firstError.error.message}. (Detalles: ${firstError.error.details || 'No hay más detalles'})`;
+        
+        console.error("Error detallado al guardar:", firstError.error);
+
+        toast({
+          title: "Error al Guardar Progreso",
+          description: detailedMessage,
+          variant: "destructive",
+          duration: 10000 // Aumentar la duración para poder leer el error
+        });
+        // Detenemos la ejecución aquí, el toast es suficiente.
+        return; 
       }
 
       setLocalChanges({});
@@ -156,10 +170,11 @@ export function EditableReportForm({
       
       await loadData();
     } catch (error) {
-      console.error('Error saving draft:', error);
+      // Este catch ahora solo atrapará errores inesperados de JavaScript.
+      console.error('Error inesperado al guardar borrador:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo guardar el borrador",
+        title: "Error Inesperado",
+        description: error instanceof Error ? error.message : "Ocurrió un error desconocido.",
         variant: "destructive",
       });
     } finally {
@@ -173,7 +188,13 @@ export function EditableReportForm({
     setSubmitting(true);
     try {
       if (Object.keys(localChanges).length > 0) {
+        // saveDraft ahora retorna si hay un error, así que verificamos si aún hay cambios.
         await saveDraft();
+        if (Object.keys(localChanges).length > 0) {
+            // Si saveDraft falló y no limpió los cambios, no continuamos.
+            setSubmitting(false);
+            return;
+        }
       }
       
       const updateResult = await updateManagerReport(reportId, { 
