@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -42,20 +42,54 @@ export function EditableReportForm({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [overallProgress, setOverallProgress] = useState(0);
 
+  // 🔧 CORRECCIÓN 1: Mover el cálculo del progreso a useMemo para evitar recálculos innecesarios
+  const overallProgress = useMemo(() => {
+    const allReports = [...progressReports];
+    
+    Object.keys(localChanges).forEach(productId => {
+      const existingIndex = allReports.findIndex(r => r.product_id === productId);
+      if (existingIndex >= 0) {
+        allReports[existingIndex] = { ...allReports[existingIndex], ...localChanges[productId] };
+      } else if (localChanges[productId]?.progress_percentage > 0) {
+        allReports.push({ product_id: productId, ...localChanges[productId] });
+      }
+    });
+
+    if (allReports.length === 0) return 0;
+
+    const totalProgress = allReports.reduce(
+      (sum, report) => sum + (report.progress_percentage || 0), 
+      0
+    );
+    return Math.round(totalProgress / allReports.length);
+  }, [progressReports, localChanges]);
+
+  // 🔧 CORRECCIÓN 2: Simplificar y estabilizar loadData
   const loadData = useCallback(async () => {
+    if (!workPlanId || !reportId) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      console.log('Cargando datos para reportId:', reportId, 'workPlanId (custom_plan_id):', workPlanId);
+      console.log('Cargando datos para reportId:', reportId, 'workPlanId:', workPlanId);
+      
       const [assignmentsResult, progressResult] = await Promise.all([
         fetchWorkPlanAssignments(workPlanId),
         fetchProductProgressReports(reportId)
       ]);
 
       console.log('Datos cargados:', { assignmentsResult, progressResult });
-      setAssignments(assignmentsResult.data || []);
-      setProgressReports(progressResult.data || []);
+      
+      // Solo actualizar si realmente hay cambios
+      const newAssignments = assignmentsResult.data || [];
+      const newProgressReports = progressResult.data || [];
+      
+      setAssignments(newAssignments);
+      setProgressReports(newProgressReports);
+      
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -68,58 +102,29 @@ export function EditableReportForm({
     }
   }, [reportId, workPlanId, fetchWorkPlanAssignments, fetchProductProgressReports, toast]);
 
-  const calculateOverallProgress = useCallback(() => {
-    const allReports = [...progressReports];
-    
-    Object.keys(localChanges).forEach(productId => {
-      const existingIndex = allReports.findIndex(r => r.product_id === productId);
-      if (existingIndex >= 0) {
-        allReports[existingIndex] = { ...allReports[existingIndex], ...localChanges[productId] };
-      } else if (localChanges[productId].progress_percentage > 0) {
-        allReports.push({ product_id: productId, ...localChanges[productId] });
-      }
-    });
-
-    if (allReports.length === 0) {
-      setOverallProgress(0);
-      return;
-    }
-
-    const totalProgress = allReports.reduce(
-      (sum, report) => sum + (report.progress_percentage || 0), 
-      0
-    );
-    const average = totalProgress / allReports.length;
-    setOverallProgress(Math.round(average));
-  }, [progressReports, localChanges]);
-
+  // 🔧 CORRECCIÓN 3: useEffect más estable, solo depende de IDs clave
   useEffect(() => {
-    if (workPlanId) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, [reportId, workPlanId, loadData]);
+    loadData();
+  }, [reportId, workPlanId]); // Removido loadData de las dependencias para evitar loops
 
-  useEffect(() => {
-    calculateOverallProgress();
-  }, [progressReports, localChanges, calculateOverallProgress]);
-
-  const getProgressReport = (productId: string, assignmentId: string) => {
-    const localChange = localChanges[productId];
-    const dbReport = progressReports.find(pr => pr.product_id === productId);
-    
-    return {
-      progress_percentage: 0,
-      observations: '',
-      evidence_files: [],
-      evidence_file_names: [],
-      ...dbReport,
-      ...localChange
+  // 🔧 CORRECCIÓN 4: Mover getProgressReport a useMemo para estabilidad
+  const getProgressReport = useMemo(() => {
+    return (productId: string, assignmentId: string) => {
+      const localChange = localChanges[productId];
+      const dbReport = progressReports.find(pr => pr.product_id === productId);
+      
+      return {
+        progress_percentage: 0,
+        observations: '',
+        evidence_files: [],
+        evidence_file_names: [],
+        ...dbReport,
+        ...localChange
+      };
     };
-  };
+  }, [localChanges, progressReports]);
 
-  const updateLocalChanges = (productId: string, assignmentId: string, updates: any) => {
+  const updateLocalChanges = useCallback((productId: string, assignmentId: string, updates: any) => {
     if (isReadOnly) return;
     
     console.log('Actualizando cambios locales:', { productId, updates });
@@ -130,10 +135,10 @@ export function EditableReportForm({
         ...updates
       }
     }));
-  };
+  }, [isReadOnly]);
 
   const saveDraft = async () => {
-    if (isReadOnly) return;
+    if (isReadOnly || saving) return;
     
     setSaving(true);
     try {
@@ -190,6 +195,7 @@ export function EditableReportForm({
       }
       
       if (saveResults.length > 0) {
+        // Limpiar cambios locales guardados exitosamente
         setLocalChanges(prev => {
           const newChanges = { ...prev };
           saveResults.forEach(({ productId }) => {
@@ -214,7 +220,18 @@ export function EditableReportForm({
           });
         }
         
-        await loadData();
+        // 🔧 CORRECCIÓN 5: Solo recargar datos si hay cambios significativos
+        // En lugar de siempre recargar, solo actualizar los datos específicos
+        const updatedProgressReports = [...progressReports];
+        saveResults.forEach(({ productId, data }) => {
+          const existingIndex = updatedProgressReports.findIndex(r => r.product_id === productId);
+          if (existingIndex >= 0) {
+            updatedProgressReports[existingIndex] = { ...updatedProgressReports[existingIndex], ...data };
+          } else {
+            updatedProgressReports.push(data);
+          }
+        });
+        setProgressReports(updatedProgressReports);
       }
     } catch (error) {
       console.error('Error saving draft:', error);
@@ -229,7 +246,7 @@ export function EditableReportForm({
   };
 
   const submitReport = async () => {
-    if (isReadOnly) return;
+    if (isReadOnly || submitting) return;
     
     setSubmitting(true);
     try {
@@ -273,7 +290,8 @@ export function EditableReportForm({
     }
   };
 
-  const organizeAssignments = () => {
+  // 🔧 CORRECCIÓN 6: Mover organizeAssignments a useMemo para evitar recálculos
+  const organizedData = useMemo(() => {
     const organized: any = {};
     
     console.log('Organizando asignaciones:', assignments);
@@ -319,7 +337,7 @@ export function EditableReportForm({
     
     console.log('Datos organizados:', organized);
     return Object.values(organized);
-  };
+  }, [assignments, getProgressReport]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -353,7 +371,6 @@ export function EditableReportForm({
     return <div className="flex justify-center p-8">Cargando formulario de informe...</div>;
   }
   
-  // 💡 CORRECCIÓN: Si no hay un workPlanId, mostramos un mensaje en lugar de un estado de carga.
   if (!workPlanId) {
     return (
       <Alert className="mt-4">
@@ -365,7 +382,6 @@ export function EditableReportForm({
     );
   }
 
-  const organizedData = organizeAssignments();
   const canEdit = !isReadOnly && reportStatus === 'draft';
   const hasUnsavedChanges = Object.keys(localChanges).length > 0;
   const requiresImprovementPlan = overallProgress < 70;
