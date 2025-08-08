@@ -16,6 +16,7 @@ import { IndicatorReportForm } from "./IndicatorReportForm";
 import { TemplateReportForm } from "./TemplateReportForm";
 import { FileText, Plus, Eye, Calendar, CheckCircle, Clock, AlertTriangle, Grid3x3, BarChart3, Edit3, Send, Trash2 } from "lucide-react";
 import { UnifiedReport } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export function MyReport() {
   const { profile } = useAuth();
@@ -40,6 +41,7 @@ export function MyReport() {
   const [selectedReportType, setSelectedReportType] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState("all-reports");
+  const [selectedWorkPlanId, setSelectedWorkPlanId] = useState<string | null>(null); // asegura pasar el plan al editor
 
   useEffect(() => {
     if (profile?.id) {
@@ -123,6 +125,29 @@ export function MyReport() {
     setSelectedReport(report);
     setSelectedReportType(report.report_type);
   };
+
+  // Asegurar obtener el work_plan_id cuando el reporte unificado no lo expone
+  useEffect(() => {
+    const loadWorkPlanId = async () => {
+      if (selectedReport && selectedReportType === 'work_plan') {
+        if (selectedReport.work_plan_id) {
+          setSelectedWorkPlanId(selectedReport.work_plan_id);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('manager_reports')
+          .select('work_plan_id')
+          .eq('id', selectedReport.id)
+          .single();
+        if (!error && data?.work_plan_id) {
+          setSelectedWorkPlanId(data.work_plan_id);
+        }
+      } else {
+        setSelectedWorkPlanId(null);
+      }
+    };
+    loadWorkPlanId();
+  }, [selectedReport, selectedReportType]);
 
   const handleDeleteReport = async (reportId: string, reportType: string) => {
     if (!confirm('¿Estás seguro de que deseas eliminar este informe? Esta acción no se puede deshacer.')) {
@@ -260,7 +285,7 @@ export function MyReport() {
       return (
         <EditableReportForm
           reportId={selectedReport.id}
-          workPlanId={selectedReport.work_plan_id}
+          workPlanId={selectedReport.work_plan_id ?? selectedWorkPlanId ?? ""}
           reportStatus={selectedReport.status}
           onSave={() => {
             setSelectedReport(null);

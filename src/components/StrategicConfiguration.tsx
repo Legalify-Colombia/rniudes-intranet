@@ -8,6 +8,7 @@ import { ReportTemplatesManagement } from "./ReportTemplatesManagement";
 import { PlanTypesManagement } from "./PlanTypesManagement";
 import { PlanElementOrderManagement } from "./PlanElementOrderManagement";
 import { SniesManagement } from "./SniesManagement";
+import { IndicatorsManagement } from "./IndicatorsManagement";
 
 export function StrategicConfiguration() {
   const [activeTab, setActiveTab] = useState("axes");
@@ -20,13 +21,14 @@ export function StrategicConfiguration() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-7 w-full">
+        <TabsList className="grid grid-cols-8 w-full">
           <TabsTrigger value="axes">Ejes Estratégicos</TabsTrigger>
           <TabsTrigger value="actions">Acciones</TabsTrigger>
           <TabsTrigger value="products">Productos</TabsTrigger>
           <TabsTrigger value="plans">Tipos de Plan</TabsTrigger>
           <TabsTrigger value="order">Orden</TabsTrigger>
           <TabsTrigger value="templates">Plantillas</TabsTrigger>
+          <TabsTrigger value="indicators">Indicadores</TabsTrigger>
           <TabsTrigger value="snies">SNIES</TabsTrigger>
         </TabsList>
 
@@ -52,6 +54,10 @@ export function StrategicConfiguration() {
 
         <TabsContent value="templates">
           <ReportTemplatesManagement />
+        </TabsContent>
+
+        <TabsContent value="indicators">
+          <IndicatorsManagement />
         </TabsContent>
 
         <TabsContent value="snies">
