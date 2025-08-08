@@ -49,7 +49,7 @@ export function useReports() {
     return { data, error };
   };
 
-  // Product Progress Reports - FUNCIONES AGREGADAS
+  // Product Progress Reports
   const fetchProductProgressReports = async (managerReportId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("product_progress_reports")
@@ -63,16 +63,15 @@ export function useReports() {
     return { data, error };
   };
 
+  // *** FUNCIÓN CORREGIDA CON LÓGICA CONDICIONAL ***
   const upsertProductProgressReport = async (reportData: any): Promise<Result<any>> => {
     try {
-      console.log('Datos a insertar/actualizar:', reportData);
+      console.log('Datos recibidos para upsert:', reportData);
       
-      // Usar el nombre correcto de la columna según el tipo de asignación
-      const cleanReportData = {
+      // 1. Preparamos el objeto base con los campos comunes.
+      const baseReportData = {
         manager_report_id: reportData.manager_report_id,
         product_id: reportData.product_id,
-        // Usar custom_plan_assignment_id ya que estás trabajando con custom_plans
-        custom_plan_assignment_id: reportData.custom_plan_assignment_id,
         progress_percentage: reportData.progress_percentage || 0,
         observations: reportData.observations || '',
         evidence_files: reportData.evidence_files || [],
@@ -80,12 +79,31 @@ export function useReports() {
         updated_at: new Date().toISOString()
       };
 
-      console.log('Datos limpios para DB:', cleanReportData);
+      // 2. Lógica condicional para decidir qué columna de asignación usar.
+      let finalReportData;
+      if (reportData.custom_plan_assignment_id) {
+        finalReportData = {
+          ...baseReportData,
+          custom_plan_assignment_id: reportData.custom_plan_assignment_id,
+          work_plan_assignment_id: null // Aseguramos que la otra columna sea nula
+        };
+      } else if (reportData.work_plan_assignment_id) {
+        finalReportData = {
+          ...baseReportData,
+          work_plan_assignment_id: reportData.work_plan_assignment_id,
+          custom_plan_assignment_id: null // Aseguramos que la otra columna sea nula
+        };
+      } else {
+        // Si no se proporciona ninguna de las dos, lanzamos un error claro.
+        throw new Error("Se debe proporcionar un 'work_plan_assignment_id' o un 'custom_plan_assignment_id'.");
+      }
+
+      console.log('Datos finales para la BD:', finalReportData);
 
       const { data, error } = await supabase
         .from("product_progress_reports")
-        .upsert(cleanReportData, {
-          onConflict: 'manager_report_id,product_id'
+        .upsert(finalReportData, {
+          onConflict: 'manager_report_id,product_id' 
         })
         .select()
         .single();
