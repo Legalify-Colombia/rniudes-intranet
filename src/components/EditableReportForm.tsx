@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useReports } from "@/hooks/useReports"; // ← Cambiado para usar tu hook actualizado
 import { useToast } from "@/hooks/use-toast";
 import { ProgressIndicatorCard } from "./ProgressIndicatorCard";
 import { EvidenceUploader } from "./EvidenceUploader";
@@ -33,7 +33,7 @@ export function EditableReportForm({
     fetchProductProgressReports,
     upsertProductProgressReport,
     updateManagerReport
-  } = useSupabaseData();
+  } = useReports(); // ← Usando tu hook actualizado
   const { toast } = useToast();
 
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -155,10 +155,11 @@ export function EditableReportForm({
             continue;
           }
 
+          // 🔧 CORRECCIÓN PRINCIPAL: Usar los nombres de columnas correctos
           const reportData = {
             manager_report_id: reportId,
             product_id: productId,
-            custom_plan_assignment_id: assignment.id,
+            work_plan_assignment_id: assignment.id, // Nombre correcto según el esquema de la DB
             ...localChanges[productId]
           };
 
@@ -245,6 +246,7 @@ export function EditableReportForm({
     }
   };
 
+  // ... resto del código permanece igual
   const submitReport = async () => {
     if (isReadOnly || submitting) return;
     
