@@ -129,10 +129,13 @@ export function EditableReportForm({
         const assignment = assignments.find(a => a.product.id === productId);
         if (!assignment) continue;
 
+        // *** CORRECCIÓN APLICADA AQUÍ ***
+        // Se cambió `custom_plan_assignment_id` por `work_plan_assignment_id`
+        // para que coincida con la columna que la base de datos espera.
         const reportData = {
           manager_report_id: reportId,
           product_id: productId,
-          custom_plan_assignment_id: assignment.id,
+          work_plan_assignment_id: assignment.id, // <-- ¡CORREGIDO!
           ...localChanges[productId]
         };
 
@@ -142,21 +145,16 @@ export function EditableReportForm({
         }
       }
 
-      // *** CORRECCIÓN: Manejo de errores detallado ***
       if (saveErrors.length > 0) {
         const firstError = saveErrors[0];
-        // El objeto de error de Supabase tiene información valiosa.
         const detailedMessage = `Error en Producto ID ${firstError.productId}: ${firstError.error.message}. (Detalles: ${firstError.error.details || 'No hay más detalles'})`;
-        
         console.error("Error detallado al guardar:", firstError.error);
-
         toast({
           title: "Error al Guardar Progreso",
           description: detailedMessage,
           variant: "destructive",
-          duration: 10000 // Aumentar la duración para poder leer el error
+          duration: 10000
         });
-        // Detenemos la ejecución aquí, el toast es suficiente.
         return; 
       }
 
@@ -170,7 +168,6 @@ export function EditableReportForm({
       
       await loadData();
     } catch (error) {
-      // Este catch ahora solo atrapará errores inesperados de JavaScript.
       console.error('Error inesperado al guardar borrador:', error);
       toast({
         title: "Error Inesperado",
@@ -188,10 +185,8 @@ export function EditableReportForm({
     setSubmitting(true);
     try {
       if (Object.keys(localChanges).length > 0) {
-        // saveDraft ahora retorna si hay un error, así que verificamos si aún hay cambios.
         await saveDraft();
         if (Object.keys(localChanges).length > 0) {
-            // Si saveDraft falló y no limpió los cambios, no continuamos.
             setSubmitting(false);
             return;
         }
