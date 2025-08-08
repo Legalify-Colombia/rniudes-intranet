@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { ManagerReport, ReportPeriod, Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
@@ -47,6 +46,64 @@ export function useReports() {
       .eq("id", id)
       .select()
       .single();
+    return { data, error };
+  };
+
+  // Product Progress Reports - FUNCIONES AGREGADAS
+  const fetchProductProgressReports = async (managerReportId: string): Promise<Result<any[]>> => {
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .select(`
+        *,
+        product:products(*),
+        assignment:work_plan_assignments(*) 
+      `)
+      .eq("manager_report_id", managerReportId)
+      .order("created_at", { ascending: false });
+    return { data, error };
+  };
+
+  const upsertProductProgressReport = async (reportData: any): Promise<Result<any>> => {
+    // Usar el nombre correcto de la columna según el esquema de la base de datos
+    const cleanReportData = {
+      manager_report_id: reportData.manager_report_id,
+      product_id: reportData.product_id,
+      work_plan_assignment_id: reportData.work_plan_assignment_id, // Nombre correcto de la columna
+      progress_percentage: reportData.progress_percentage || 0,
+      observations: reportData.observations || '',
+      evidence_files: reportData.evidence_files || [],
+      evidence_file_names: reportData.evidence_file_names || [],
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from("product_progress_reports")
+      .upsert(cleanReportData, {
+        onConflict: 'manager_report_id,product_id'
+      })
+      .select()
+      .single();
+    
+    return { data, error };
+  };
+
+  const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
+    // Ajusta el nombre de la tabla según tu esquema real
+    // Podría ser 'work_plan_assignments' o 'custom_plan_assignments'
+    const { data, error } = await supabase
+      .from("work_plan_assignments") // Cambia esto si el nombre de tu tabla es diferente
+      .select(`
+        *,
+        product:products(
+          *,
+          action:strategic_actions(
+            *,
+            strategic_axis:strategic_axes(*)
+          )
+        )
+      `)
+      .eq("work_plan_id", workPlanId) // También ajusta este nombre si es diferente
+      .order("created_at", { ascending: false });
     return { data, error };
   };
 
@@ -168,6 +225,9 @@ export function useReports() {
     fetchManagerReportsByManager,
     createManagerReport,
     updateManagerReport,
+    fetchProductProgressReports,
+    upsertProductProgressReport,
+    fetchWorkPlanAssignments,
     fetchReportPeriods,
     createReportPeriod,
     updateReportPeriod,
