@@ -1326,21 +1326,7 @@ export type Database = {
             foreignKeyName: "manager_reports_work_plan_id_fkey"
             columns: ["work_plan_id"]
             isOneToOne: true
-            referencedRelation: "vw_full_report_data"
-            referencedColumns: ["work_plan_id"]
-          },
-          {
-            foreignKeyName: "manager_reports_work_plan_id_fkey"
-            columns: ["work_plan_id"]
-            isOneToOne: true
-            referencedRelation: "work_plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "manager_reports_work_plan_id_fkey"
-            columns: ["work_plan_id"]
-            isOneToOne: true
-            referencedRelation: "work_plans_with_manager"
+            referencedRelation: "custom_plans"
             referencedColumns: ["id"]
           },
         ]
