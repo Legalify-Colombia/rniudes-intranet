@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,8 +41,15 @@ export function MyReport() {
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState("all-reports");
   const [selectedWorkPlanId, setSelectedWorkPlanId] = useState<string | null>(null);
+  const [loadingWorkPlan, setLoadingWorkPlan] = useState(false);
 
-  const loadData = useCallback(async () => {
+  useEffect(() => {
+    if (profile?.id) {
+      loadData();
+    }
+  }, [profile?.id]);
+
+  const loadData = async () => {
     if (!profile?.id) return;
     
     setLoading(true);
@@ -70,62 +77,42 @@ export function MyReport() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, fetchUnifiedReports, fetchWorkPlansForManager, toast]);
+  };
 
+  // Simplificar la carga del work_plan_id - solo cuando realmente se necesite
   useEffect(() => {
-    if (profile?.id) {
-      loadData();
-    }
-  }, [profile?.id, loadData]);
-
-  // Separar la lógica de obtención del work_plan_id
-  const loadWorkPlanId = useCallback(async (report: any) => {
-    if (!report || selectedReportType !== 'work_plan') {
-      return null;
-    }
-
-    if (report.work_plan_id) {
-      return report.work_plan_id;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('manager_reports')
-        .select('work_plan_id')
-        .eq('id', report.id)
-        .single();
-      
-      if (!error && data?.work_plan_id) {
-        return data.work_plan_id;
-      }
-    } catch (error) {
-      console.error('Error fetching work_plan_id:', error);
-    }
-    
-    return null;
-  }, [selectedReportType]);
-
-  // Efecto optimizado para cargar work_plan_id
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchWorkPlanId = async () => {
+    const loadWorkPlanIdIfNeeded = async () => {
       if (selectedReport && selectedReportType === 'work_plan') {
-        const workPlanId = await loadWorkPlanId(selectedReport);
-        if (isMounted) {
-          setSelectedWorkPlanId(workPlanId);
+        // Si ya tenemos el work_plan_id, no hacer nada
+        if (selectedReport.work_plan_id) {
+          setSelectedWorkPlanId(selectedReport.work_plan_id);
+          return;
         }
-      } else if (isMounted) {
+
+        // Solo si no lo tenemos, hacer la consulta
+        setLoadingWorkPlan(true);
+        try {
+          const { data, error } = await supabase
+            .from('manager_reports')
+            .select('work_plan_id')
+            .eq('id', selectedReport.id)
+            .single();
+          
+          if (!error && data?.work_plan_id) {
+            setSelectedWorkPlanId(data.work_plan_id);
+          }
+        } catch (error) {
+          console.error('Error fetching work_plan_id:', error);
+        } finally {
+          setLoadingWorkPlan(false);
+        }
+      } else {
         setSelectedWorkPlanId(null);
       }
     };
 
-    fetchWorkPlanId();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedReport?.id, selectedReportType, loadWorkPlanId]);
+    loadWorkPlanIdIfNeeded();
+  }, [selectedReport?.id, selectedReportType]); // Solo depende del ID, no del objeto completo
 
   const createNewWorkPlanReport = async (workPlanId: string) => {
     if (!profile?.id) return;
@@ -169,10 +156,10 @@ export function MyReport() {
     }
   };
 
-  const handleEditReport = useCallback((report: UnifiedReport) => {
+  const handleEditReport = (report: UnifiedReport) => {
     setSelectedReport(report);
     setSelectedReportType(report.report_type);
-  }, []);
+  };
 
   const handleDeleteReport = async (reportId: string, reportType: string) => {
     if (!confirm('¿Estás seguro de que deseas eliminar este informe? Esta acción no se puede deshacer.')) {
@@ -294,16 +281,16 @@ export function MyReport() {
     return report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
   };
 
-  const handleBackToReports = useCallback(() => {
+  const handleBackToReports = () => {
     setSelectedReport(null);
     setSelectedReportType("");
     setSelectedWorkPlanId(null);
-  }, []);
+  };
 
-  const handleSaveReport = useCallback(() => {
+  const handleSaveReport = () => {
     handleBackToReports();
     loadData();
-  }, [handleBackToReports, loadData]);
+  };
 
   if (loading) {
     return (
@@ -316,17 +303,36 @@ export function MyReport() {
     );
   }
 
-  // Renderizado condicional mejorado
+  // Renderizado condicional para informes seleccionados
   if (selectedReport) {
     if (selectedReportType === 'work_plan') {
-      // Solo renderizar si tenemos el work_plan_id
-      if (!selectedWorkPlanId) {
+      // Si estamos cargando el work_plan_id, mostrar loading
+      if (loadingWorkPlan) {
         return (
           <div className="flex justify-center items-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-gray-600">Cargando datos del plan de trabajo...</p>
+              <p className="text-gray-600">Cargando datos del informe...</p>
             </div>
+          </div>
+        );
+      }
+
+      // Si no tenemos work_plan_id después de la carga, mostrar error
+      if (!selectedWorkPlanId) {
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleBackToReports}>
+                ← Volver a Mis Informes
+              </Button>
+            </div>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                No se pudo cargar el plan de trabajo asociado a este informe.
+              </AlertDescription>
+            </Alert>
           </div>
         );
       }
@@ -359,10 +365,7 @@ export function MyReport() {
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleBackToReports}
-            >
+            <Button variant="outline" onClick={handleBackToReports}>
               ← Volver a Mis Informes
             </Button>
           </div>
