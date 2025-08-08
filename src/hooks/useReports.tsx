@@ -1,10 +1,12 @@
+import { useCallback } from 'react'; // *** PASO 1: IMPORTAR useCallback ***
 import { supabase } from "@/integrations/supabase/client";
 import type { ManagerReport, ReportPeriod, Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
 
 export function useReports() {
-  // Manager Reports
-  const fetchManagerReports = async (): Promise<Result<any[]>> => {
+  // *** PASO 2: Envolver CADA función en useCallback para estabilizarla ***
+
+  const fetchManagerReports = useCallback(async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("manager_reports")
       .select(`
@@ -15,9 +17,9 @@ export function useReports() {
       `)
       .order("created_at", { ascending: false });
     return { data, error };
-  };
+  }, []);
 
-  const fetchManagerReportsByManager = async (managerId: string): Promise<Result<any[]>> => {
+  const fetchManagerReportsByManager = useCallback(async (managerId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("manager_reports")
       .select(`
@@ -28,18 +30,18 @@ export function useReports() {
       .eq("manager_id", managerId)
       .order("created_at", { ascending: false });
     return { data, error };
-  };
+  }, []);
 
-  const createManagerReport = async (report: any): Promise<Result<any>> => {
+  const createManagerReport = useCallback(async (report: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("manager_reports")
       .insert(report)
       .select()
       .single();
     return { data, error };
-  };
+  }, []);
 
-  const updateManagerReport = async (id: string, updates: Database["public"]["Tables"]["manager_reports"]["Update"]): Promise<Result<ManagerReport>> => {
+  const updateManagerReport = useCallback(async (id: string, updates: Database["public"]["Tables"]["manager_reports"]["Update"]): Promise<Result<ManagerReport>> => {
     const { data, error } = await supabase
       .from("manager_reports")
       .update(updates)
@@ -47,10 +49,9 @@ export function useReports() {
       .select()
       .single();
     return { data, error };
-  };
+  }, []);
 
-  // Product Progress Reports
-  const fetchProductProgressReports = async (managerReportId: string): Promise<Result<any[]>> => {
+  const fetchProductProgressReports = useCallback(async (managerReportId: string): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("product_progress_reports")
       .select(`
@@ -61,14 +62,10 @@ export function useReports() {
       .eq("manager_report_id", managerReportId)
       .order("created_at", { ascending: false });
     return { data, error };
-  };
+  }, []);
 
-  // *** FUNCIÓN CORREGIDA CON LÓGICA CONDICIONAL ***
-  const upsertProductProgressReport = async (reportData: any): Promise<Result<any>> => {
+  const upsertProductProgressReport = useCallback(async (reportData: any): Promise<Result<any>> => {
     try {
-      console.log('Datos recibidos para upsert:', reportData);
-      
-      // 1. Preparamos el objeto base con los campos comunes.
       const baseReportData = {
         manager_report_id: reportData.manager_report_id,
         product_id: reportData.product_id,
@@ -79,26 +76,22 @@ export function useReports() {
         updated_at: new Date().toISOString()
       };
 
-      // 2. Lógica condicional para decidir qué columna de asignación usar.
       let finalReportData;
       if (reportData.custom_plan_assignment_id) {
         finalReportData = {
           ...baseReportData,
           custom_plan_assignment_id: reportData.custom_plan_assignment_id,
-          work_plan_assignment_id: null // Aseguramos que la otra columna sea nula
+          work_plan_assignment_id: null
         };
       } else if (reportData.work_plan_assignment_id) {
         finalReportData = {
           ...baseReportData,
           work_plan_assignment_id: reportData.work_plan_assignment_id,
-          custom_plan_assignment_id: null // Aseguramos que la otra columna sea nula
+          custom_plan_assignment_id: null
         };
       } else {
-        // Si no se proporciona ninguna de las dos, lanzamos un error claro.
         throw new Error("Se debe proporcionar un 'work_plan_assignment_id' o un 'custom_plan_assignment_id'.");
       }
-
-      console.log('Datos finales para la BD:', finalReportData);
 
       const { data, error } = await supabase
         .from("product_progress_reports")
@@ -110,8 +103,6 @@ export function useReports() {
       
       if (error) {
         console.error('Error en upsert:', error);
-      } else {
-        console.log('Upsert exitoso:', data);
       }
       
       return { data, error };
@@ -119,107 +110,92 @@ export function useReports() {
       console.error('Excepción en upsertProductProgressReport:', err);
       return { data: null, error: err as any };
     }
-  };
+  }, []);
 
-  const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
+  const fetchWorkPlanAssignments = useCallback(async (workPlanId: string): Promise<Result<any[]>> => {
     try {
-      console.log('Consultando asignaciones para custom_plan_id:', workPlanId);
-      
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .select(`
           *,
-          product:products(
-            *,
-            action:strategic_actions(
-              *,
-              strategic_axis:strategic_axes(*)
-            )
-          )
+          product:products(*, action:strategic_actions(*, strategic_axis:strategic_axes(*)))
         `)
         .eq("custom_plan_id", workPlanId)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error('Error en fetchWorkPlanAssignments:', error);
-      } else {
-        console.log('Asignaciones encontradas:', data?.length || 0);
-      }
-
+      if (error) console.error('Error en fetchWorkPlanAssignments:', error);
       return { data, error };
     } catch (err) {
       console.error('Excepción en fetchWorkPlanAssignments:', err);
       return { data: null, error: err as any };
     }
-  };
+  }, []);
 
-  // Report Periods
-  const fetchReportPeriods = async (): Promise<Result<ReportPeriod[]>> => {
+  const fetchReportPeriods = useCallback(async (): Promise<Result<ReportPeriod[]>> => {
     const { data, error } = await supabase
       .from("report_periods")
       .select("*")
       .order("start_date", { ascending: false });
     return { data, error };
-  };
+  }, []);
 
-  const createReportPeriod = async (period: Database["public"]["Tables"]["report_periods"]["Insert"]): Promise<Result<ReportPeriod>> => {
+  const createReportPeriod = useCallback(async (period: Database["public"]["Tables"]["report_periods"]["Insert"]): Promise<Result<ReportPeriod>> => {
     const { data, error } = await supabase.from("report_periods").insert(period).select().single();
     return { data, error };
-  };
+  }, []);
 
-  const updateReportPeriod = async (id: string, updates: Database["public"]["Tables"]["report_periods"]["Update"]): Promise<Result<ReportPeriod>> => {
+  const updateReportPeriod = useCallback(async (id: string, updates: Database["public"]["Tables"]["report_periods"]["Update"]): Promise<Result<ReportPeriod>> => {
     const { data, error } = await supabase.from("report_periods").update(updates).eq("id", id).select().single();
     return { data, error };
-  };
+  }, []);
 
-  const deleteReportPeriod = async (id: string): Promise<Result<any>> => {
+  const deleteReportPeriod = useCallback(async (id: string): Promise<Result<any>> => {
     const { data, error } = await supabase.from("report_periods").delete().eq("id", id);
     return { data, error };
-  };
+  }, []);
 
-  const fetchReportSystemConfig = async (): Promise<Result<any>> => {
+  const fetchReportSystemConfig = useCallback(async (): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("report_system_config")
       .select("*")
       .single();
     return { data, error };
-  };
+  }, []);
 
-  const updateReportSystemConfig = async (config: any): Promise<Result<any>> => {
+  const updateReportSystemConfig = useCallback(async (config: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("report_system_config")
       .upsert(config)
       .select()
       .single();
     return { data, error };
-  };
+  }, []);
 
-  const checkPeriodActive = async (periodId: string): Promise<Result<boolean>> => {
+  const checkPeriodActive = useCallback(async (periodId: string): Promise<Result<boolean>> => {
     const { data, error } = await supabase
       .rpc('is_period_active', { period_id: periodId });
     return { data, error };
-  };
+  }, []);
 
-  // Report Templates
-  const fetchReportTemplates = async (): Promise<Result<any[]>> => {
+  const fetchReportTemplates = useCallback(async (): Promise<Result<any[]>> => {
     const { data, error } = await supabase
       .from("report_templates")
       .select("*")
       .eq("is_active", true)
       .order("name");
     return { data, error };
-  };
+  }, []);
 
-  const createReportTemplate = async (template: any): Promise<Result<any>> => {
+  const createReportTemplate = useCallback(async (template: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("report_templates")
       .insert(template)
       .select()
       .single();
     return { data, error };
-  };
+  }, []);
 
-  const updateReportTemplate = async (id: string, updates: any): Promise<Result<any>> => {
+  const updateReportTemplate = useCallback(async (id: string, updates: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("report_templates")
       .update(updates)
@@ -227,27 +203,26 @@ export function useReports() {
       .select()
       .single();
     return { data, error };
-  };
+  }, []);
 
-  const deleteReportTemplate = async (id: string): Promise<Result<any>> => {
+  const deleteReportTemplate = useCallback(async (id: string): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("report_templates")
       .delete()
       .eq("id", id);
     return { data, error };
-  };
+  }, []);
 
-  // Manager Report Versions
-  const createManagerReportVersion = async (version: any): Promise<Result<any>> => {
+  const createManagerReportVersion = useCallback(async (version: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("manager_report_versions")
       .insert(version)
       .select()
       .single();
     return { data, error };
-  };
+  }, []);
 
-  const updateManagerReportVersion = async (id: string, updates: any): Promise<Result<any>> => {
+  const updateManagerReportVersion = useCallback(async (id: string, updates: any): Promise<Result<any>> => {
     const { data, error } = await supabase
       .from("manager_report_versions")
       .update(updates)
@@ -255,16 +230,16 @@ export function useReports() {
       .select()
       .single();
     return { data, error };
-  };
+  }, []);
 
-  const getNextVersionNumber = async (managerReportId: string, templateId: string): Promise<Result<number>> => {
+  const getNextVersionNumber = useCallback(async (managerReportId: string, templateId: string): Promise<Result<number>> => {
     const { data, error } = await supabase
       .rpc('get_next_version_number', {
         p_manager_report_id: managerReportId,
         p_template_id: templateId
       });
     return { data, error };
-  };
+  }, []);
 
   return {
     fetchManagerReports,
