@@ -16,6 +16,8 @@ import { TemplateReportForm } from "./TemplateReportForm";
 import { FileText, Plus, Eye, Calendar, CheckCircle, Clock, AlertTriangle, Grid3x3, BarChart3, Edit3, Send, Trash2 } from "lucide-react";
 import { UnifiedReport } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+// Es recomendable usar un componente de diálogo en lugar de window.confirm
+// import { AlertDialog, AlertDialogAction, ... } from "@/components/ui/alert-dialog";
 
 export function MyReport() {
   const { profile } = useAuth();
@@ -45,49 +47,46 @@ export function MyReport() {
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
     
-    setLoading(true);
     try {
       const [unifiedResult, workPlansResult] = await Promise.all([
         fetchUnifiedReports(profile.id),
         fetchWorkPlansForManager(profile.id)
       ]);
 
-      console.log('Unified reports loaded:', unifiedResult);
-
       setUnifiedReports(unifiedResult.data || []);
-      // Solo planes del gestor, filtramos aprobados
       const approvedPlans = (workPlansResult.data || []).filter(
         (plan: any) => plan.status === 'approved'
       );
       setWorkPlans(approvedPlans);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error reloading data:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos",
+        description: "No se pudieron recargar los datos",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   }, [profile?.id, fetchUnifiedReports, fetchWorkPlansForManager, toast]);
 
+  // **CORRECCIÓN PRINCIPAL**: Este `useEffect` ahora solo se ejecuta cuando cambia el ID del perfil.
+  // Se rompe el bucle infinito al no depender de la función `loadData` que cambia en cada render.
   useEffect(() => {
     if (profile?.id) {
-      loadData();
+      setLoading(true);
+      loadData().finally(() => {
+        setLoading(false);
+      });
     }
-  }, [profile?.id, loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]); // Solo depende del ID del perfil, que es estable.
 
-  // Separar la lógica de obtención del work_plan_id
   const loadWorkPlanId = useCallback(async (report: any) => {
     if (!report || selectedReportType !== 'work_plan') {
       return null;
     }
-
     if (report.work_plan_id) {
       return report.work_plan_id;
     }
-
     try {
       const { data, error } = await supabase
         .from('manager_reports')
@@ -101,14 +100,11 @@ export function MyReport() {
     } catch (error) {
       console.error('Error fetching work_plan_id:', error);
     }
-    
     return null;
   }, [selectedReportType]);
 
-  // Efecto optimizado para cargar work_plan_id
   useEffect(() => {
     let isMounted = true;
-
     const fetchWorkPlanId = async () => {
       if (selectedReport && selectedReportType === 'work_plan') {
         const workPlanId = await loadWorkPlanId(selectedReport);
@@ -119,9 +115,7 @@ export function MyReport() {
         setSelectedWorkPlanId(null);
       }
     };
-
     fetchWorkPlanId();
-
     return () => {
       isMounted = false;
     };
@@ -136,7 +130,6 @@ export function MyReport() {
       if (!workPlan) {
         throw new Error('Plan de trabajo no encontrado');
       }
-
       const reportData = {
         manager_id: profile.id,
         work_plan_id: workPlanId,
@@ -144,18 +137,15 @@ export function MyReport() {
         description: `Informe de progreso para el plan de trabajo`,
         status: 'draft' as const
       };
-
       const result = await createManagerReport(reportData);
       
       if (result.error) {
         throw result.error;
       }
-
       toast({
         title: "Éxito",
         description: "Informe creado correctamente",
       });
-
       await loadData();
     } catch (error) {
       console.error('Error creating report:', error);
@@ -175,7 +165,7 @@ export function MyReport() {
   }, []);
 
   const handleDeleteReport = async (reportId: string, reportType: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este informe? Esta acción no se puede deshacer.')) {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este informe? Esta acción no se puede deshacer.')) {
       return;
     }
 
@@ -215,7 +205,7 @@ export function MyReport() {
   };
 
   const handleSubmitReport = async (reportId: string, reportType: string) => {
-    if (!confirm('¿Estás seguro de que deseas enviar este informe? No podrás editarlo después.')) {
+    if (!window.confirm('¿Estás seguro de que deseas enviar este informe? No podrás editarlo después.')) {
       return;
     }
 
@@ -282,17 +272,9 @@ export function MyReport() {
     }
   };
 
-  const canEdit = (report: UnifiedReport) => {
-    return report.status === 'draft';
-  };
-
-  const canDelete = (report: UnifiedReport) => {
-    return report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
-  };
-
-  const canSubmit = (report: UnifiedReport) => {
-    return report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
-  };
+  const canEdit = (report: UnifiedReport) => report.status === 'draft';
+  const canDelete = (report: UnifiedReport) => report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
+  const canSubmit = (report: UnifiedReport) => report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
 
   const handleBackToReports = useCallback(() => {
     setSelectedReport(null);
@@ -316,10 +298,8 @@ export function MyReport() {
     );
   }
 
-  // Renderizado condicional mejorado
   if (selectedReport) {
     if (selectedReportType === 'work_plan') {
-      // Solo renderizar si tenemos el work_plan_id
       if (!selectedWorkPlanId) {
         return (
           <div className="flex justify-center items-center h-64">
@@ -355,7 +335,6 @@ export function MyReport() {
         />
       );
     } else {
-      // Fallback for other report types
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
