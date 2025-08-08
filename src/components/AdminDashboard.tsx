@@ -175,8 +175,8 @@ export function AdminDashboard() {
     }
   };
 
+  // El gráfico ahora solo compara Acciones y Productos
   const strategicData = [
-    { name: 'Ejes', total: adminStats.totalAxes, fill: '#3b82f6' },
     { name: 'Acciones', total: adminStats.totalActions, fill: '#10b981' },
     { name: 'Productos', total: adminStats.totalProducts, fill: '#8b5cf6' },
   ];
@@ -268,35 +268,57 @@ export function AdminDashboard() {
 
             {/* Fila de Gráficos y Notificaciones */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Columna de Gráficos */}
+              {/* Columna de Gráficos y Ejes */}
               <div className="lg:col-span-2 space-y-8">
-                {/* Gráfico de Elementos Estratégicos */}
-                <Card className="shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-800">Resumen de Elementos Estratégicos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={strategicData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                          <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                          <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                              backdropFilter: 'blur(5px)',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '0.5rem',
-                              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                            }}
-                            cursor={{ fill: 'rgba(229, 231, 235, 0.5)' }}
-                          />
-                          <Bar dataKey="total" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {/* Tarjeta Numérica para Ejes Estratégicos */}
+                    <div className="md:col-span-1">
+                        <Card className="shadow-sm h-full flex flex-col justify-center items-center text-center">
+                            <CardHeader>
+                                <Target className="h-10 w-10 text-blue-600 mx-auto" />
+                                <CardTitle className="mt-2 text-lg font-semibold text-gray-800">Ejes Estratégicos</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-5xl font-bold text-blue-600">{adminStats.totalAxes}</p>
+                                <p className="text-sm text-gray-500 mt-1">Definidos</p>
+                            </CardContent>
+                        </Card>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    {/* Gráfico de Acciones y Productos */}
+                    <div className="md:col-span-2">
+                        <Card className="shadow-sm">
+                          <CardHeader>
+                            <CardTitle className="text-lg font-semibold text-gray-800">Resumen de Acciones y Productos</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="h-80">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={strategicData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                  <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                                  <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                                  <Tooltip
+                                    contentStyle={{
+                                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                      backdropFilter: 'blur(5px)',
+                                      border: '1px solid #e5e7eb',
+                                      borderRadius: '0.5rem',
+                                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                                    }}
+                                    cursor={{ fill: 'rgba(229, 231, 235, 0.5)' }}
+                                  />
+                                  <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                                    {strategicData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </CardContent>
+                        </Card>
+                    </div>
+                </div>
               </div>
 
               {/* Columna de Progreso y Notificaciones */}
