@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,15 +40,9 @@ export function MyReport() {
   const [selectedReportType, setSelectedReportType] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState("all-reports");
-  const [selectedWorkPlanId, setSelectedWorkPlanId] = useState<string | null>(null); // asegura pasar el plan al editor
+  const [selectedWorkPlanId, setSelectedWorkPlanId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (profile?.id) {
-      loadData();
-    }
-  }, [profile?.id]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!profile?.id) return;
     
     setLoading(true);
@@ -77,7 +70,62 @@ export function MyReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.id, fetchUnifiedReports, fetchWorkPlansForManager, toast]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      loadData();
+    }
+  }, [profile?.id, loadData]);
+
+  // Separar la lógica de obtención del work_plan_id
+  const loadWorkPlanId = useCallback(async (report: any) => {
+    if (!report || selectedReportType !== 'work_plan') {
+      return null;
+    }
+
+    if (report.work_plan_id) {
+      return report.work_plan_id;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('manager_reports')
+        .select('work_plan_id')
+        .eq('id', report.id)
+        .single();
+      
+      if (!error && data?.work_plan_id) {
+        return data.work_plan_id;
+      }
+    } catch (error) {
+      console.error('Error fetching work_plan_id:', error);
+    }
+    
+    return null;
+  }, [selectedReportType]);
+
+  // Efecto optimizado para cargar work_plan_id
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchWorkPlanId = async () => {
+      if (selectedReport && selectedReportType === 'work_plan') {
+        const workPlanId = await loadWorkPlanId(selectedReport);
+        if (isMounted) {
+          setSelectedWorkPlanId(workPlanId);
+        }
+      } else if (isMounted) {
+        setSelectedWorkPlanId(null);
+      }
+    };
+
+    fetchWorkPlanId();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedReport?.id, selectedReportType, loadWorkPlanId]);
 
   const createNewWorkPlanReport = async (workPlanId: string) => {
     if (!profile?.id) return;
@@ -121,33 +169,10 @@ export function MyReport() {
     }
   };
 
-  const handleEditReport = (report: UnifiedReport) => {
+  const handleEditReport = useCallback((report: UnifiedReport) => {
     setSelectedReport(report);
     setSelectedReportType(report.report_type);
-  };
-
-  // Asegurar obtener el work_plan_id cuando el reporte unificado no lo expone
-  useEffect(() => {
-    const loadWorkPlanId = async () => {
-      if (selectedReport && selectedReportType === 'work_plan') {
-        if (selectedReport.work_plan_id) {
-          setSelectedWorkPlanId(selectedReport.work_plan_id);
-          return;
-        }
-        const { data, error } = await supabase
-          .from('manager_reports')
-          .select('work_plan_id')
-          .eq('id', selectedReport.id)
-          .single();
-        if (!error && data?.work_plan_id) {
-          setSelectedWorkPlanId(data.work_plan_id);
-        }
-      } else {
-        setSelectedWorkPlanId(null);
-      }
-    };
-    loadWorkPlanId();
-  }, [selectedReport, selectedReportType]);
+  }, []);
 
   const handleDeleteReport = async (reportId: string, reportType: string) => {
     if (!confirm('¿Estás seguro de que deseas eliminar este informe? Esta acción no se puede deshacer.')) {
@@ -269,6 +294,17 @@ export function MyReport() {
     return report.status === 'draft' && (report.report_type === 'template' || report.report_type === 'indicators');
   };
 
+  const handleBackToReports = useCallback(() => {
+    setSelectedReport(null);
+    setSelectedReportType("");
+    setSelectedWorkPlanId(null);
+  }, []);
+
+  const handleSaveReport = useCallback(() => {
+    handleBackToReports();
+    loadData();
+  }, [handleBackToReports, loadData]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -280,18 +316,27 @@ export function MyReport() {
     );
   }
 
+  // Renderizado condicional mejorado
   if (selectedReport) {
     if (selectedReportType === 'work_plan') {
+      // Solo renderizar si tenemos el work_plan_id
+      if (!selectedWorkPlanId) {
+        return (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-600">Cargando datos del plan de trabajo...</p>
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <EditableReportForm
           reportId={selectedReport.id}
-          workPlanId={selectedReport.work_plan_id ?? selectedWorkPlanId ?? ""}
+          workPlanId={selectedWorkPlanId}
           reportStatus={selectedReport.status}
-          onSave={() => {
-            setSelectedReport(null);
-            setSelectedReportType("");
-            loadData();
-          }}
+          onSave={handleSaveReport}
         />
       );
     } else if (selectedReportType === 'indicators') {
@@ -299,22 +344,14 @@ export function MyReport() {
         <IndicatorReportForm
           reportId={selectedReport.id}
           reportPeriodId={selectedReport.report_period_id}
-          onSave={() => {
-            setSelectedReport(null);
-            setSelectedReportType("");
-            loadData();
-          }}
+          onSave={handleSaveReport}
         />
       );
     } else if (selectedReportType === 'template') {
       return (
         <TemplateReportForm
           reportId={selectedReport.id}
-          onSave={() => {
-            setSelectedReport(null);
-            setSelectedReportType("");
-            loadData();
-          }}
+          onSave={handleSaveReport}
         />
       );
     } else {
@@ -324,10 +361,7 @@ export function MyReport() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={() => {
-                setSelectedReport(null);
-                setSelectedReportType("");
-              }}
+              onClick={handleBackToReports}
             >
               ← Volver a Mis Informes
             </Button>
