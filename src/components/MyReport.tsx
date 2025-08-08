@@ -30,6 +30,7 @@ export function MyReport() {
     checkPeriodActive,
     submitIndicatorReport,
     submitTemplateBasedReport,
+    fetchWorkPlansForManager,
   } = useSupabaseData();
 
   const [unifiedReports, setUnifiedReports] = useState<UnifiedReport[]>([]);
@@ -53,16 +54,15 @@ export function MyReport() {
     try {
       const [unifiedResult, workPlansResult] = await Promise.all([
         fetchUnifiedReports(profile.id),
-        fetchWorkPlans()
+        fetchWorkPlansForManager(profile.id)
       ]);
 
       console.log('Unified reports loaded:', unifiedResult);
 
       setUnifiedReports(unifiedResult.data || []);
-      
-      // Filtrar planes de trabajo aprobados para este gestor
+      // Solo planes del gestor, filtramos aprobados
       const approvedPlans = (workPlansResult.data || []).filter(
-        (plan: any) => plan.manager_id === profile.id && plan.status === 'approved'
+        (plan: any) => plan.status === 'approved'
       );
       setWorkPlans(approvedPlans);
     } catch (error) {
