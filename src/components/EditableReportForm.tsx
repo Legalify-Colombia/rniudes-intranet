@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useToast } from "@/hooks/use-toast";
-import { ProgressIndicatorCard } from "./ProgressIndicatorCard";
 import { EvidenceUploader } from "./EvidenceUploader";
 import { FileText, Save, Send, AlertTriangle, CheckCircle, Clock, Edit3 } from "lucide-react";
 
@@ -45,15 +44,11 @@ export function EditableReportForm({
   const [overallProgress, setOverallProgress] = useState(0);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
     try {
-      console.log('Cargando datos para reportId:', reportId, 'workPlanId (custom_plan_id):', workPlanId);
       const [assignmentsResult, progressResult] = await Promise.all([
         fetchWorkPlanAssignments(workPlanId),
         fetchProductProgressReports(reportId)
       ]);
-
-      console.log('Datos cargados:', { assignmentsResult, progressResult });
       setAssignments(assignmentsResult.data || []);
       setProgressReports(progressResult.data || []);
     } catch (error) {
@@ -63,14 +58,21 @@ export function EditableReportForm({
         description: "No se pudieron cargar los datos del informe",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   }, [reportId, workPlanId, fetchWorkPlanAssignments, fetchProductProgressReports, toast]);
 
-  const calculateOverallProgress = useCallback(() => {
+  useEffect(() => {
+    if (workPlanId && reportId) {
+      setLoading(true);
+      loadData().finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportId, workPlanId]);
+
+  useEffect(() => {
     const allReports = [...progressReports];
-    
     Object.keys(localChanges).forEach(productId => {
       const existingIndex = allReports.findIndex(r => r.product_id === productId);
       if (existingIndex >= 0) {
@@ -93,22 +95,9 @@ export function EditableReportForm({
     setOverallProgress(Math.round(average));
   }, [progressReports, localChanges]);
 
-  useEffect(() => {
-    if (workPlanId) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, [reportId, workPlanId, loadData]);
-
-  useEffect(() => {
-    calculateOverallProgress();
-  }, [progressReports, localChanges, calculateOverallProgress]);
-
-  const getProgressReport = (productId: string, assignmentId: string) => {
+  const getProgressReport = useCallback((productId: string) => {
     const localChange = localChanges[productId];
     const dbReport = progressReports.find(pr => pr.product_id === productId);
-    
     return {
       progress_percentage: 0,
       observations: '',
@@ -117,12 +106,10 @@ export function EditableReportForm({
       ...dbReport,
       ...localChange
     };
-  };
+  }, [localChanges, progressReports]);
 
-  const updateLocalChanges = (productId: string, assignmentId: string, updates: any) => {
+  const updateLocalChanges = useCallback((productId: string, updates: any) => {
     if (isReadOnly) return;
-    
-    console.log('Actualizando cambios locales:', { productId, updates });
     setLocalChanges(prev => ({
       ...prev,
       [productId]: {
@@ -130,92 +117,44 @@ export function EditableReportForm({
         ...updates
       }
     }));
-  };
+  }, [isReadOnly]);
 
-  const saveDraft = async () => {
+  const saveDraft = useCallback(async () => {
     if (isReadOnly) return;
     
     setSaving(true);
     try {
-      console.log('Guardando borrador con cambios locales:', localChanges);
-      
-      const saveResults = [];
       const saveErrors = [];
-      
       for (const productId of Object.keys(localChanges)) {
-        try {
-          const assignment = assignments.find(a => a.product.id === productId);
-          if (!assignment) {
-            console.warn('No se encontró assignment para producto:', productId);
-            continue;
-          }
+        const assignment = assignments.find(a => a.product.id === productId);
+        if (!assignment) continue;
 
-          const reportData = {
-            manager_report_id: reportId,
-            product_id: productId,
-            custom_plan_assignment_id: assignment.id,
-            ...localChanges[productId]
-          };
+        const reportData = {
+          manager_report_id: reportId,
+          product_id: productId,
+          custom_plan_assignment_id: assignment.id,
+          ...localChanges[productId]
+        };
 
-          console.log('Guardando reporte de producto:', reportData);
-          const result = await upsertProductProgressReport(reportData);
-          
-          if (result.error) {
-            console.error('Error guardando producto', productId, ':', result.error);
-            saveErrors.push({ productId, error: result.error });
-          } else {
-            console.log('Producto guardado exitosamente:', productId);
-            saveResults.push({ productId, data: result.data });
-          }
-        } catch (error) {
-          console.error('Error guardando producto', productId, ':', error);
-          saveErrors.push({ productId, error });
+        const result = await upsertProductProgressReport(reportData);
+        if (result.error) {
+          saveErrors.push({ productId, error: result.error });
         }
       }
 
-      console.log('Resultados del guardado:', { saveResults, saveErrors });
-      
       if (saveErrors.length > 0) {
-        console.error('Errores al guardar:', saveErrors);
-        
-        if (saveResults.length === 0) {
-          throw new Error(`No se pudo guardar ningún reporte. ${saveErrors.map(e => `Producto ${e.productId}: ${e.error?.message || 'Error desconocido'}`).join(', ')}`);
-        } else {
-          toast({
-            title: "Guardado parcial",
-            description: `Se guardaron ${saveResults.length} reportes, pero ${saveErrors.length} fallaron. Intenta guardar nuevamente.`,
-            variant: "destructive",
-          });
-        }
+        throw new Error(`No se pudo guardar el progreso para algunos productos.`);
       }
-      
-      if (saveResults.length > 0) {
-        setLocalChanges(prev => {
-          const newChanges = { ...prev };
-          saveResults.forEach(({ productId }) => {
-            delete newChanges[productId];
-          });
-          return newChanges;
-        });
-        
-        const updateResult = await updateManagerReport(reportId, { 
-          status: 'draft',
-          updated_at: new Date().toISOString()
-        });
 
-        if (updateResult.error) {
-          console.error('Error actualizando informe principal:', updateResult.error);
-        }
-        
-        if (saveErrors.length === 0) {
-          toast({
-            title: "Éxito",
-            description: "Borrador guardado correctamente",
-          });
-        }
-        
-        await loadData();
-      }
+      setLocalChanges({});
+      await updateManagerReport(reportId, { updated_at: new Date().toISOString() });
+      
+      toast({
+        title: "Éxito",
+        description: "Borrador guardado correctamente",
+      });
+      
+      await loadData();
     } catch (error) {
       console.error('Error saving draft:', error);
       toast({
@@ -226,17 +165,14 @@ export function EditableReportForm({
     } finally {
       setSaving(false);
     }
-  };
+  }, [isReadOnly, localChanges, assignments, reportId, upsertProductProgressReport, updateManagerReport, toast, loadData]);
 
-  const submitReport = async () => {
+  const submitReport = useCallback(async () => {
     if (isReadOnly) return;
     
     setSubmitting(true);
     try {
-      console.log('Enviando informe...');
-      
       if (Object.keys(localChanges).length > 0) {
-        console.log('Guardando cambios pendientes antes de enviar...');
         await saveDraft();
       }
       
@@ -249,8 +185,6 @@ export function EditableReportForm({
       if (updateResult.error) {
         throw updateResult.error;
       }
-
-      console.log('Informe enviado exitosamente');
 
       toast({
         title: "Éxito",
@@ -271,81 +205,38 @@ export function EditableReportForm({
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [isReadOnly, localChanges, saveDraft, updateManagerReport, reportId, toast, overallProgress, onSave]);
 
-  const organizeAssignments = () => {
+  const organizedData = useMemo(() => {
     const organized: any = {};
-    
-    console.log('Organizando asignaciones:', assignments);
-    
     assignments.forEach(assignment => {
       const product = assignment.product;
-      if (!product) {
-        console.warn('Asignación sin producto:', assignment);
-        return;
-      }
+      if (!product?.action?.strategic_axis) return;
       
+      const axis = product.action.strategic_axis;
       const action = product.action;
-      if (!action) {
-        console.warn('Producto sin acción:', product);
-        return;
-      }
-      
-      const axis = action.strategic_axis;
-      if (!axis) {
-        console.warn('Acción sin eje estratégico:', action);
-        return;
-      }
       
       if (!organized[axis.id]) {
-        organized[axis.id] = {
-          ...axis,
-          actions: {}
-        };
+        organized[axis.id] = { ...axis, actions: {} };
       }
-      
       if (!organized[axis.id].actions[action.id]) {
-        organized[axis.id].actions[action.id] = {
-          ...action,
-          products: []
-        };
+        organized[axis.id].actions[action.id] = { ...action, products: [] };
       }
       
       organized[axis.id].actions[action.id].products.push({
         ...assignment,
-        progressReport: getProgressReport(product.id, assignment.id)
+        progressReport: getProgressReport(product.id)
       });
     });
-    
-    console.log('Datos organizados:', organized);
     return Object.values(organized);
-  };
+  }, [assignments, getProgressReport]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'draft':
-        return (
-          <Badge variant="secondary">
-            <Clock className="w-3 h-3 mr-1" />
-            Borrador
-          </Badge>
-        );
-      case 'submitted':
-        return (
-          <Badge variant="default">
-            <Send className="w-3 h-3 mr-1" />
-            Enviado
-          </Badge>
-        );
-      case 'reviewed':
-        return (
-          <Badge variant="default" className="bg-green-600">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Revisado
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">Sin estado</Badge>;
+      case 'draft': return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Borrador</Badge>;
+      case 'submitted': return <Badge variant="default"><Send className="w-3 h-3 mr-1" />Enviado</Badge>;
+      case 'reviewed': return <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Revisado</Badge>;
+      default: return <Badge variant="outline">Sin estado</Badge>;
     }
   };
 
@@ -353,7 +244,6 @@ export function EditableReportForm({
     return <div className="flex justify-center p-8">Cargando formulario de informe...</div>;
   }
   
-  // 💡 CORRECCIÓN: Si no hay un workPlanId, mostramos un mensaje en lugar de un estado de carga.
   if (!workPlanId) {
     return (
       <Alert className="mt-4">
@@ -365,14 +255,12 @@ export function EditableReportForm({
     );
   }
 
-  const organizedData = organizeAssignments();
   const canEdit = !isReadOnly && reportStatus === 'draft';
   const hasUnsavedChanges = Object.keys(localChanges).length > 0;
   const requiresImprovementPlan = overallProgress < 70;
 
   return (
     <div className="space-y-6">
-      {/* Header del informe */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">
@@ -380,9 +268,7 @@ export function EditableReportForm({
           </h2>
           <div className="flex items-center gap-4 mt-2">
             {getStatusBadge(reportStatus)}
-            <span className="text-sm text-gray-600">
-              {assignments.length} indicadores
-            </span>
+            <span className="text-sm text-gray-600">{assignments.length} indicadores</span>
             {hasUnsavedChanges && canEdit && (
               <Badge variant="outline" className="text-yellow-600 border-yellow-600">
                 <Edit3 className="w-3 h-3 mr-1" />
@@ -394,38 +280,18 @@ export function EditableReportForm({
         <div className="flex gap-2">
           {canEdit && (
             <>
-              <Button 
-                onClick={saveDraft} 
-                variant="outline" 
-                disabled={saving}
-              >
+              <Button onClick={saveDraft} variant="outline" disabled={saving}>
                 {saving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Guardando...
-                  </>
+                  <><div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>Guardando...</>
                 ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Guardar Borrador
-                  </>
+                  <><Save className="h-4 w-4 mr-2" />Guardar Borrador</>
                 )}
               </Button>
-              <Button 
-                onClick={submitReport} 
-                disabled={submitting}
-                className={requiresImprovementPlan ? "bg-yellow-600 hover:bg-yellow-700" : ""}
-              >
+              <Button onClick={submitReport} disabled={submitting} className={requiresImprovementPlan ? "bg-yellow-600 hover:bg-yellow-700" : ""}>
                 {submitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Enviando...
-                  </>
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>Enviando...</>
                 ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar Informe
-                  </>
+                  <><Send className="h-4 w-4 mr-2" />Enviar Informe</>
                 )}
               </Button>
             </>
@@ -439,7 +305,6 @@ export function EditableReportForm({
         </div>
       </div>
 
-      {/* Resumen general del progreso */}
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -457,7 +322,6 @@ export function EditableReportForm({
               <div className="text-sm text-gray-600">Total de Indicadores</div>
             </div>
           </div>
-
           {requiresImprovementPlan && (
             <Alert className="mt-4 border-yellow-400 bg-yellow-50">
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
@@ -466,7 +330,6 @@ export function EditableReportForm({
               </AlertDescription>
             </Alert>
           )}
-
           {hasUnsavedChanges && canEdit && (
             <Alert className="mt-4 border-blue-400 bg-blue-50">
               <Edit3 className="h-4 w-4 text-blue-600" />
@@ -490,18 +353,12 @@ export function EditableReportForm({
           {organizedData.map((axis: any) => (
             <Card key={axis.id}>
               <CardHeader>
-                <CardTitle className="text-lg text-blue-800">
-                  {axis.code} - {axis.name}
-                </CardTitle>
+                <CardTitle className="text-lg text-blue-800">{axis.code} - {axis.name}</CardTitle>
               </CardHeader>
               <CardContent>
                 {Object.values(axis.actions).map((action: any) => (
                   <div key={action.id} className="mb-6">
-                    <h4 className="font-medium text-gray-800 mb-4">
-                      {action.code} {action.name}
-                    </h4>
-                    
-                    {/* Tabla de indicadores */}
+                    <h4 className="font-medium text-gray-800 mb-4">{action.code} {action.name}</h4>
                     <div className="border rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
@@ -518,27 +375,19 @@ export function EditableReportForm({
                           {action.products.map((assignment: any) => {
                             const product = assignment.product;
                             const progressReport = assignment.progressReport;
-                            
                             return (
                               <TableRow key={assignment.id} className="hover:bg-gray-50">
-                                <TableCell>
-                                  <div className="font-medium">{product.name}</div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{assignment.assigned_hours}h</Badge>
-                                </TableCell>
+                                <TableCell><div className="font-medium">{product.name}</div></TableCell>
+                                <TableCell><Badge variant="outline">{assignment.assigned_hours}h</Badge></TableCell>
                                 <TableCell>
                                   {canEdit ? (
                                     <Input
                                       type="number"
-                                      min="0"
-                                      max="100"
+                                      min="0" max="100"
                                       value={progressReport.progress_percentage || 0}
                                       onChange={(e) => {
                                         const newPercentage = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                                        updateLocalChanges(product.id, assignment.id, {
-                                          progress_percentage: newPercentage
-                                        });
+                                        updateLocalChanges(product.id, { progress_percentage: newPercentage });
                                       }}
                                       className="w-20"
                                       placeholder="0"
@@ -549,31 +398,20 @@ export function EditableReportForm({
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
-                                    <Progress 
-                                      value={progressReport.progress_percentage || 0} 
-                                      className="flex-1"
-                                    />
-                                    <span className="text-xs text-gray-500 w-8">
-                                      {progressReport.progress_percentage || 0}%
-                                    </span>
+                                    <Progress value={progressReport.progress_percentage || 0} className="flex-1" />
+                                    <span className="text-xs text-gray-500 w-8">{progressReport.progress_percentage || 0}%</span>
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   {canEdit ? (
                                     <Textarea
                                       value={progressReport.observations || ''}
-                                      onChange={(e) => {
-                                        updateLocalChanges(product.id, assignment.id, {
-                                          observations: e.target.value
-                                        });
-                                      }}
+                                      onChange={(e) => updateLocalChanges(product.id, { observations: e.target.value })}
                                       placeholder="Observaciones sobre el progreso..."
                                       className="min-h-[60px] resize-none"
                                     />
                                   ) : (
-                                    <div className="text-sm text-gray-600 max-w-xs">
-                                      {progressReport.observations || 'Sin observaciones'}
-                                    </div>
+                                    <div className="text-sm text-gray-600 max-w-xs">{progressReport.observations || 'Sin observaciones'}</div>
                                   )}
                                 </TableCell>
                                 <TableCell>
@@ -583,7 +421,7 @@ export function EditableReportForm({
                                     currentFiles={progressReport.evidence_files || []}
                                     currentFileNames={progressReport.evidence_file_names || []}
                                     onFilesChange={(files, fileNames) => {
-                                      updateLocalChanges(product.id, assignment.id, {
+                                      updateLocalChanges(product.id, {
                                         evidence_files: files,
                                         evidence_file_names: fileNames
                                       });
