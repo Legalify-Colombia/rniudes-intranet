@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { ManagerReport, ReportPeriod, Result } from "@/types/supabase";
 import type { Database } from "@/integrations/supabase/types";
@@ -47,110 +48,6 @@ export function useReports() {
       .select()
       .single();
     return { data, error };
-  };
-
-  // Product Progress Reports
-  const fetchProductProgressReports = async (managerReportId: string): Promise<Result<any[]>> => {
-    const { data, error } = await supabase
-      .from("product_progress_reports")
-      .select(`
-        *,
-        product:products(*),
-        assignment:custom_plan_assignments(*)
-      `)
-      .eq("manager_report_id", managerReportId)
-      .order("created_at", { ascending: false });
-    return { data, error };
-  };
-
-  // *** FUNCIÓN CORREGIDA CON LÓGICA CONDICIONAL ***
-  const upsertProductProgressReport = async (reportData: any): Promise<Result<any>> => {
-    try {
-      console.log('Datos recibidos para upsert:', reportData);
-      
-      // 1. Preparamos el objeto base con los campos comunes.
-      const baseReportData = {
-        manager_report_id: reportData.manager_report_id,
-        product_id: reportData.product_id,
-        progress_percentage: reportData.progress_percentage || 0,
-        observations: reportData.observations || '',
-        evidence_files: reportData.evidence_files || [],
-        evidence_file_names: reportData.evidence_file_names || [],
-        updated_at: new Date().toISOString()
-      };
-
-      // 2. Lógica condicional para decidir qué columna de asignación usar.
-      let finalReportData;
-      if (reportData.custom_plan_assignment_id) {
-        finalReportData = {
-          ...baseReportData,
-          custom_plan_assignment_id: reportData.custom_plan_assignment_id,
-          work_plan_assignment_id: null // Aseguramos que la otra columna sea nula
-        };
-      } else if (reportData.work_plan_assignment_id) {
-        finalReportData = {
-          ...baseReportData,
-          work_plan_assignment_id: reportData.work_plan_assignment_id,
-          custom_plan_assignment_id: null // Aseguramos que la otra columna sea nula
-        };
-      } else {
-        // Si no se proporciona ninguna de las dos, lanzamos un error claro.
-        throw new Error("Se debe proporcionar un 'work_plan_assignment_id' o un 'custom_plan_assignment_id'.");
-      }
-
-      console.log('Datos finales para la BD:', finalReportData);
-
-      const { data, error } = await supabase
-        .from("product_progress_reports")
-        .upsert(finalReportData, {
-          onConflict: 'manager_report_id,product_id' 
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error en upsert:', error);
-      } else {
-        console.log('Upsert exitoso:', data);
-      }
-      
-      return { data, error };
-    } catch (err) {
-      console.error('Excepción en upsertProductProgressReport:', err);
-      return { data: null, error: err as any };
-    }
-  };
-
-  const fetchWorkPlanAssignments = async (workPlanId: string): Promise<Result<any[]>> => {
-    try {
-      console.log('Consultando asignaciones para custom_plan_id:', workPlanId);
-      
-      const { data, error } = await supabase
-        .from("custom_plan_assignments")
-        .select(`
-          *,
-          product:products(
-            *,
-            action:strategic_actions(
-              *,
-              strategic_axis:strategic_axes(*)
-            )
-          )
-        `)
-        .eq("custom_plan_id", workPlanId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error('Error en fetchWorkPlanAssignments:', error);
-      } else {
-        console.log('Asignaciones encontradas:', data?.length || 0);
-      }
-
-      return { data, error };
-    } catch (err) {
-      console.error('Excepción en fetchWorkPlanAssignments:', err);
-      return { data: null, error: err as any };
-    }
   };
 
   // Report Periods
@@ -271,9 +168,6 @@ export function useReports() {
     fetchManagerReportsByManager,
     createManagerReport,
     updateManagerReport,
-    fetchProductProgressReports,
-    upsertProductProgressReport,
-    fetchWorkPlanAssignments,
     fetchReportPeriods,
     createReportPeriod,
     updateReportPeriod,
