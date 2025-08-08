@@ -129,13 +129,14 @@ export function EditableReportForm({
         const assignment = assignments.find(a => a.product.id === productId);
         if (!assignment) continue;
 
-        // *** CORRECCIÓN APLICADA AQUÍ ***
-        // Se cambió `custom_plan_assignment_id` por `work_plan_assignment_id`
-        // para que coincida con la columna que la base de datos espera.
+        // *** CORRECCIÓN FINAL APLICADA AQUÍ ***
+        // El ID de la asignación viene de `custom_plan_assignments`,
+        // por lo tanto, debe ir en la columna `custom_plan_assignment_id`.
+        // El hook `useReports` se encargará de poner la otra columna en `null`.
         const reportData = {
           manager_report_id: reportId,
           product_id: productId,
-          work_plan_assignment_id: assignment.id, // <-- ¡CORREGIDO!
+          custom_plan_assignment_id: assignment.id, // <-- ¡CORREGIDO!
           ...localChanges[productId]
         };
 
