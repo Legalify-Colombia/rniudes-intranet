@@ -13,7 +13,7 @@ export function useCustomPlans() {
           profiles:manager_id(*)
         `)
         .order("created_at", { ascending: false });
-      
+     
       return { 
         data: data || [], 
         error 
@@ -32,7 +32,7 @@ export function useCustomPlans() {
       if (!managerId) {
         return { data: [], error: null };
       }
-      
+     
       const { data, error } = await supabase
         .from("custom_plans")
         .select(`
@@ -41,7 +41,7 @@ export function useCustomPlans() {
         `)
         .eq("manager_id", managerId)
         .order("created_at", { ascending: false });
-      
+     
       return { 
         data: data || [], 
         error 
@@ -60,7 +60,7 @@ export function useCustomPlans() {
       if (!planId) {
         return { data: null, error: new Error("Plan ID is required") };
       }
-      
+     
       const { data, error } = await supabase
         .from("custom_plans")
         .select(`
@@ -71,12 +71,12 @@ export function useCustomPlans() {
         `)
         .eq("id", planId)
         .single();
-      
+     
       if (error) {
         console.error("Supabase error fetching custom plan details:", error);
         return { data: null, error };
       }
-      
+     
       return { data, error: null };
     } catch (error) {
       console.error("Error fetching custom plan details:", error);
@@ -95,13 +95,13 @@ export function useCustomPlans() {
           error: new Error("Manager ID and Plan Type ID are required") 
         };
       }
-      
+     
       const { data, error } = await supabase
         .from("custom_plans")
         .insert(plan)
         .select()
         .single();
-      
+     
       return { data, error };
     } catch (error) {
       console.error("Error creating custom plan:", error);
@@ -117,14 +117,14 @@ export function useCustomPlans() {
       if (!id) {
         return { data: null, error: new Error("Plan ID is required") };
       }
-      
+     
       const { data, error } = await supabase
         .from("custom_plans")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
-      
+     
       return { data, error };
     } catch (error) {
       console.error("Error updating custom plan:", error);
@@ -140,7 +140,7 @@ export function useCustomPlans() {
       if (!id) {
         return { data: null, error: new Error("Plan ID is required") };
       }
-      // CORRECCIÓN: El objeto de actualización se simplifica
+      // ✅ CORRECCIÓN: Nos aseguramos de que el objeto de actualización sea lo más limpio posible
       const { data, error } = await supabase
         .from("custom_plans")
         .update({ 
@@ -150,7 +150,7 @@ export function useCustomPlans() {
         .eq("id", id)
         .select()
         .single();
-      
+     
       return { data, error };
     } catch (error) {
       console.error("Error submitting custom plan:", error);
@@ -169,7 +169,7 @@ export function useCustomPlans() {
           error: new Error("Custom plan ID and plan field ID are required") 
         };
       }
-      
+      // ✅ CORRECCIÓN: Simplificamos el manejo del JSONB
       const { data, error } = await supabase
         .from("custom_plan_responses")
         .upsert(response, {
@@ -177,12 +177,12 @@ export function useCustomPlans() {
         })
         .select()
         .single();
-      
+     
       if (error) {
         console.error('Supabase error in upsertCustomPlanResponse:', error);
         return { data: null, error };
       }
-      
+     
       console.log('Response upserted successfully:', data);
       return { data, error: null };
     } catch (error) {
@@ -202,7 +202,7 @@ export function useCustomPlans() {
           error: new Error("Custom plan ID and product ID are required") 
         };
       }
-      
+     
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .upsert(assignment, {
@@ -210,12 +210,12 @@ export function useCustomPlans() {
         })
         .select()
         .single();
-      
+     
       if (error) {
         console.error('Supabase error in upsertCustomPlanAssignment:', error);
         return { data: null, error };
       }
-      
+     
       console.log('Assignment upserted successfully:', data);
       return { data, error: null };
     } catch (error) {
@@ -226,7 +226,7 @@ export function useCustomPlans() {
       };
     }
   };
-  
+ 
   const deleteCustomPlanAssignment = async (customPlanId: string, productId: string): Promise<Result<any>> => {
     try {
       if (!customPlanId || !productId) {
@@ -235,13 +235,13 @@ export function useCustomPlans() {
           error: new Error("Custom plan ID and product ID are required") 
         };
       }
-      
+     
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .delete()
         .eq("custom_plan_id", customPlanId)
         .eq("product_id", productId);
-      
+     
       return { data, error };
     } catch (error) {
       console.error("Error deleting custom plan assignment:", error);
@@ -258,7 +258,7 @@ export function useCustomPlans() {
         console.warn("DEBUG: planId es nulo o indefinido. No se realizará la consulta.");
         return { data: [], error: null };
       }
-      
+     
       const { data, error } = await supabase
         .from("custom_plan_assignments")
         .select(`
@@ -272,7 +272,7 @@ export function useCustomPlans() {
           )
         `)
         .eq("custom_plan_id", planId);
-      
+     
       return { data: data || [], error };
     } catch (error) {
       console.error("Error fetching custom plan assignments:", error);
