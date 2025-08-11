@@ -14,518 +14,518 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StructuredCustomPlanForm } from "./StructuredCustomPlanForm";
 
 interface CustomPlanFormProps {
-  planId?: string;
-  planTypeId?: string;
-  onSave?: () => void;
-  embedded?: boolean;
+  planId?: string;
+  planTypeId?: string;
+  onSave?: () => void;
+  embedded?: boolean;
 }
 
 export function CustomPlanForm({ planId, planTypeId, onSave, embedded = false }: CustomPlanFormProps) {
-  const [plan, setPlan] = useState<any>(null);
-  const [planType, setPlanType] = useState<any>(null);
-  const [fields, setFields] = useState<any[]>([]);
-  const [responses, setResponses] = useState<{[key: string]: any}>({});
-  const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
-  const [actions, setActions] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [title, setTitle] = useState("");
-    
-  const { profile } = useAuth();
-  const { toast } = useToast();
-  const { 
-    fetchCustomPlanDetails, 
-    updateCustomPlan, 
-    submitCustomPlan, 
-    upsertCustomPlanResponse,
-    fetchStrategicAxes,
-    fetchActions,
-    fetchProducts,
-    fetchPlanFields,
-    fetchPlanTypes,
-    createCustomPlan
-  } = useSupabaseData();
+  const [plan, setPlan] = useState<any>(null);
+  const [planType, setPlanType] = useState<any>(null);
+  const [fields, setFields] = useState<any[]>([]);
+  const [responses, setResponses] = useState<{[key: string]: any}>({});
+  const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
+  const [actions, setActions] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [title, setTitle] = useState("");
+    
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const { 
+    fetchCustomPlanDetails, 
+    updateCustomPlan, 
+    submitCustomPlan, 
+    upsertCustomPlanResponse,
+    fetchStrategicAxes,
+    fetchActions,
+    fetchProducts,
+    fetchPlanFields,
+    fetchPlanTypes,
+    createCustomPlan
+  } = useSupabaseData();
 
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        await loadMasterData();
-        if (planId) {
-          await loadPlanDetails();
-        } else if (planTypeId) {
-          await loadPlanType();
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadData();
-  }, [planId, planTypeId]);
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        await loadMasterData();
+        if (planId) {
+          await loadPlanDetails();
+        } else if (planTypeId) {
+          await loadPlanType();
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [planId, planTypeId]);
 
-  const loadPlanDetails = async () => {
-    if (!planId) return;
-    
-    try {
-      const result = await fetchCustomPlanDetails(planId);
-      if (result.data) {
-        setPlan(result.data);
-        setPlanType(result.data.plan_type);
-        setTitle(result.data.title);
-        
-        const responsesMap: {[key: string]: any} = {};
-        result.data.responses?.forEach((response: any) => {
-          responsesMap[response.plan_field_id] = response.response_value;
-        });
-        setResponses(responsesMap);
-        
-        if (result.data.plan_type_id) {
-          const fieldsResult = await fetchPlanFields(result.data.plan_type_id);
-          if (fieldsResult.data) {
-            setFields(fieldsResult.data);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error loading plan details:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo cargar el plan",
-        variant: "destructive",
-      });
-    }
-  };
+  const loadPlanDetails = async () => {
+    if (!planId) return;
+    
+    try {
+      const result = await fetchCustomPlanDetails(planId);
+      if (result.data) {
+        setPlan(result.data);
+        setPlanType(result.data.plan_type);
+        setTitle(result.data.title);
+        
+        const responsesMap: {[key: string]: any} = {};
+        result.data.responses?.forEach((response: any) => {
+          responsesMap[response.plan_field_id] = response.response_value;
+        });
+        setResponses(responsesMap);
+        
+        if (result.data.plan_type_id) {
+          const fieldsResult = await fetchPlanFields(result.data.plan_type_id);
+          if (fieldsResult.data) {
+            setFields(fieldsResult.data);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading plan details:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo cargar el plan",
+        variant: "destructive",
+      });
+    }
+  };
 
-  const loadPlanType = async () => {
-    if (!planTypeId) return;
-    
-    try {
-      const { data: planTypes } = await fetchPlanTypes();
-      const foundPlanType = planTypes?.find(pt => pt.id === planTypeId);
-      if (foundPlanType) {
-        setPlanType(foundPlanType);
-        setTitle(`Plan de ${foundPlanType.name} - ${profile?.full_name}`);
-      }
-      
-      const fieldsResult = await fetchPlanFields(planTypeId);
-      if (fieldsResult.data) {
-        setFields(fieldsResult.data);
-        const initialResponses: {[key: string]: any} = {};
-        fieldsResult.data.forEach((field: any) => {
-          initialResponses[field.id] = '';
-        });
-        setResponses(initialResponses);
-      }
-    } catch (error) {
-      console.error("Error loading plan type:", error);
-    }
-  };
+  const loadPlanType = async () => {
+    if (!planTypeId) return;
+    
+    try {
+      const { data: planTypes } = await fetchPlanTypes();
+      const foundPlanType = planTypes?.find(pt => pt.id === planTypeId);
+      if (foundPlanType) {
+        setPlanType(foundPlanType);
+        setTitle(`Plan de ${foundPlanType.name} - ${profile?.full_name}`);
+      }
+      
+      const fieldsResult = await fetchPlanFields(planTypeId);
+      if (fieldsResult.data) {
+        setFields(fieldsResult.data);
+        const initialResponses: {[key: string]: any} = {};
+        fieldsResult.data.forEach((field: any) => {
+          initialResponses[field.id] = '';
+        });
+        setResponses(initialResponses);
+      }
+    } catch (error) {
+      console.error("Error loading plan type:", error);
+    }
+  };
 
-  const loadMasterData = async () => {
-    try {
-      const [axesResult, actionsResult, productsResult] = await Promise.all([
-        fetchStrategicAxes(),
-        fetchActions(),
-        fetchProducts()
-      ]);
-      
-      if (axesResult.data) setStrategicAxes(axesResult.data);
-      if (actionsResult.data) setActions(actionsResult.data);
-      if (productsResult.data) setProducts(productsResult.data);
-    } catch (error) {
-      console.error("Error loading master data:", error);
-    }
-  };
+  const loadMasterData = async () => {
+    try {
+      const [axesResult, actionsResult, productsResult] = await Promise.all([
+        fetchStrategicAxes(),
+        fetchActions(),
+        fetchProducts()
+      ]);
+      
+      if (axesResult.data) setStrategicAxes(axesResult.data);
+      if (actionsResult.data) setActions(actionsResult.data);
+      if (productsResult.data) setProducts(productsResult.data);
+    } catch (error) {
+      console.error("Error loading master data:", error);
+    }
+  };
 
-  if (planType?.uses_structured_elements) {
-    return (
-      <StructuredCustomPlanForm
-        planId={planId}
-        planTypeId={planTypeId}
-        onSave={onSave}
-      />
-    );
-  }
+  if (planType?.uses_structured_elements) {
+    return (
+      <StructuredCustomPlanForm
+        planId={planId}
+        planTypeId={planTypeId}
+        onSave={onSave}
+      />
+    );
+  }
 
-  const handleResponseChange = async (fieldId: string, value: any) => {
-    setResponses(prev => ({ ...prev, [fieldId]: value }));
-    
-    if (plan?.id) {
-      try {
-        await upsertCustomPlanResponse({
-          custom_plan_id: plan.id,
-          plan_field_id: fieldId,
-          response_value: value
-        });
-      } catch (error) {
-        console.error("Error saving response:", error);
-      }
-    }
-  };
+  const handleResponseChange = async (fieldId: string, value: any) => {
+    setResponses(prev => ({ ...prev, [fieldId]: value }));
+    
+    if (plan?.id) {
+      try {
+        await upsertCustomPlanResponse({
+          custom_plan_id: plan.id,
+          plan_field_id: fieldId,
+          response_value: value
+        });
+      } catch (error) {
+        console.error("Error saving response:", error);
+      }
+    }
+  };
 
-  const handleSave = async () => {
-    try {
-      setIsLoading(true);
-      
-      let currentPlan = plan;
-      
-      if (!currentPlan && planTypeId) {
-        const planData = {
-          title,
-          plan_type_id: planTypeId,
-          manager_id: profile?.id,
-          status: 'draft'
-        };
-        
-        // --- LÍNEA DE DEPURACIÓN AÑADIDA AQUÍ ---
-        console.log("Creando nuevo plan con los datos:", planData); 
-        // ------------------------------------------
+  const handleSave = async () => {
+    try {
+      setIsLoading(true);
+      
+      let currentPlan = plan;
+      
+      if (!currentPlan && planTypeId) {
+        const planData = {
+          title,
+          plan_type_id: planTypeId,
+          manager_id: profile?.id,
+          status: 'draft'
+        };
+        
+        // --- LÍNEA DE DEPURACIÓN AÑADIDA AQUÍ ---
+        console.log("Creando nuevo plan con los datos:", planData); 
+        // ------------------------------------------
 
-        const result = await createCustomPlan(planData);
-        if (result.error) {
-          throw new Error(result.error.message);
-        }
-        currentPlan = result.data;
-        setPlan(currentPlan);
-      }
-      
-      if (currentPlan) {
-        await updateCustomPlan(currentPlan.id, { title });
-        
-        for (const [fieldId, value] of Object.entries(responses)) {
-          if (value !== null && value !== undefined && value !== '') {
-            await upsertCustomPlanResponse({
-              custom_plan_id: currentPlan.id,
-              plan_field_id: fieldId,
-              response_value: value
-            });
-          }
-        }
-      }
-      
-      toast({
-        title: "Éxito",
-        description: "Plan guardado correctamente",
-      });
-      
-      if (onSave) onSave();
-      
-      return currentPlan;
+        const result = await createCustomPlan(planData);
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+        currentPlan = result.data;
+        setPlan(currentPlan);
+      }
+      
+      if (currentPlan) {
+        await updateCustomPlan(currentPlan.id, { title });
+        
+        for (const [fieldId, value] of Object.entries(responses)) {
+          if (value !== null && value !== undefined && value !== '') {
+            await upsertCustomPlanResponse({
+              custom_plan_id: currentPlan.id,
+              plan_field_id: fieldId,
+              response_value: value
+            });
+          }
+        }
+      }
+      
+      toast({
+        title: "Éxito",
+        description: "Plan guardado correctamente",
+      });
+      
+      if (onSave) onSave();
+      
+      return currentPlan;
 
-    } catch (error) {
-      console.error("Error saving plan:", error);
-      toast({
-        title: "Error",
-        description: `No se pudo guardar el plan: ${error.message}`,
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    } catch (error) {
+      console.error("Error saving plan:", error);
+      toast({
+        title: "Error",
+        description: `No se pudo guardar el plan: ${error.message}`,
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleSubmit = async () => {
-    try {
-      setIsLoading(true);
-      
-      const savedPlan = await handleSave();
-      
-      if (!savedPlan?.id) {
-        toast({
-          title: "Error",
-          description: "No se pudo guardar el plan antes de enviar. Inténtalo de nuevo.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      const result = await submitCustomPlan(savedPlan.id);
-      
-      if (result.error) {
-        throw new Error(result.error.message || 'Error al enviar el plan');
-      }
-      
-      toast({
-        title: "Éxito",
-        description: "Plan enviado para revisión",
-      });
-      
-      if (onSave) onSave();
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+      
+      const savedPlan = await handleSave();
+      
+      if (!savedPlan?.id) {
+        toast({
+          title: "Error",
+          description: "No se pudo guardar el plan antes de enviar. Inténtalo de nuevo.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const result = await submitCustomPlan(savedPlan.id);
+      
+      if (result.error) {
+        throw new Error(result.error.message || 'Error al enviar el plan');
+      }
+      
+      toast({
+        title: "Éxito",
+        description: "Plan enviado para revisión",
+      });
+      
+      if (onSave) onSave();
 
-    } catch (error) {
-      console.error("Error submitting plan:", error);
-      toast({
-        title: "Error",
-        description: `No se pudo enviar el plan: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    } catch (error) {
+      console.error("Error submitting plan:", error);
+      toast({
+        title: "Error",
+        description: `No se pudo enviar el plan: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const renderField = (field: any) => {
-    const value = responses[field.id] || '';
-    const isReadOnly = (plan?.status === 'approved') || 
-                       (plan?.status === 'submitted' && !['Administrador', 'Coordinador'].includes(profile?.role || ''));
-    
-    switch (field.field_type) {
-      case 'text':
-      case 'short_text':
-        return (
-          <Input
-            value={value}
-            onChange={(e) => handleResponseChange(field.id, e.target.value)}
-            placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
-            disabled={isReadOnly}
-          />
-        );
-      
-      case 'textarea':
-      case 'long_text':
-        return (
-          <Textarea
-            value={value}
-            onChange={(e) => handleResponseChange(field.id, e.target.value)}
-            placeholder={`Describe ${field.field_name.toLowerCase()}`}
-            rows={4}
-            disabled={isReadOnly}
-          />
-        );
-      
-      case 'number':
-      case 'numeric':
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleResponseChange(field.id, parseInt(e.target.value) || 0)}
-            placeholder="0"
-            disabled={isReadOnly}
-          />
-        );
-      
-      case 'dropdown':
-        return (
-          <Select 
-            value={value} 
-            onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={isReadOnly}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={`Selecciona ${field.field_name.toLowerCase()}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.dropdown_options?.map((option: string) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      
-      case 'strategic_axes':
-        return (
-          <Select 
-            value={value} 
-            onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={isReadOnly}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona un eje estratégico" />
-            </SelectTrigger>
-            <SelectContent>
-              {strategicAxes.map((axis) => (
-                <SelectItem key={axis.id} value={axis.id}>
-                  {axis.code} - {axis.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      
-      case 'actions':
-        return (
-          <Select 
-            value={value} 
-            onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={isReadOnly}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona una acción" />
-            </SelectTrigger>
-            <SelectContent>
-              {actions.map((action) => (
-                <SelectItem key={action.id} value={action.id}>
-                  {action.code} - {action.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      
-      case 'products':
-        return (
-          <Select 
-            value={value} 
-            onValueChange={(val) => handleResponseChange(field.id, val)}
-            disabled={isReadOnly}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona un producto" />
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((product) => (
-                <SelectItem key={product.id} value={product.id}>
-                  {product.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      
-      default:
-        return (
-          <Input
-            value={value}
-            onChange={(e) => handleResponseChange(field.id, e.target.value)}
-            placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
-            disabled={isReadOnly}
-          />
-        );
-    }
-  };
+  const renderField = (field: any) => {
+    const value = responses[field.id] || '';
+    const isReadOnly = (plan?.status === 'approved') || 
+                       (plan?.status === 'submitted' && !['Administrador', 'Coordinador'].includes(profile?.role || ''));
+    
+    switch (field.field_type) {
+      case 'text':
+      case 'short_text':
+        return (
+          <Input
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, e.target.value)}
+            placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
+            disabled={isReadOnly}
+          />
+        );
+      
+      case 'textarea':
+      case 'long_text':
+        return (
+          <Textarea
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, e.target.value)}
+            placeholder={`Describe ${field.field_name.toLowerCase()}`}
+            rows={4}
+            disabled={isReadOnly}
+          />
+        );
+      
+      case 'number':
+      case 'numeric':
+        return (
+          <Input
+            type="number"
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, parseInt(e.target.value) || 0)}
+            placeholder="0"
+            disabled={isReadOnly}
+          />
+        );
+      
+      case 'dropdown':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={`Selecciona ${field.field_name.toLowerCase()}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.dropdown_options?.map((option: string) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'strategic_axes':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona un eje estratégico" />
+            </SelectTrigger>
+            <SelectContent>
+              {strategicAxes.map((axis) => (
+                <SelectItem key={axis.id} value={axis.id}>
+                  {axis.code} - {axis.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'actions':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona una acción" />
+            </SelectTrigger>
+            <SelectContent>
+              {actions.map((action) => (
+                <SelectItem key={action.id} value={action.id}>
+                  {action.code} - {action.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'products':
+        return (
+          <Select 
+            value={value} 
+            onValueChange={(val) => handleResponseChange(field.id, val)}
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona un producto" />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map((product) => (
+                <SelectItem key={product.id} value={product.id}>
+                  {product.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      
+      default:
+        return (
+          <Input
+            value={value}
+            onChange={(e) => handleResponseChange(field.id, e.target.value)}
+            placeholder={`Ingresa ${field.field_name.toLowerCase()}`}
+            disabled={isReadOnly}
+          />
+        );
+    }
+  };
 
-  if (isLoading) {
-    return <div className="flex justify-center p-8">Cargando...</div>;
-  }
+  if (isLoading) {
+    return <div className="flex justify-center p-8">Cargando...</div>;
+  }
 
-  const isReadOnly = (plan?.status === 'approved') || 
-                     (plan?.status === 'submitted' && !['Administrador', 'Coordinador'].includes(profile?.role || ''));
+  const isReadOnly = (plan?.status === 'approved') || 
+                     (plan?.status === 'submitted' && !['Administrador', 'Coordinador'].includes(profile?.role || ''));
 
-  if (embedded) {
-    return (
-      <div className="space-y-4">
-        {fields.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campo</TableHead>
-                <TableHead>Valor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fields.map((field) => {
-                const value = responses[field.id];
-                let displayValue = value || 'Sin especificar';
-                
-                if (field.field_type === 'strategic_axes' && value) {
-                  const axis = strategicAxes.find(a => a.id === value);
-                  displayValue = axis ? `${axis.code} - ${axis.name}` : value;
-                } else if (field.field_type === 'actions' && value) {
-                  const action = actions.find(a => a.id === value);
-                  displayValue = action ? `${action.code} - ${action.name}` : value;
-                } else if (field.field_type === 'products' && value) {
-                  const product = products.find(p => p.id === value);
-                  displayValue = product ? product.name : value;
-                }
-                
-                return (
-                  <TableRow key={field.id}>
-                    <TableCell className="font-medium">{field.field_name}</TableCell>
-                    <TableCell>{displayValue}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-4 text-gray-500">
-            No hay campos configurados para este tipo de plan
-          </div>
-        )}
-      </div>
-    );
-  }
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        {fields.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campo</TableHead>
+                <TableHead>Valor</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fields.map((field) => {
+                const value = responses[field.id];
+                let displayValue = value || 'Sin especificar';
+                
+                if (field.field_type === 'strategic_axes' && value) {
+                  const axis = strategicAxes.find(a => a.id === value);
+                  displayValue = axis ? `${axis.code} - ${axis.name}` : value;
+                } else if (field.field_type === 'actions' && value) {
+                  const action = actions.find(a => a.id === value);
+                  displayValue = action ? `${action.code} - ${action.name}` : value;
+                } else if (field.field_type === 'products' && value) {
+                  const product = products.find(p => p.id === value);
+                  displayValue = product ? product.name : value;
+                }
+                
+                return (
+                  <TableRow key={field.id}>
+                    <TableCell className="font-medium">{field.field_name}</TableCell>
+                    <TableCell>{displayValue}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            No hay campos configurados para este tipo de plan
+          </div>
+        )}
+      </div>
+    );
+  }
 
-  return (
-    <div className="space-y-6 max-w-4xl">
-      {!embedded && (
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => window.history.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {plan ? 'Editar Plan' : 'Crear Plan'}
-            </h1>
-            <p className="text-gray-600">
-              {planType?.name} - {planType?.description}
-            </p>
-          </div>
-        </div>
-      )}
+  return (
+    <div className="space-y-6 max-w-4xl">
+      {!embedded && (
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => window.history.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Volver
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {plan ? 'Editar Plan' : 'Crear Plan'}
+            </h1>
+            <p className="text-gray-600">
+              {planType?.name} - {planType?.description}
+            </p>
+        </div>
+      </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            {planType?.name || 'Plan Personalizado'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <Label htmlFor="title">Título del Plan</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ingresa el título del plan"
-              disabled={isReadOnly}
-            />
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {planType?.name || 'Plan Personalizado'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <Label htmlFor="title">Título del Plan</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ingresa el título del plan"
+              disabled={isReadOnly}
+            />
+        </div>
 
-          {fields.length > 0 ? (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Campos del Plan</h3>
-              <div className="grid gap-6">
-                {fields.map((field) => (
-                  <div key={field.id}>
-                    <Label htmlFor={field.id} className="flex items-center gap-2">
-                      {field.field_name}
-                      {field.is_required && <Badge variant="secondary">Requerido</Badge>}
-                    </Label>
-                    {renderField(field)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No hay campos configurados para este tipo de plan
-            </div>
-          )}
+          {fields.length > 0 ? (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold">Campos del Plan</h3>
+              <div className="grid gap-6">
+                {fields.map((field) => (
+                  <div key={field.id}>
+                    <Label htmlFor={field.id} className="flex items-center gap-2">
+                      {field.field_name}
+                      {field.is_required && <Badge variant="secondary">Requerido</Badge>}
+                    </Label>
+                    {renderField(field)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No hay campos configurados para este tipo de plan
+            </div>
+          )}
 
-          {!embedded && !isReadOnly && (
-            <div className="flex gap-4 pt-6">
-              <Button onClick={handleSave} disabled={isLoading}>
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? 'Guardando...' : 'Guardar'}
-              </Button>
-              {plan?.status !== 'submitted' && (
-                <Button onClick={handleSubmit} disabled={isLoading || !title.trim()}>
-                  <Send className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+          {!embedded && !isReadOnly && (
+            <div className="flex gap-4 pt-6">
+              <Button onClick={handleSave} disabled={isLoading}>
+                <Save className="h-4 w-4 mr-2" />
+                {isLoading ? 'Guardando...' : 'Guardar'}
+              </Button>
+              {plan?.status !== 'submitted' && (
+                <Button onClick={handleSubmit} disabled={isLoading || !title.trim()}>
+                  <Send className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
