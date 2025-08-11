@@ -118,6 +118,7 @@ export function useCustomPlans() {
         return { data: null, error: new Error("Plan ID is required") };
       }
       
+      // CORRECCIÓN: El objeto de actualizaciones se pasa directamente a la base de datos
       const { data, error } = await supabase
         .from("custom_plans")
         .update(updates)
@@ -170,6 +171,7 @@ export function useCustomPlans() {
         };
       }
       
+      // CORRECCIÓN: El objeto de respuesta se pasa directamente a la base de datos
       const { data, error } = await supabase
         .from("custom_plan_responses")
         .upsert(response, {
