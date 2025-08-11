@@ -8,7 +8,17 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (data: { email: string; password: string; fullName: string; documentNumber: string; position: string; role: string; weeklyHours?: number; numberOfWeeks?: number }) => Promise<{ error: any }>;
+  signUp: (data: { 
+    email: string;
+    password: string;
+    fullName: string;
+    documentNumber: string;
+    position: string;
+    campus: string; // ¡Hemos añadido el campus aquí!
+    role: string;
+    weeklyHours?: number;
+    numberOfWeeks?: number;
+   }) => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
   loading: boolean;
 }
@@ -157,13 +167,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     fullName: string;
     documentNumber: string;
     position: string;
+    campus: string; // ¡Hemos añadido el campus al tipo de la función!
     role: string;
     weeklyHours?: number;
     numberOfWeeks?: number;
   }) => {
     try {
-      const totalHours = data.weeklyHours && data.numberOfWeeks 
-        ? data.weeklyHours * data.numberOfWeeks 
+      const totalHours = data.weeklyHours && data.numberOfWeeks
+        ? data.weeklyHours * data.numberOfWeeks
         : undefined;
 
       const { error } = await supabase.auth.signUp({
@@ -175,6 +186,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             full_name: data.fullName,
             document_number: data.documentNumber,
             position: data.position,
+            campus: data.campus, // ¡Hemos añadido el campus a los metadatos!
             role: data.role,
             weekly_hours: data.weeklyHours,
             number_of_weeks: data.numberOfWeeks,
