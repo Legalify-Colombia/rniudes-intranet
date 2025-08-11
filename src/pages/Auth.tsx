@@ -18,10 +18,9 @@ import { useToast } from '@/hooks/use-toast';
 import { getValidPositions, getRoleFromPosition, validatePosition } from '@/utils/positionUtils';
 
 export default function Auth() {
-  // --- TODA TU LÓGICA Y ESTADOS SE MANTIENEN INTACTOS ---
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar contraseña
+  const [showPassword, setShowPassword] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -32,9 +31,13 @@ export default function Auth() {
     fullName: '',
     documentNumber: '',
     position: '',
+    campus: '', // Campo para el campus
     weeklyHours: 0,
     numberOfWeeks: 16,
   });
+
+  // Lista de campus disponibles
+  const campuses = ['Bucaramanga', 'Cúcuta', 'Valledupar', 'Bogotá', 'Ocaña'];
 
   const positions = getValidPositions().filter(pos =>
     pos && typeof pos === 'string' && pos.trim().length > 0 && validatePosition(pos)
@@ -64,12 +67,24 @@ export default function Auth() {
           return;
         }
 
+        // Validación para el campus
+        if (!formData.campus || formData.campus.trim() === "") {
+          toast({
+            title: 'Error',
+            description: 'El campus es requerido',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          return;
+        }
+
         const { error } = await signUp({
           email: formData.email,
           password: formData.password,
           fullName: formData.fullName,
           documentNumber: formData.documentNumber,
           position: formData.position,
+          campus: formData.campus, // Enviar el campus al registrarse
           role: getRoleFromPosition(formData.position),
           weeklyHours: formData.position === 'Gestor de Internacionalización' ? formData.weeklyHours : undefined,
           numberOfWeeks: formData.position === 'Gestor de Internacionalización' ? formData.numberOfWeeks : undefined,
@@ -82,7 +97,7 @@ export default function Auth() {
             variant: 'destructive',
           });
         } else {
-           setIsSignUp(false); // Opcional: cambiar a la vista de login tras registro exitoso
+          setIsSignUp(false);
           toast({
             title: 'Registro exitoso',
             description: 'Se ha enviado un correo de confirmación.',
@@ -112,13 +127,11 @@ export default function Auth() {
     }
   };
 
-  // --- NUEVA ESTRUCTURA VISUAL CON TU LÓGICA INTEGRADA ---
   return (
     <div className="min-h-screen w-full bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-6xl flex rounded-2xl overflow-hidden shadow-2xl">
         {/* Lado Izquierdo - Sección Hero con imagen */}
         <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary/20 via-primary/10 to-background relative overflow-hidden">
-          {/* Puedes cambiar esta URL por la imagen que prefieras */}
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070')] bg-cover bg-center opacity-25" />
           <div className="relative z-10 p-12 flex flex-col justify-center">
             <div className="space-y-8">
@@ -142,15 +155,14 @@ export default function Auth() {
         {/* Lado Derecho - Formulario de Autenticación */}
         <div className="flex-1 bg-card">
           <Card className="h-full border-0 shadow-none rounded-none">
-            {/* Cabecera con tu logo y título dinámico */}
             <CardHeader className="space-y-1 pb-8 pt-12 text-center">
-               <div className="flex justify-center mb-4">
-                 <img
-                   src="https://udes.edu.co/images/logo/logo-con-acreditada-color.png"
-                   alt="UDES Logo"
-                   className="h-16 w-auto"
-                 />
-               </div>
+              <div className="flex justify-center mb-4">
+                <img
+                  src="https://udes.edu.co/images/logo/logo-con-acreditada-color.png"
+                  alt="UDES Logo"
+                  className="h-16 w-auto"
+                />
+              </div>
               <CardTitle className="text-3xl font-bold">
                 DRNI - Gestión
               </CardTitle>
@@ -158,9 +170,8 @@ export default function Auth() {
                 {isSignUp ? 'Crea una nueva cuenta para comenzar' : 'Ingresa tus credenciales para acceder'}
               </CardDescription>
             </CardHeader>
-            
+              
             <CardContent className="space-y-4 px-8">
-              {/* Formulario con todos tus campos y lógica */}
               <form onSubmit={handleSubmit} className="space-y-4">
                 {isSignUp && (
                   <>
@@ -185,6 +196,22 @@ export default function Auth() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Nuevo campo de selección de campus */}
+                    <div className="space-y-2">
+                      <Label htmlFor="campus">Campus</Label>
+                      <Select value={formData.campus || undefined} onValueChange={(value) => setFormData(prev => ({ ...prev, campus: value }))}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Seleccionar campus" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {campuses.map((campus) => (
+                            <SelectItem key={campus} value={campus}>{campus}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {formData.position === 'Gestor de Internacionalización' && (
                       <>
                         <div className="space-y-2">
@@ -199,12 +226,12 @@ export default function Auth() {
                     )}
                   </>
                 )}
-                
+                  
                 <div className="space-y-2">
                   <Label htmlFor="email">Correo Electrónico</Label>
                   <Input id="email" type="email" placeholder="correo@udes.edu.co" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} required className="h-12"/>
                 </div>
-                
+                  
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
                   <div className="relative">
@@ -222,7 +249,7 @@ export default function Auth() {
                     </Button>
                   </div>
                 </div>
-                
+                  
                 <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
                   {loading ? (
                     <div className="flex items-center space-x-2">
@@ -233,11 +260,11 @@ export default function Auth() {
                 </Button>
               </form>
             </CardContent>
-            
+              
             <CardFooter className="pb-12">
               <div className="w-full text-center">
                 <p className="text-sm text-muted-foreground">
-                   {isSignUp ? '¿Ya tienes una cuenta?' : '¿No tienes una cuenta?'}
+                    {isSignUp ? '¿Ya tienes una cuenta?' : '¿No tienes una cuenta?'}
                   <Button variant="link" className="px-1.5 text-sm font-medium" onClick={() => setIsSignUp(!isSignUp)}>
                     {isSignUp ? 'Inicia sesión' : 'Regístrate'}
                   </Button>
