@@ -1730,6 +1730,7 @@ export type Database = {
       product_progress_reports: {
         Row: {
           created_at: string | null
+          custom_plan_assignment_id: string | null
           evidence_file_names: string[] | null
           evidence_files: string[] | null
           id: string
@@ -1738,10 +1739,11 @@ export type Database = {
           product_id: string
           progress_percentage: number
           updated_at: string | null
-          work_plan_assignment_id: string
+          work_plan_assignment_id: string | null
         }
         Insert: {
           created_at?: string | null
+          custom_plan_assignment_id?: string | null
           evidence_file_names?: string[] | null
           evidence_files?: string[] | null
           id?: string
@@ -1750,10 +1752,11 @@ export type Database = {
           product_id: string
           progress_percentage?: number
           updated_at?: string | null
-          work_plan_assignment_id: string
+          work_plan_assignment_id?: string | null
         }
         Update: {
           created_at?: string | null
+          custom_plan_assignment_id?: string | null
           evidence_file_names?: string[] | null
           evidence_files?: string[] | null
           id?: string
@@ -1762,9 +1765,16 @@ export type Database = {
           product_id?: string
           progress_percentage?: number
           updated_at?: string | null
-          work_plan_assignment_id?: string
+          work_plan_assignment_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "product_progress_reports_custom_plan_assignment_id_fkey"
+            columns: ["custom_plan_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "custom_plan_assignments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_progress_reports_manager_report_id_fkey"
             columns: ["manager_report_id"]

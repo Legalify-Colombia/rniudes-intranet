@@ -23,9 +23,10 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     fetchProducts, 
     fetchWorkPlans,
     fetchWorkPlanAssignments,
+    fetchPlanTypes,
     createCustomPlan,
     updateCustomPlan,
-    upsertWorkPlanAssignment,
+    upsertCustomPlanAssignment,
     submitCustomPlan // Asegúrate de que esta función esté disponible en useSupabaseData
   } = useSupabaseData();
   const { toast } = useToast();
@@ -33,6 +34,7 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
   const [actions, setActions] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [planTypes, setPlanTypes] = useState<any[]>([]);
   const [workPlan, setWorkPlan] = useState<any>(null);
   const [objectives, setObjectives] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -49,12 +51,14 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
         { data: axesData },
         { data: actionsData },
         { data: productsData },
-        { data: customPlansData }
+        { data: customPlansData },
+        { data: planTypesData }
       ] = await Promise.all([
         fetchStrategicAxes(),
         fetchActions(),
         fetchProducts(),
         fetchWorkPlans(),
+        fetchPlanTypes(),
       ]);
 
       const validAxes = (axesData || []).filter(axis => axis.id && typeof axis.id === 'string' && axis.id.trim().length > 0);
@@ -65,6 +69,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
 
       const validProducts = (productsData || []).filter(product => product.id && typeof product.id === 'string' && product.id.trim().length > 0);
       setProducts(validProducts);
+
+      setPlanTypes(planTypesData || []);
 
       const existingPlan = customPlansData?.find(
         (plan: any) => plan.manager_id === manager.id
@@ -101,9 +107,15 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
     try {
       setLoading(true);
       if (!currentWorkPlan) {
+        const chosenPlanTypeId = (manager as any).plan_type_id || planTypes?.[0]?.id;
+        if (!chosenPlanTypeId) {
+          toast({ title: "Asigne un tipo de plan", description: "No se encontró un tipo de plan válido para este gestor.", variant: "destructive" });
+          setLoading(false);
+          return;
+        }
         const newPlan = {
           manager_id: manager.id,
-          plan_type_id: manager.plan_type_id || 'default_plan_type_id', // Asegúrate de tener un plan_type_id
+          plan_type_id: chosenPlanTypeId,
           title: objectives,
           status: 'draft'
         };
@@ -120,8 +132,8 @@ export function WorkPlanForm({ manager, onClose, onSave }: WorkPlanFormProps) {
       await Promise.all(
         Object.entries(inputValues).map(async ([productId, hours]) => {
           if (hours > 0) {
-            await upsertWorkPlanAssignment({
-              work_plan_id: currentWorkPlan.id,
+            await upsertCustomPlanAssignment({
+              custom_plan_id: currentWorkPlan.id,
               product_id: productId,
               assigned_hours: hours
             });
