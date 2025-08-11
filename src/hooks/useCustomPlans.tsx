@@ -170,32 +170,9 @@ export function useCustomPlans() {
         };
       }
       
-      // Handle JSONB properly - database now expects proper JSON
-      let processedValue = response.response_value;
-      
-      // Convert to proper JSONB format if needed
-      if (typeof processedValue === 'string' && processedValue !== '') {
-        try {
-          // Try to parse as JSON first
-          JSON.parse(processedValue);
-          // If successful, keep as is (it's already valid JSON string)
-        } catch {
-          // If not valid JSON, wrap in quotes to make it a JSON string
-          processedValue = JSON.stringify(processedValue);
-        }
-      } else if (typeof processedValue === 'object' && processedValue !== null) {
-        // Convert object to JSON string
-        processedValue = JSON.stringify(processedValue);
-      } else if (processedValue === null || processedValue === undefined) {
-        processedValue = null;
-      }
-      
       const { data, error } = await supabase
         .from("custom_plan_responses")
-        .upsert({ 
-          ...response, 
-          response_value: processedValue 
-        }, {
+        .upsert(response, {
           onConflict: "custom_plan_id,plan_field_id"
         })
         .select()
@@ -277,7 +254,6 @@ export function useCustomPlans() {
 
   const fetchCustomPlanAssignments = async (planId: string): Promise<Result<any[]>> => {
     try {
-      // 💡 CAMBIO APLICADO AQUÍ
       if (!planId) {
         console.warn("DEBUG: planId es nulo o indefinido. No se realizará la consulta.");
         return { data: [], error: null };
