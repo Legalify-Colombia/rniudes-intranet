@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }) => {
             document_number: documentNumber || null,
             position: position || null,
             weekly_hours: parsedWeeklyHours,
-            number_of_weeks: 16,
+            number_of_weeks: 16, // Valor por defecto
             total_hours: parsedTotalHours,
             campus_id: parsedCampusId,
           },
