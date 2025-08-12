@@ -1,9 +1,16 @@
 import { useState, useEffect, useContext, createContext } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// Reemplaza con tus credenciales de Supabase
-const supabaseUrl = 'TU_URL_DE_SUPABASE';
-const supabaseKey = 'TU_CLAVE_ANON';
+// --- CAMBIO IMPORTANTE: Ingresa tus credenciales aquí manualmente.
+// Esto soluciona los errores de compilación con 'import.meta'.
+const supabaseUrl = "https://TU_PROYECTO_ID.supabase.co"; // Reemplaza con la URL de tu proyecto
+const supabaseKey = "TU_CLAVE_ANON"; // Reemplaza con tu clave anon pública
+
+// Validar que las variables estén definidas antes de crear el cliente
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Las credenciales de Supabase no están definidas. Por favor, ingresa tu URL y clave de Supabase en el código.');
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const AuthContext = createContext(null);
@@ -13,30 +20,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Escucha los cambios en la sesión de autenticación de Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Cargar el usuario inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Limpiar la suscripción al desmontar el componente
     return () => {
       subscription?.unsubscribe();
     };
   }, []);
 
-  // Función para manejar el registro de nuevos usuarios
   const signUp = async ({ email, password, fullName, documentNumber, position, weeklyHours, totalHours, campusId }) => {
     setLoading(true);
     try {
-      // Es crucial asegurarse de que todos los valores se pasen en un objeto JSON válido.
-      // Incluso si un campo es opcional, se debe incluir con un valor null o predeterminado.
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -46,7 +47,7 @@ export const AuthProvider = ({ children }) => {
             document_number: documentNumber || null,
             position: position || null,
             weekly_hours: weeklyHours || null,
-            number_of_weeks: 16, // Valor predeterminado según tu trigger
+            number_of_weeks: 16,
             total_hours: totalHours || null,
             campus_id: campusId || null,
           },
@@ -66,18 +67,52 @@ export const AuthProvider = ({ children }) => {
       return { error };
     }
   };
+  
+  const signIn = async (email, password) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        throw error;
+      }
+      return { data };
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error.message);
+      return { error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const value = {
     user,
     loading,
     signUp,
-    // Puedes añadir más funciones como signIn, signOut, etc.
+    signIn,
+    signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Hook para consumir el contexto de autenticación
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === null) {
@@ -85,28 +120,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// Ejemplo de cómo usar el hook en un componente
-// function SignUpForm() {
-//   const { signUp, loading } = useAuth();
-//   const [formState, setFormState] = useState({ email: '', password: '', ... });
-
-//   const handleSubmit = async (event) => {
-//     event.preventDefault();
-//     const result = await signUp(formState);
-//     if (!result.error) {
-//       // Redirigir o mostrar un mensaje de éxito
-//       console.log('¡Usuario creado con éxito!');
-//     }
-//   };
-
-//   return (
-//     <form onSubmit={handleSubmit}>
-//       <input name="email" value={formState.email} onChange={...} />
-//       ...
-//       <button type="submit" disabled={loading}>
-//         {loading ? 'Registrando...' : 'Registrarse'}
-//       </button>
-//     </form>
-//   );
-// }
