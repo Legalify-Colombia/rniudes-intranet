@@ -34,11 +34,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Función para obtener el perfil del usuario de la tabla 'profiles'
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: profileData, error } = await supabase
         .from('profiles')
         .select(`
           *,
-          campus:campus_id(name)
+          campus(name)
         `)
         .eq('id', userId)
         .single();
@@ -48,10 +48,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return null;
       }
       
-      if (data) {
+      if (profileData) {
         // Mapear los datos para que el nombre del campus sea una cadena simple
-        const campusName = data.campus ? data.campus.name : null;
-        return { ...data, campus_name: campusName, role: data.role as Profile['role'] };
+        const campusName = profileData.campus ? profileData.campus.name : null;
+        return { ...profileData, campus_name: campusName, role: profileData.role as Profile['role'] };
       }
       return null;
     } catch (err) {
@@ -92,6 +92,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) {
+        // Si no hay error, el onAuthStateChange se encargará de cargar el perfil y desactivar el loading
+        return { error: null };
+    }
+    setLoading(false);
     return { error };
   };
 
@@ -112,11 +117,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     });
+    setLoading(false);
     return { error };
   };
 
   const signOut = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signOut();
+    setLoading(false);
     return { error };
   };
 
