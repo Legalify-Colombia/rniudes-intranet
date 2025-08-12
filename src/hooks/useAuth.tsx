@@ -1,112 +1,155 @@
 import { useState, useEffect, useContext, createContext } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
-// Reemplaza con tus credenciales de Supabase
-const supabaseUrl = 'TU_URL_DE_SUPABASE';
-const supabaseKey = 'TU_CLAVE_ANON';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Definir los tipos de datos para el perfil con todas las propiedades necesarias
+interface Profile {
+  id: string;
+  full_name: string;
+  document_number: string;
+  position: string;
+  role: "Administrador" | "Coordinador" | "Gestor";
+  campus_id: string;
+  email: string;
+  weekly_hours?: number | null;
+  number_of_weeks?: number | null;
+  total_hours?: number | null;
+  managed_campus_ids?: string[] | null;
+  campus_name?: string | null;
+}
 
-const AuthContext = createContext(null);
+// Definir la interfaz para el contexto
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  profile: Profile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (data: any) => Promise<{ error: any }>;
+  signOut: () => Promise<{ error: any }>;
+}
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Función para obtener el perfil del usuario de la tabla 'profiles'
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          campus(name)
+        `)
+        .eq('id', userId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error al obtener el perfil:", error);
+        return null;
+      }
+      
+      if (profileData) {
+        const campusName = profileData.campus ? profileData.campus.name : null;
+        return { ...profileData, campus_name: campusName, role: profileData.role as Profile['role'] };
+      }
+      return null;
+    } catch (err) {
+      console.error("Error inesperado al obtener el perfil:", err);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    // Escucha los cambios en la sesión de autenticación de Supabase
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const handleAuthStateChange = async (event: string, currentSession: Session | null) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        const userProfile = await fetchProfile(currentSession.user.id);
+        setProfile(userProfile);
+      } else {
+        setProfile(null);
+      }
+      
       setLoading(false);
-    });
+    };
 
-    // Cargar el usuario inicial
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+      handleAuthStateChange('INITIAL_SESSION', session);
     });
 
-    // Limpiar la suscripción al desmontar el componente
     return () => {
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  // Función para manejar el registro de nuevos usuarios
-  const signUp = async ({ email, password, fullName, documentNumber, position, weeklyHours, totalHours, campusId }) => {
+  const signIn = async (email: string, password: string) => {
     setLoading(true);
-    try {
-      // Es crucial asegurarse de que todos los valores se pasen en un objeto JSON válido.
-      // Incluso si un campo es opcional, se debe incluir con un valor null o predeterminado.
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName || null,
-            document_number: documentNumber || null,
-            position: position || null,
-            weekly_hours: weeklyHours || null,
-            number_of_weeks: 16, // Valor predeterminado según tu trigger
-            total_hours: totalHours || null,
-            campus_id: campusId || null,
-          },
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-      
-      console.log('Registro exitoso:', data);
-      setLoading(false);
-      return data;
-    } catch (error) {
-      console.error('Error de registro:', error.message);
-      setLoading(false);
-      return { error };
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) {
+        return { error: null };
     }
+    setLoading(false);
+    return { error };
+  };
+
+  const signUp = async (data: any) => {
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          full_name: data.fullName,
+          document_number: data.documentNumber,
+          position: data.position,
+          campus_id: data.campusId,
+          role: data.role,
+          weekly_hours: data.weeklyHours,
+          number_of_weeks: data.numberOfWeeks,
+        }
+      }
+    });
+    setLoading(false);
+    return { error };
+  };
+
+  const signOut = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signOut();
+    setLoading(false);
+    return { error };
   };
 
   const value = {
     user,
+    session,
+    profile,
     loading,
+    signIn,
     signUp,
-    // Puedes añadir más funciones como signIn, signOut, etc.
+    signOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-// Hook para consumir el contexto de autenticación
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === null) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
-
-// Ejemplo de cómo usar el hook en un componente
-// function SignUpForm() {
-//   const { signUp, loading } = useAuth();
-//   const [formState, setFormState] = useState({ email: '', password: '', ... });
-
-//   const handleSubmit = async (event) => {
-//     event.preventDefault();
-//     const result = await signUp(formState);
-//     if (!result.error) {
-//       // Redirigir o mostrar un mensaje de éxito
-//       console.log('¡Usuario creado con éxito!');
-//     }
-//   };
-
-//   return (
-//     <form onSubmit={handleSubmit}>
-//       <input name="email" value={formState.email} onChange={...} />
-//       ...
-//       <button type="submit" disabled={loading}>
-//         {loading ? 'Registrando...' : 'Registrarse'}
-//       </button>
-//     </form>
-//   );
-// }
