@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useAuth } from "./hooks/useAuth";
+// Es importante que importes tu hook correctamente
+import { useUsers } from "./hooks/useUsers";
 import { Plus, Edit, Save, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "./integrations/supabase/client";
 
 export function UserManagement() {
   const [users, setUsers] = useState<any[]>([]);
@@ -22,7 +23,8 @@ export function UserManagement() {
   
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchUsersByCampus, fetchCampus, updateUserProfile } = useSupabaseData();
+  // Usa el hook useUsers
+  const { fetchUsersByCampus, updateUserProfile } = useUsers();
 
   const [userForm, setUserForm] = useState({
     email: '',
@@ -49,7 +51,6 @@ export function UserManagement() {
   }, []);
 
   useEffect(() => {
-    // Calculate total hours when weekly hours or weeks change
     const weeklyHours = parseInt(userForm.weekly_hours) || 0;
     const numberOfWeeks = parseInt(userForm.number_of_weeks) || 16;
     const totalHours = weeklyHours * numberOfWeeks;
@@ -63,33 +64,30 @@ export function UserManagement() {
     try {
       setIsLoading(true);
       
-      // Load campuses
-      const campusResult = await fetchCampus();
-      if (campusResult.data) {
-        // Filter campuses with valid IDs
-        const validCampuses = campusResult.data.filter(campus => 
-          campus.id && 
-          typeof campus.id === 'string' && 
-          campus.id.trim().length > 0
-        );
-        setCampuses(validCampuses);
-      }
+      const { data: campusResult, error: campusError } = await supabase.from("campuses").select("*");
+      if (campusError) throw campusError;
+      
+      const validCampuses = campusResult.filter(campus =>
+        campus.id &&
+        typeof campus.id === 'string' &&
+        campus.id.trim().length > 0
+      );
+      setCampuses(validCampuses);
 
-      // For super admin, load all users. For campus admin, load only their managed campuses
       let campusIds: string[] | undefined;
       if (profile?.role === 'Administrador' && profile.managed_campus_ids) {
         campusIds = profile.managed_campus_ids;
       }
 
-      const usersResult = await fetchUsersByCampus(campusIds);
-      if (usersResult.data) {
-        setUsers(usersResult.data);
-      }
-    } catch (error) {
+      const { data: usersResult, error: usersError } = await fetchUsersByCampus(campusIds);
+      if (usersError) throw usersError;
+      
+      setUsers(usersResult);
+    } catch (error: any) {
       console.error("Error loading data:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos",
+        description: "No se pudieron cargar los datos: " + error.message,
         variant: "destructive",
       });
     } finally {
@@ -196,11 +194,11 @@ export function UserManagement() {
       
       setIsCreateDialogOpen(false);
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating user:", error);
       toast({
         title: "Error",
-        description: "Error inesperado al crear el usuario",
+        description: "Error inesperado al crear el usuario: " + error.message,
         variant: "destructive",
       });
     } finally {
@@ -226,22 +224,34 @@ export function UserManagement() {
     });
   };
 
+  // 🐛 Versión corregida de la función saveUserChanges
   const saveUserChanges = async (userId: string) => {
+    // 1. Añade una comprobación defensiva para el userId
+    if (!userId) {
+      console.error("Error: userId is null or undefined.");
+      toast({
+        title: "Error de validación",
+        description: "El ID de usuario no es válido.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       setIsLoading(true);
       
       const updates: any = {
         weekly_hours: editForm.weekly_hours ? parseInt(editForm.weekly_hours) : null,
-        number_of_weeks: parseInt(editForm.number_of_weeks),
-        total_hours: editForm.weekly_hours ? parseInt(editForm.weekly_hours) * parseInt(editForm.number_of_weeks) : null
+        number_of_weeks: editForm.number_of_weeks ? parseInt(editForm.number_of_weeks) : null, // Asegúrate de manejar el caso nulo
+        total_hours: editForm.weekly_hours && editForm.number_of_weeks ? parseInt(editForm.weekly_hours) * parseInt(editForm.number_of_weeks) : null
       };
 
-      // Only update managed_campus_ids for administrators
       const user = users.find(u => u.id === userId);
       if (user?.role === 'Administrador') {
         updates.managed_campus_ids = editForm.managed_campus_ids.length > 0 ? editForm.managed_campus_ids : null;
       }
-
+      
+      // 2. Llama al hook con el userId validado
       const { data, error } = await updateUserProfile(userId, updates);
 
       if (error) {
@@ -261,11 +271,11 @@ export function UserManagement() {
 
       setEditingUser(null);
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating user:", error);
       toast({
         title: "Error",
-        description: "Error inesperado al actualizar el usuario",
+        description: "Error inesperado al actualizar el usuario: " + error.message,
         variant: "destructive",
       });
     } finally {
@@ -291,16 +301,14 @@ export function UserManagement() {
     return campus?.name || 'Sin asignar';
   };
 
-  const getManagedCampusNames = (campusIds: string[]) => {
+  const getManagedCampusNames = (campusIds: string[] | null) => {
     if (!campusIds || campusIds.length === 0) return 'Todos los campus';
     return campusIds.map(id => getCampusName(id)).join(', ');
   };
 
   const canManageUser = (user: any) => {
     if (profile?.role === 'Administrador') {
-      // Super admin can manage all
       if (!profile.managed_campus_ids) return true;
-      // Campus admin can only manage users in their campuses
       return user.campus_id && profile.managed_campus_ids.includes(user.campus_id);
     }
     return false;
@@ -343,7 +351,6 @@ export function UserManagement() {
                       required
                     />
                   </div>
-
                   <div>
                     <Label htmlFor="password">Contraseña</Label>
                     <Input
@@ -409,7 +416,6 @@ export function UserManagement() {
                         </SelectTrigger>
                         <SelectContent>
                           {campuses.map(campus => {
-                            // Validate campus ID before rendering
                             if (!campus.id || typeof campus.id !== 'string' || campus.id.trim().length === 0) {
                               console.warn('UserManagement - Skipping invalid campus:', campus);
                               return null;
@@ -419,7 +425,7 @@ export function UserManagement() {
                                 {campus.name}
                               </SelectItem>
                             );
-                          }).filter(Boolean)}
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -466,7 +472,6 @@ export function UserManagement() {
                       <Label>Campus que puede gestionar</Label>
                       <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
                         {campuses.map(campus => {
-                          // Validate campus ID before rendering
                           if (!campus.id || typeof campus.id !== 'string' || campus.id.trim().length === 0) {
                             console.warn('UserManagement - Skipping invalid campus for checkbox:', campus);
                             return null;
@@ -496,7 +501,7 @@ export function UserManagement() {
                               </Label>
                             </div>
                           );
-                        }).filter(Boolean)}
+                        })}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
                         Si no selecciona ninguno, podrá gestionar todos los campus
@@ -561,7 +566,7 @@ export function UserManagement() {
                   </TableCell>
                   <TableCell>
                     {editingUser === user.id ? (
-                      <span>{editForm.weekly_hours ? parseInt(editForm.weekly_hours) * parseInt(editForm.number_of_weeks) : user.total_hours}</span>
+                      <span>{editForm.weekly_hours && editForm.number_of_weeks ? parseInt(editForm.weekly_hours) * parseInt(editForm.number_of_weeks) : user.total_hours}</span>
                     ) : (
                       <span>{user.total_hours || '-'}</span>
                     )}
@@ -571,7 +576,6 @@ export function UserManagement() {
                       <div className="max-w-xs">
                         <div className="space-y-1 max-h-20 overflow-y-auto">
                           {campuses.map(campus => {
-                            // Validate campus ID before rendering
                             if (!campus.id || typeof campus.id !== 'string' || campus.id.trim().length === 0) {
                               console.warn('UserManagement - Skipping invalid campus for edit:', campus);
                               return null;
@@ -602,7 +606,7 @@ export function UserManagement() {
                                 </label>
                               </div>
                             );
-                          }).filter(Boolean)}
+                          })}
                         </div>
                       </div>
                     ) : (
