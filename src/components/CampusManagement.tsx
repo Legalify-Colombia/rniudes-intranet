@@ -160,7 +160,8 @@ const CampusManagement = () => {
         director_email: "", 
         faculty_id: "", 
         campus_id: "", 
-        manager_id: null 
+        manager_id: null,
+        coordinador_id: null
       });
       loadData();
     }
