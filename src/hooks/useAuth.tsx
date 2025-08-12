@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // --- CAMBIO IMPORTANTE: Ingresa tus credenciales aquí manualmente.
 // Esto soluciona los errores de compilación con 'import.meta'.
-const supabaseUrl = "https://TU_PROYECTO_ID.supabase.co"; // Reemplaza con la URL de tu proyecto
-const supabaseKey = "TU_CLAVE_ANON"; // Reemplaza con tu clave anon pública
+const supabaseUrl = "https://fdfovqfvisrtzdtkgcdj.supabase.co"; // Reemplaza con la URL de tu proyecto
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZm92cWZ2aXNydHpkdGtnY2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzNzQ1ODIsImV4cCI6MjA2NTk1MDU4Mn0.an5CvVlhuaio_OShrEvBuNkbzaFxz5huuiQxdArfIPc"; // Reemplaza con tu clave anon pública
 
 // Validar que las variables estén definidas antes de crear el cliente
 if (!supabaseUrl || !supabaseKey) {
