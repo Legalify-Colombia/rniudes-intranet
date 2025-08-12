@@ -14,7 +14,7 @@ interface AuthContextType {
     fullName: string;
     documentNumber: string;
     position: string;
-    campus: string; // ¡Hemos añadido el campus aquí!
+    campusId: string; // Campus ID seleccionado en el registro
     role: string;
     weeklyHours?: number;
     numberOfWeeks?: number;
@@ -167,7 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     fullName: string;
     documentNumber: string;
     position: string;
-    campus: string; // ¡Hemos añadido el campus al tipo de la función!
+    campusId: string;
     role: string;
     weeklyHours?: number;
     numberOfWeeks?: number;
@@ -186,7 +186,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             full_name: data.fullName,
             document_number: data.documentNumber,
             position: data.position,
-            campus: data.campus, // ¡Hemos añadido el campus a los metadatos!
+            campus_id: data.campusId,
             role: data.role,
             weekly_hours: data.weeklyHours,
             number_of_weeks: data.numberOfWeeks,

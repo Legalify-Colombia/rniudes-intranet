@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react'; // Importar íconos
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,13 +32,19 @@ export default function Auth() {
     fullName: '',
     documentNumber: '',
     position: '',
-    campus: '', // Campo para el campus
+    campusId: '', // ID del campus seleccionado
     weeklyHours: 0,
     numberOfWeeks: 16,
   });
 
-  // Lista de campus disponibles
-  const campuses = ['Bucaramanga', 'Cúcuta', 'Valledupar', 'Bogotá', 'Ocaña'];
+  // Campus desde la base de datos
+  const [campuses, setCampuses] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('campus').select('id,name').order('name');
+      setCampuses(data || []);
+    })();
+  }, []);
 
   const positions = getValidPositions().filter(pos =>
     pos && typeof pos === 'string' && pos.trim().length > 0 && validatePosition(pos)
@@ -68,7 +75,7 @@ export default function Auth() {
         }
 
         // Validación para el campus
-        if (!formData.campus || formData.campus.trim() === "") {
+        if (!formData.campusId || formData.campusId.trim() === "") {
           toast({
             title: 'Error',
             description: 'El campus es requerido',
@@ -84,7 +91,7 @@ export default function Auth() {
           fullName: formData.fullName,
           documentNumber: formData.documentNumber,
           position: formData.position,
-          campus: formData.campus, // Enviar el campus al registrarse
+          campusId: formData.campusId,
           role: getRoleFromPosition(formData.position),
           weeklyHours: formData.position === 'Gestor de Internacionalización' ? formData.weeklyHours : undefined,
           numberOfWeeks: formData.position === 'Gestor de Internacionalización' ? formData.numberOfWeeks : undefined,
@@ -200,13 +207,13 @@ export default function Auth() {
                     {/* Nuevo campo de selección de campus */}
                     <div className="space-y-2">
                       <Label htmlFor="campus">Campus</Label>
-                      <Select value={formData.campus || undefined} onValueChange={(value) => setFormData(prev => ({ ...prev, campus: value }))}>
+                      <Select value={formData.campusId || undefined} onValueChange={(value) => setFormData(prev => ({ ...prev, campusId: value }))}>
                         <SelectTrigger className="h-12">
                           <SelectValue placeholder="Seleccionar campus" />
                         </SelectTrigger>
                         <SelectContent>
                           {campuses.map((campus) => (
-                            <SelectItem key={campus} value={campus}>{campus}</SelectItem>
+                            <SelectItem key={campus.id} value={campus.id}>{campus.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
