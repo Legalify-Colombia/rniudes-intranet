@@ -17,6 +17,7 @@ export type Database = {
       academic_programs: {
         Row: {
           campus_id: string
+          coordinador_id: string | null
           created_at: string | null
           description: string | null
           director_email: string
@@ -29,6 +30,7 @@ export type Database = {
         }
         Insert: {
           campus_id: string
+          coordinador_id?: string | null
           created_at?: string | null
           description?: string | null
           director_email: string
@@ -41,6 +43,7 @@ export type Database = {
         }
         Update: {
           campus_id?: string
+          coordinador_id?: string | null
           created_at?: string | null
           description?: string | null
           director_email?: string
@@ -57,6 +60,13 @@ export type Database = {
             columns: ["campus_id"]
             isOneToOne: false
             referencedRelation: "campus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academic_programs_coordinador_id_fkey"
+            columns: ["coordinador_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
