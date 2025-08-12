@@ -1,154 +1,146 @@
 import { useState, useEffect, useContext, createContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
-const AuthContext = createContext(null);
+// Definir los tipos de datos para el perfil
+interface Profile {
+  id: string;
+  full_name: string;
+  email: string;
+  role: "Administrador" | "Coordinador" | "Gestor";
+  campus_name?: string | null;
+  // Otros campos del perfil...
+}
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Definir la interfaz para el contexto
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  profile: Profile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (data: any) => Promise<{ error: any }>;
+  signOut: () => Promise<{ error: any }>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Función para obtener el perfil del usuario de la tabla 'profiles'
-  const fetchProfile = async (userId) => {
+  const fetchProfile = async (userId: string) => {
     try {
-      setLoading(true);
-      
-      // Consultar el perfil y el nombre del campus en una sola llamada
       const { data, error } = await supabase
         .from('profiles')
-        .select(`*, campus!profiles_campus_id_fkey(name)`) // Corregido: el alias del campus no es necesario aquí
+        .select(`
+          *,
+          campus:campus_id(name)
+        `)
         .eq('id', userId)
         .single();
-
+      
       if (error && error.code !== 'PGRST116') { // PGRST116 es para 'no se encontraron filas'
         console.error("Error al obtener el perfil:", error);
-        setProfile(null);
-      } else {
-        // Manejar el caso de que no se encuentre el perfil
-        if (!data) {
-          setProfile(null);
-        } else {
-          // Aseguramos que 'campus_name' es una cadena o null si no se encuentra
-          const campusName = data.campus?.name || null;
-          setProfile({ ...data, campus_name: campusName });
-        }
+        return null;
       }
+      
+      if (data) {
+        // Mapear los datos para que el nombre del campus sea una cadena simple
+        const campusName = data.campus ? data.campus.name : null;
+        return { ...data, campus_name: campusName, role: data.role as Profile['role'] };
+      }
+      return null;
     } catch (err) {
       console.error("Error inesperado al obtener el perfil:", err);
-      setProfile(null);
-    } finally {
-      setLoading(false);
+      return null;
     }
   };
 
   useEffect(() => {
-    const handleAuthStateChange = async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+    const handleAuthStateChange = async (event: string, currentSession: Session | null) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        const userProfile = await fetchProfile(currentSession.user.id);
+        setProfile(userProfile);
       } else {
         setProfile(null);
-        setLoading(false);
       }
+      
+      setLoading(false);
     };
 
+    // Escucha los cambios en el estado de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
-
+    
+    // Obtener la sesión inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleAuthStateChange(null, session);
+      handleAuthStateChange('INITIAL_SESSION', session);
     });
 
+    // Limpiar la suscripción al desmontar el componente
     return () => {
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  const signUp = async ({ email, password, fullName, documentNumber, position, weeklyHours, totalHours, campusId }) => {
+  const signIn = async (email: string, password: string) => {
     setLoading(true);
-    try {
-      const parsedWeeklyHours = weeklyHours ? parseInt(weeklyHours) : null;
-      const parsedTotalHours = totalHours ? parseInt(totalHours) : null;
-      const parsedCampusId = campusId || null;
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName || null,
-            document_number: documentNumber || null,
-            position: position || null,
-            weekly_hours: parsedWeeklyHours,
-            number_of_weeks: 16,
-            total_hours: parsedTotalHours,
-            campus_id: parsedCampusId,
-          },
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('Registro exitoso:', data);
-      setLoading(false);
-      return data;
-    } catch (error) {
-      console.error('Error de registro:', error.message);
-      setLoading(false);
-      return { error };
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
   };
 
-  const signIn = async (email, password) => {
+  const signUp = async (data: any) => {
     setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        throw error;
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          full_name: data.fullName,
+          document_number: data.documentNumber,
+          position: data.position,
+          campus_id: data.campusId,
+          role: data.role,
+          weekly_hours: data.weeklyHours,
+          number_of_weeks: data.numberOfWeeks,
+        }
       }
-      return { data };
-    } catch (error) {
-      console.error('Error al iniciar sesión:', error.message);
-      return { error };
-    } finally {
-      setLoading(false);
-    }
+    });
+    return { error };
   };
 
   const signOut = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error.message);
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await supabase.auth.signOut();
+    return { error };
   };
 
   const value = {
     user,
+    session,
     profile,
     loading,
-    signUp,
     signIn,
+    signUp,
     signOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === null) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
