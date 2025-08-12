@@ -2,14 +2,20 @@ import { useState, useEffect, useContext, createContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
-// Definir los tipos de datos para el perfil
+// Definir los tipos de datos para el perfil con todas las propiedades necesarias
 interface Profile {
   id: string;
   full_name: string;
-  email: string;
+  document_number: string;
+  position: string;
   role: "Administrador" | "Coordinador" | "Gestor";
+  campus_id: string;
+  email: string;
+  weekly_hours?: number | null;
+  number_of_weeks?: number | null;
+  total_hours?: number | null;
+  managed_campus_ids?: string[] | null;
   campus_name?: string | null;
-  // Otros campos del perfil...
 }
 
 // Definir la interfaz para el contexto
