@@ -5,26 +5,33 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null); // Nuevo estado para el perfil
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Función para obtener el perfil del usuario de la tabla 'profiles'
   const fetchProfile = async (userId) => {
     try {
       setLoading(true);
+      
+      // Consultar el perfil y el nombre del campus en una sola llamada
       const { data, error } = await supabase
         .from('profiles')
-        .select(`*, campus_name: campus!profiles_campus_id_fkey(name)`) // Carga el nombre del campus
+        .select(`*, campus!profiles_campus_id_fkey(name)`) // Corregido: el alias del campus no es necesario aquí
         .eq('id', userId)
         .single();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') { // PGRST116 es para 'no se encontraron filas'
         console.error("Error al obtener el perfil:", error);
         setProfile(null);
       } else {
-        // Aseguramos que 'campus_name' es una cadena
-        const campusName = data.campus_name?.name || 'Sin asignar';
-        setProfile({ ...data, campus_name: campusName });
+        // Manejar el caso de que no se encuentre el perfil
+        if (!data) {
+          setProfile(null);
+        } else {
+          // Aseguramos que 'campus_name' es una cadena o null si no se encuentra
+          const campusName = data.campus?.name || null;
+          setProfile({ ...data, campus_name: campusName });
+        }
       }
     } catch (err) {
       console.error("Error inesperado al obtener el perfil:", err);
@@ -45,15 +52,12 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    // Escucha los cambios en la sesión de autenticación de Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    // Obtiene la sesión actual al cargar el componente
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleAuthStateChange(null, session);
     });
 
-    // Limpia la suscripción al desmontar el componente
     return () => {
       subscription?.unsubscribe();
     };
@@ -75,7 +79,7 @@ export const AuthProvider = ({ children }) => {
             document_number: documentNumber || null,
             position: position || null,
             weekly_hours: parsedWeeklyHours,
-            number_of_weeks: 16, // Valor por defecto
+            number_of_weeks: 16,
             total_hours: parsedTotalHours,
             campus_id: parsedCampusId,
           },
@@ -106,7 +110,6 @@ export const AuthProvider = ({ children }) => {
       if (error) {
         throw error;
       }
-      // Al iniciar sesión, se activará el onAuthStateChange y se cargará el perfil
       return { data };
     } catch (error) {
       console.error('Error al iniciar sesión:', error.message);
@@ -132,7 +135,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    profile, // Ahora el perfil está disponible en el contexto
+    profile,
     loading,
     signUp,
     signIn,
