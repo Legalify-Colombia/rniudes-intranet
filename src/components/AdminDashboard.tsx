@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationFeed } from "@/components/NotificationFeed";
-import { EmailConfigurationForm } from "@/components/EmailConfigurationForm";
+import { EmailManagementSettings } from "@/components/EmailManagementSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
@@ -118,14 +118,16 @@ export function AdminDashboard() {
         profilesResult,
         axesResult,
         actionsResult,
-        productsResult
+        productsResult,
+        reportsResult
       ] = await Promise.all([
         fetchCampus(),
         fetchFaculties(),
         fetchProfiles(),
         fetchStrategicAxes(),
         fetchActions(),
-        fetchProducts()
+        fetchProducts(),
+        supabase.from('manager_reports').select('id, manager_id, total_progress_percentage, submitted_date, created_at, status')
       ]);
 
       const allCampus = campusResult.data || [];
@@ -134,6 +136,7 @@ export function AdminDashboard() {
       const allAxes = axesResult.data || [];
       const allActions = actionsResult.data || [];
       const allProducts = productsResult.data || [];
+      const allReports = reportsResult.data || [];
 
       setCampusList(allCampus);
 
@@ -146,8 +149,32 @@ export function AdminDashboard() {
       }
       
       const managers = filteredProfiles.filter(profile => profile.role === 'Gestor');
-      const totalElements = allAxes.length + allActions.length + allProducts.length;
-      const progressSimulated = totalElements > 0 ? Math.min(100, (totalElements * 8) + Math.random() * 30) : 0;
+
+      // Calcular progreso real basado en el último informe de cada gestor
+      const managerIds = new Set(managers.map((m: any) => m.id));
+      const reportsByManager = new Map<string, any[]>();
+      for (const r of allReports as any[]) {
+        if (selectedCampus === "all" || managerIds.has(r.manager_id)) {
+          const arr = reportsByManager.get(r.manager_id) || [];
+          arr.push(r);
+          reportsByManager.set(r.manager_id, arr);
+        }
+      }
+
+      const latestReports: number[] = [];
+      reportsByManager.forEach((reports) => {
+        const latest = reports.reduce((acc: any, curr: any) => {
+          const accDate = acc?.submitted_date || acc?.created_at || null;
+          const currDate = curr?.submitted_date || curr?.created_at || null;
+          return (new Date(currDate) > new Date(accDate)) ? curr : acc;
+        });
+        const pct = Number(latest?.total_progress_percentage ?? 0);
+        if (!Number.isNaN(pct)) latestReports.push(pct);
+      });
+
+      const avgProgress = latestReports.length
+        ? Math.round(latestReports.reduce((s, v) => s + v, 0) / latestReports.length)
+        : 0;
 
       setAdminStats({
         totalCampus: selectedCampus === "all" ? allCampus.length : 1,
@@ -156,7 +183,7 @@ export function AdminDashboard() {
         totalAxes: allAxes.length,
         totalActions: allActions.length,
         totalProducts: allProducts.length,
-        overallProgress: Math.round(progressSimulated)
+        overallProgress: avgProgress
       });
     } catch (error) {
       console.error('Error loading admin data:', error);
@@ -250,10 +277,10 @@ export function AdminDashboard() {
         {activeSection === "email" ? (
           <Card className="shadow-sm">
             <CardHeader>
-                <CardTitle>Configuración de Correo Electrónico</CardTitle>
+                <CardTitle>Gestión de Email</CardTitle>
             </CardHeader>
             <CardContent>
-                <EmailConfigurationForm />
+                <EmailManagementSettings />
             </CardContent>
           </Card>
         ) : (

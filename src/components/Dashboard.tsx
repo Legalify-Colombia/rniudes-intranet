@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { NotificationFeed } from "@/components/NotificationFeed";
 import { StrategicAxesProgress } from "@/components/StrategicAxesProgress";
 import { AdminDashboard } from "@/components/AdminDashboard"; // Asumo que este es el dashboard de admin
+import { useReports } from "@/hooks/useReports";
 import { 
   Target,
   TrendingUp,
@@ -32,6 +33,7 @@ const StatCard = ({ icon: Icon, title, value, subtitle, colorClass }) => (
 export function Dashboard() {
   const { profile } = useAuth();
   const { fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
+  const { fetchManagerReportsByManager } = useReports();
   
   const [stats, setStats] = useState({
     totalAxes: 0,
@@ -55,24 +57,34 @@ export function Dashboard() {
     setLoading(true);
     try {
       // Aquí podrías filtrar las acciones/productos por el `profile.id` del gestor
-      const [axesResult, actionsResult, productsResult] = await Promise.all([
+      const [axesResult, actionsResult, productsResult, reportsResult] = await Promise.all([
         fetchStrategicAxes(),
         fetchActions(), // Idealmente: fetchActions({ manager_id: profile.id })
-        fetchProducts()  // Idealmente: fetchProducts({ manager_id: profile.id })
+        fetchProducts(),  // Idealmente: fetchProducts({ manager_id: profile.id })
+        fetchManagerReportsByManager(profile.id)
       ]);
 
       const axes = axesResult.data || [];
       const actions = actionsResult.data || [];
       const products = productsResult.data || [];
+      const reports = reportsResult.data || [];
 
-      // Cálculo de progreso simulado
-      const overallProgress = products.length > 0 ? Math.min(100, products.length * 10 + Math.random() * 20) : 0;
+      // Progreso real: usar el último informe del gestor
+      let overallProgress = 0;
+      if (reports.length > 0) {
+        const latest = reports.reduce((acc: any, curr: any) => {
+          const accDate = acc?.submitted_date || acc?.created_at || null;
+          const currDate = curr?.submitted_date || curr?.created_at || null;
+          return (new Date(currDate) > new Date(accDate)) ? curr : acc;
+        });
+        overallProgress = Math.round(Number(latest?.total_progress_percentage ?? 0));
+      }
 
       setStats({
         totalAxes: axes.length,
         totalActions: actions.length,
         totalProducts: products.length,
-        overallProgress: Math.round(overallProgress)
+        overallProgress
       });
     } catch (error) {
       console.error('Error loading manager data:', error);
