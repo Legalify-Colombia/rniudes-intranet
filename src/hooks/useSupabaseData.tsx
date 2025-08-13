@@ -134,7 +134,7 @@ export function useSupabaseData() {
     ...managers,
     ...reports,
     ...workPlans,
-    ...customPlanAssignments, // <- ¡Aquí se re-exporta!
+    ...customPlanAssignments,
     ...academicPrograms,
     ...planTypes,
     ...customPlans,
@@ -147,5 +147,9 @@ export function useSupabaseData() {
     ...snies,
     savePlanElementOrder,
     fetchPlanElementOrder,
+    // Alias para compatibilidad con componentes existentes
+    fetchWorkPlanAssignments: customPlanAssignments.fetchCustomPlanAssignments,
+    upsertWorkPlanAssignment: customPlanAssignments.upsertCustomPlanAssignment,
+    submitCustomPlan: workPlans.submitCustomPlan, // Usar la función del hook correcto
   };
 }

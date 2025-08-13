@@ -5,18 +5,17 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Target, CheckCircle2 } from "lucide-react";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useAuth } from "@/hooks/useAuth";
 
 export function StrategicAxesProgress() {
   const [strategicAxes, setStrategicAxes] = useState<any[]>([]);
-  const [actions, setActions] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [managerReports, setManagerReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const { 
     fetchStrategicAxes, 
-    fetchActions, 
-    fetchProducts, 
-    fetchWorkPlans 
+    fetchManagerReportsByManager
   } = useSupabaseData();
 
   useEffect(() => {
@@ -24,23 +23,20 @@ export function StrategicAxesProgress() {
   }, []);
 
   const loadData = async () => {
+    if (!user?.id) return;
+    
     setLoading(true);
     try {
-      const [axesResult, actionsResult, productsResult, workPlansResult] = await Promise.all([
+      const [axesResult, reportsResult] = await Promise.all([
         fetchStrategicAxes(),
-        fetchActions(),
-        fetchProducts(),
-        fetchWorkPlans()
+        fetchManagerReportsByManager(user.id)
       ]);
 
       if (axesResult.data) setStrategicAxes(axesResult.data);
-      if (actionsResult.data) setActions(actionsResult.data);
-      if (productsResult.data) setProducts(productsResult.data);
+      if (reportsResult.data) setManagerReports(reportsResult.data);
       
       console.log('Strategic axes loaded:', axesResult.data);
-      console.log('Actions loaded:', actionsResult.data);
-      console.log('Products loaded:', productsResult.data);
-      console.log('Work plans loaded:', workPlansResult.data);
+      console.log('Manager reports loaded:', reportsResult.data);
     } catch (error) {
       console.error('Error loading strategic data:', error);
     } finally {
@@ -49,16 +45,16 @@ export function StrategicAxesProgress() {
   };
 
   const calculateAxisProgress = (axisId: string) => {
-    const axisActions = actions.filter(action => action.strategic_axis_id === axisId);
-    const axisProducts = products.filter(product => 
-      axisActions.some(action => action.id === product.action_id)
+    // Calcular progreso real basado en los reportes del gestor
+    const relevantReports = managerReports.filter(report => 
+      report.status === 'submitted' || report.status === 'approved'
     );
     
-    if (axisProducts.length === 0) return 0;
+    if (relevantReports.length === 0) return 0;
     
-    // Simulamos progreso basado en la cantidad de productos
-    // En una implementación real, esto vendría de los reportes de progreso
-    return Math.min(100, (axisProducts.length * 15) + Math.random() * 30);
+    // Usar el progreso promedio de los reportes más recientes
+    const latestReport = relevantReports[0]; // Ya vienen ordenados por fecha
+    return latestReport?.total_progress_percentage || 0;
   };
 
   const getProgressColor = (progress: number) => {
@@ -108,10 +104,10 @@ export function StrategicAxesProgress() {
   }
 
   const totalAxes = strategicAxes.length;
-  const totalActions = actions.length;
-  const totalProducts = products.length;
-  const overallProgress = strategicAxes.length > 0 
-    ? strategicAxes.reduce((acc, axis) => acc + calculateAxisProgress(axis.id), 0) / strategicAxes.length 
+  const totalReports = managerReports.length;
+  const submittedReports = managerReports.filter(r => r.status === 'submitted' || r.status === 'approved').length;
+  const overallProgress = managerReports.length > 0 
+    ? managerReports.reduce((acc, report) => acc + (report.total_progress_percentage || 0), 0) / managerReports.length 
     : 0;
 
   return (
@@ -134,8 +130,8 @@ export function StrategicAxesProgress() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Acciones</p>
-                <p className="text-2xl font-bold text-blue-600">{totalActions}</p>
+                <p className="text-sm font-medium text-gray-600">Informes Totales</p>
+                <p className="text-2xl font-bold text-blue-600">{totalReports}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-blue-600" />
             </div>
@@ -146,8 +142,8 @@ export function StrategicAxesProgress() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Productos</p>
-                <p className="text-2xl font-bold text-green-600">{totalProducts}</p>
+                <p className="text-sm font-medium text-gray-600">Informes Enviados</p>
+                <p className="text-2xl font-bold text-green-600">{submittedReports}</p>
               </div>
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
@@ -175,13 +171,9 @@ export function StrategicAxesProgress() {
           <CardTitle>Progreso Detallado por Eje Estratégico</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
+          <div className="space-y-4">
             {strategicAxes.map((axis) => {
               const progress = calculateAxisProgress(axis.id);
-              const axisActions = actions.filter(action => action.strategic_axis_id === axis.id);
-              const axisProducts = products.filter(product => 
-                axisActions.some(action => action.id === product.action_id)
-              );
 
               return (
                 <div key={axis.id} className="border rounded-lg p-4">
@@ -189,7 +181,7 @@ export function StrategicAxesProgress() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{axis.code} - {axis.name}</h3>
                       <p className="text-sm text-gray-600">
-                        {axisActions.length} acciones • {axisProducts.length} productos
+                        Progreso basado en informes de gestión
                       </p>
                     </div>
                     {getStatusBadge(progress)}
@@ -202,28 +194,9 @@ export function StrategicAxesProgress() {
                     </div>
                     <Progress 
                       value={progress} 
-                      className="h-2"
+                      className="h-3"
                     />
                   </div>
-
-                  {axisActions.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-medium text-sm mb-2">Acciones:</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {axisActions.map((action) => {
-                          const actionProducts = products.filter(p => p.action_id === action.id);
-                          return (
-                            <div key={action.id} className="bg-gray-50 p-2 rounded text-sm">
-                              <div className="font-medium">{action.code} - {action.name}</div>
-                              <div className="text-gray-600">
-                                {actionProducts.length} producto{actionProducts.length !== 1 ? 's' : ''}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
