@@ -3269,6 +3269,10 @@ export type Database = {
         Args: { report_id: string }
         Returns: number
       }
+      can_approve_custom_plan: {
+        Args: { approver_id: string; plan_id: string }
+        Returns: boolean
+      }
       can_edit_custom_plan: {
         Args: { plan_id: string; user_id: string }
         Returns: boolean
@@ -3287,6 +3291,20 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      get_academic_program_with_director: {
+        Args: { manager_id_param: string }
+        Returns: {
+          campus_id: string
+          campus_name: string
+          director_email: string
+          director_id: string
+          director_name: string
+          faculty_id: string
+          faculty_name: string
+          program_id: string
+          program_name: string
+        }[]
       }
       get_administrators: {
         Args: Record<PropertyKey, never>
