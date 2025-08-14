@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, ArrowUp, ArrowDown, Mail, CheckSquare } from "lucide-react";
+import { Settings, ArrowUp, ArrowDown, Mail, CheckSquare, BarChart3, Users } from "lucide-react";
 import { PlanElementOrderManagement } from "./PlanElementOrderManagement";
 import { EmailManagementSettings } from "./EmailManagementSettings";
 import { WorkPlanApproval } from "./WorkPlanApproval";
+import { IndicatorsAndReports } from "./IndicatorsAndReports";
+import { AcademicProgramsManagement } from "./AcademicProgramsManagement";
 import { useAuth } from "@/hooks/useAuth";
 
 export function CoordinatorSettings() {
@@ -40,6 +42,24 @@ export function CoordinatorSettings() {
             </Button>
             
             <Button
+              variant={activeSection === "programs" ? "default" : "outline"}
+              onClick={() => setActiveSection("programs")}
+              className="flex items-center gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Programas Académicos
+            </Button>
+            
+            <Button
+              variant={activeSection === "indicators" ? "default" : "outline"}
+              onClick={() => setActiveSection("indicators")}
+              className="flex items-center gap-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Indicadores y Reportes
+            </Button>
+            
+            <Button
               variant={activeSection === "email" ? "default" : "outline"}
               onClick={() => setActiveSection("email")}
               className="flex items-center gap-2"
@@ -60,6 +80,8 @@ export function CoordinatorSettings() {
           </div>
 
           {activeSection === "approval" && <WorkPlanApproval />}
+          {activeSection === "programs" && <AcademicProgramsManagement />}
+          {activeSection === "indicators" && <IndicatorsAndReports />}
           {activeSection === "email" && <EmailManagementSettings />}
           {activeSection === "order" && <PlanElementOrderManagement />}
         </CardContent>
