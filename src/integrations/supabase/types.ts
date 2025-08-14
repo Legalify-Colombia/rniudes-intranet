@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -3279,85 +3279,85 @@ export type Database = {
       }
       create_notification: {
         Args: {
-          p_user_id: string
-          p_title: string
           p_message: string
-          p_type: string
-          p_related_entity_type?: string
           p_related_entity_id?: string
+          p_related_entity_type?: string
+          p_title: string
+          p_type: string
+          p_user_id: string
         }
         Returns: string
       }
       get_administrators: {
         Args: Record<PropertyKey, never>
         Returns: {
-          admin_id: string
           admin_email: string
+          admin_id: string
           admin_name: string
         }[]
       }
       get_available_plan_types_for_manager: {
         Args: { manager_profile_id: string }
         Returns: {
-          id: string
-          name: string
           description: string
-          min_weekly_hours: number
-          max_weekly_hours: number
           field_count: number
+          id: string
+          max_weekly_hours: number
+          min_weekly_hours: number
+          name: string
         }[]
       }
       get_campus_coordinators: {
         Args: { target_campus_id: string }
         Returns: {
-          coordinator_id: string
           coordinator_email: string
+          coordinator_id: string
           coordinator_name: string
         }[]
       }
       get_campus_coordinators_for_manager: {
         Args: { manager_id: string }
         Returns: {
-          coordinator_id: string
           coordinator_email: string
+          coordinator_id: string
           coordinator_name: string
         }[]
       }
       get_complete_work_plan_details: {
         Args: { plan_id: string }
         Returns: {
-          id: string
-          title: string
-          manager_id: string
-          plan_type_id: string
-          status: string
-          created_at: string
-          updated_at: string
-          submitted_date: string
-          approved_date: string
-          approved_by: string
           approval_comments: string
-          manager_name: string
-          manager_email: string
-          manager_position: string
-          manager_campus_id: string
-          plan_type_name: string
-          total_hours_assigned: number
-          program_name: string
-          campus_name: string
-          faculty_name: string
-          objectives: string
+          approved_by: string
+          approved_date: string
           assignments_data: Json
+          campus_name: string
+          created_at: string
+          faculty_name: string
+          id: string
+          manager_campus_id: string
+          manager_email: string
+          manager_id: string
+          manager_name: string
+          manager_position: string
+          objectives: string
+          plan_type_id: string
+          plan_type_name: string
+          program_name: string
+          status: string
+          submitted_date: string
+          title: string
+          total_hours_assigned: number
+          updated_at: string
         }[]
       }
       get_managers_by_coordinator_campus: {
         Args: { coordinator_id: string }
         Returns: {
-          manager_id: string
-          manager_name: string
-          manager_email: string
           campus_id: string
           campus_name: string
+          manager_email: string
+          manager_id: string
+          manager_name: string
         }[]
       }
       get_next_version_number: {
@@ -3367,27 +3367,27 @@ export type Database = {
       get_pending_work_plans_with_details: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          title: string
-          manager_id: string
-          plan_type_id: string
-          status: string
-          created_at: string
-          updated_at: string
-          submitted_date: string
-          approved_date: string
-          approved_by: string
           approval_comments: string
-          manager_name: string
-          manager_email: string
-          manager_position: string
-          plan_type_name: string
-          total_hours_assigned: number
-          program_name: string
-          campus_name: string
-          faculty_name: string
-          objectives: string
+          approved_by: string
+          approved_date: string
           assignments_data: Json
+          campus_name: string
+          created_at: string
+          faculty_name: string
+          id: string
+          manager_email: string
+          manager_id: string
+          manager_name: string
+          manager_position: string
+          objectives: string
+          plan_type_id: string
+          plan_type_name: string
+          program_name: string
+          status: string
+          submitted_date: string
+          title: string
+          total_hours_assigned: number
+          updated_at: string
         }[]
       }
       is_admin: {
