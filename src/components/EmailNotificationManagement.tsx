@@ -480,11 +480,11 @@ export function EmailNotificationManagement() {
               <div className="space-y-2">
                 <Label htmlFor="campus">Campus</Label>
                 <Select
-                  value={currentTemplate.campus_id || ""}
+                  value={currentTemplate.campus_id || "global"}
                   onValueChange={(value) =>
                     setCurrentTemplate({
                       ...currentTemplate,
-                      campus_id: value,
+                      campus_id: value === "global" ? "" : value,
                     })
                   }
                 >
@@ -492,7 +492,7 @@ export function EmailNotificationManagement() {
                     <SelectValue placeholder="Selecciona un campus" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Global</SelectItem>
+                    <SelectItem value="global">Global</SelectItem>
                     {campuses.map((campus) => (
                       <SelectItem key={campus.id} value={campus.id}>
                         {campus.name}

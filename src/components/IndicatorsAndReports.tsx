@@ -95,21 +95,21 @@ export function IndicatorsAndReports() {
     let filteredReports = data.reports;
 
     // Aplicar filtros
-    if (filters.campus_id) {
+    if (filters.campus_id && filters.campus_id !== "all") {
       filteredPlans = filteredPlans.filter(plan => {
         const program = data.programsList.find(p => p.manager_id === plan.manager_id);
         return program?.campus_id === filters.campus_id;
       });
     }
 
-    if (filters.faculty_id) {
+    if (filters.faculty_id && filters.faculty_id !== "all") {
       filteredPlans = filteredPlans.filter(plan => {
         const program = data.programsList.find(p => p.manager_id === plan.manager_id);
         return program?.faculty_id === filters.faculty_id;
       });
     }
 
-    if (filters.program_id) {
+    if (filters.program_id && filters.program_id !== "all") {
       filteredPlans = filteredPlans.filter(plan => {
         const program = data.programsList.find(p => p.manager_id === plan.manager_id);
         return program?.id === filters.program_id;
@@ -141,7 +141,7 @@ export function IndicatorsAndReports() {
   };
 
   const getFilteredPrograms = () => {
-    if (!filters.faculty_id) return data.programsList;
+    if (!filters.faculty_id || filters.faculty_id === "all") return data.programsList;
     return data.programsList.filter(program => program.faculty_id === filters.faculty_id);
   };
 
@@ -199,14 +199,14 @@ export function IndicatorsAndReports() {
             <div>
               <label className="text-sm font-medium mb-2 block">Campus</label>
               <Select
-                value={filters.campus_id}
-                onValueChange={(value) => setFilters({ ...filters, campus_id: value, faculty_id: "", program_id: "" })}
+                value={filters.campus_id || "all"}
+                onValueChange={(value) => setFilters({ ...filters, campus_id: value === "all" ? "" : value, faculty_id: "", program_id: "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos los campus" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los campus</SelectItem>
+                  <SelectItem value="all">Todos los campus</SelectItem>
                   {data.campusList.map((campus) => (
                     <SelectItem key={campus.id} value={campus.id}>
                       {campus.name}
@@ -219,14 +219,14 @@ export function IndicatorsAndReports() {
             <div>
               <label className="text-sm font-medium mb-2 block">Facultad</label>
               <Select
-                value={filters.faculty_id}
-                onValueChange={(value) => setFilters({ ...filters, faculty_id: value, program_id: "" })}
+                value={filters.faculty_id || "all"}
+                onValueChange={(value) => setFilters({ ...filters, faculty_id: value === "all" ? "" : value, program_id: "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todas las facultades" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las facultades</SelectItem>
+                  <SelectItem value="all">Todas las facultades</SelectItem>
                   {data.facultiesList.map((faculty) => (
                     <SelectItem key={faculty.id} value={faculty.id}>
                       {faculty.name}
@@ -239,14 +239,14 @@ export function IndicatorsAndReports() {
             <div>
               <label className="text-sm font-medium mb-2 block">Programa</label>
               <Select
-                value={filters.program_id}
-                onValueChange={(value) => setFilters({ ...filters, program_id: value })}
+                value={filters.program_id || "all"}
+                onValueChange={(value) => setFilters({ ...filters, program_id: value === "all" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos los programas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los programas</SelectItem>
+                  <SelectItem value="all">Todos los programas</SelectItem>
                   {getFilteredPrograms().map((program) => (
                     <SelectItem key={program.id} value={program.id}>
                       {program.name}
