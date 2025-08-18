@@ -253,7 +253,7 @@ export function EmailNotificationManagement() {
     setIsDialogOpen(true);
   };
 
-  if (profile?.role !== "Administrador") {
+  if (profile?.role !== "Administrador" && profile?.role !== "Coordinador") {
     return (
       <div className="text-center py-8">
         <p className="text-gray-500">

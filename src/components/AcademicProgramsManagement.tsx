@@ -68,7 +68,8 @@ export function AcademicProgramsManagement() {
       
       const users = usersResult.data || [];
       setManagersList(users.filter(user => user.role === 'Gestor'));
-      setDirectorsList(users.filter(user => user.position === 'Director de Programa' || user.role === 'Coordinador'));
+      // Permitir que cualquier usuario registrado pueda ser director de programa
+      setDirectorsList(users.filter(user => user.role !== 'Gestor'));
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -278,7 +279,7 @@ export function AcademicProgramsManagement() {
                         <SelectContent>
                           {directorsList.map((director) => (
                             <SelectItem key={director.id} value={director.id}>
-                              {director.full_name} ({director.position || director.role})
+                              {director.full_name} - {director.email} ({director.role})
                             </SelectItem>
                           ))}
                         </SelectContent>
