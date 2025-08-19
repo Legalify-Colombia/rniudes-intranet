@@ -129,17 +129,18 @@ export const AgreementsManagement = () => {
     { 
       key: 'termination_date', 
       label: 'Estado',
-      render: (item: Agreement) => item ? getStatusBadge(item.termination_date, item.current_status) : <Badge variant="outline">-</Badge>
+      render: (value: any, item: Agreement) => item ? getStatusBadge(item.termination_date, item.current_status) : <Badge variant="outline">-</Badge>
     },
     {
       key: 'actions',
       label: 'Acciones',
-      render: (item: Agreement) => item ? (
+      render: (value: any, item: Agreement) => item ? (
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setSelectedAgreement(item);
               setShowDetails(true);
             }}
@@ -150,7 +151,8 @@ export const AgreementsManagement = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setSelectedAgreement(item);
               setShowEditForm(true);
             }}
@@ -162,7 +164,8 @@ export const AgreementsManagement = () => {
             variant="outline"
             size="sm"
             className="text-destructive hover:text-destructive"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setAgreementToDelete(item);
             }}
           >
@@ -266,6 +269,10 @@ export const AgreementsManagement = () => {
                 columns={columns}
                 searchFields={['foreign_institution_name', 'code', 'country']}
                 title="Convenios"
+                onRowClick={(agreement) => {
+                  setSelectedAgreement(agreement);
+                  setShowDetails(true);
+                }}
               />
             </CardContent>
           </Card>

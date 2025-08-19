@@ -15,9 +15,10 @@ interface PaginatedTableProps {
   }>;
   searchFields: string[];
   title: string;
+  onRowClick?: (item: any) => void;
 }
 
-export function PaginatedTable({ data, columns, searchFields, title }: PaginatedTableProps) {
+export function PaginatedTable({ data, columns, searchFields, title, onRowClick }: PaginatedTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -84,7 +85,11 @@ export function PaginatedTable({ data, columns, searchFields, title }: Paginated
           </TableHeader>
           <TableBody>
             {currentData.map((item, index) => (
-              <TableRow key={item.id || index}>
+              <TableRow 
+                key={item.id || index}
+                className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+                onClick={() => onRowClick && onRowClick(item)}
+              >
                 {columns.map((column) => (
                   <TableCell key={column.key}>
                     {column.render ? column.render(item[column.key], item) : item[column.key]}
