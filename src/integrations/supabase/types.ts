@@ -136,6 +136,84 @@ export type Database = {
           },
         ]
       }
+      agreements: {
+        Row: {
+          agreement_nature: string | null
+          agreement_type: string | null
+          campus_id: string | null
+          code: string | null
+          country: string
+          created_at: string | null
+          created_by: string | null
+          digital_folder_link: string | null
+          duration_years: number | null
+          faculty_id: string | null
+          foreign_institution_name: string
+          id: string
+          modality: string | null
+          object: string | null
+          observations: string | null
+          programs: string[] | null
+          relation_date: string | null
+          remaining_days: number | null
+          renewal_info: string | null
+          signature_date: string | null
+          status: string | null
+          termination_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agreement_nature?: string | null
+          agreement_type?: string | null
+          campus_id?: string | null
+          code?: string | null
+          country: string
+          created_at?: string | null
+          created_by?: string | null
+          digital_folder_link?: string | null
+          duration_years?: number | null
+          faculty_id?: string | null
+          foreign_institution_name: string
+          id?: string
+          modality?: string | null
+          object?: string | null
+          observations?: string | null
+          programs?: string[] | null
+          relation_date?: string | null
+          remaining_days?: number | null
+          renewal_info?: string | null
+          signature_date?: string | null
+          status?: string | null
+          termination_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agreement_nature?: string | null
+          agreement_type?: string | null
+          campus_id?: string | null
+          code?: string | null
+          country?: string
+          created_at?: string | null
+          created_by?: string | null
+          digital_folder_link?: string | null
+          duration_years?: number | null
+          faculty_id?: string | null
+          foreign_institution_name?: string
+          id?: string
+          modality?: string | null
+          object?: string | null
+          observations?: string | null
+          programs?: string[] | null
+          relation_date?: string | null
+          remaining_days?: number | null
+          renewal_info?: string | null
+          signature_date?: string | null
+          status?: string | null
+          termination_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       auto_generated_reports: {
         Row: {
           created_at: string | null

@@ -89,6 +89,16 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         bgColor: "bg-red-50",
         borderColor: "border-red-200",
         hoverColor: "hover:bg-red-100"
+      },
+      {
+        title: "Gestión de Convenios",
+        url: "agreements",
+        icon: FileText,
+        roles: ["Administrador", "Coordinador"],
+        color: "text-green-600",
+        bgColor: "bg-green-50",
+        borderColor: "border-green-200",
+        hoverColor: "hover:bg-green-100"
       }
     ];
 

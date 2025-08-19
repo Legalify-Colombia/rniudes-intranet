@@ -10,6 +10,7 @@ import { PlanElementOrderManagement } from "./PlanElementOrderManagement";
 import { SniesManagement } from "./SniesManagement";
 import { IndicatorsManagement } from "./IndicatorsManagement";
 import { ReportPeriodsManagement } from "./ReportPeriodsManagement";
+import { AgreementsManagement } from "./AgreementsManagement";
 
 export function StrategicConfiguration() {
   const [activeTab, setActiveTab] = useState("axes");
@@ -22,7 +23,7 @@ export function StrategicConfiguration() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid grid-cols-9 w-full">
+        <TabsList className="grid grid-cols-10 w-full">
           <TabsTrigger value="axes">Ejes Estratégicos</TabsTrigger>
           <TabsTrigger value="actions">Acciones</TabsTrigger>
           <TabsTrigger value="products">Productos</TabsTrigger>
@@ -32,6 +33,7 @@ export function StrategicConfiguration() {
           <TabsTrigger value="indicators">Indicadores</TabsTrigger>
           <TabsTrigger value="periods">Períodos</TabsTrigger>
           <TabsTrigger value="snies">SNIES</TabsTrigger>
+          <TabsTrigger value="agreements">Convenios</TabsTrigger>
         </TabsList>
 
         <TabsContent value="axes">
@@ -68,6 +70,10 @@ export function StrategicConfiguration() {
 
         <TabsContent value="snies">
           <SniesManagement />
+        </TabsContent>
+
+        <TabsContent value="agreements">
+          <AgreementsManagement />
         </TabsContent>
       </Tabs>
     </div>
