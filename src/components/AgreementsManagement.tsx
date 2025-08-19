@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { useAgreements, Agreement } from "@/hooks/useAgreements";
 import { AgreementImporter } from "./AgreementImporter";
 import { AgreementDetails } from "./AgreementDetails";
+import { NewAgreementForm } from "./NewAgreementForm";
 import { PaginatedTable } from "./PaginatedTable";
 import { Upload, Eye, Plus } from 'lucide-react';
 
@@ -16,6 +17,7 @@ export const AgreementsManagement = () => {
   const { 
     agreements, 
     loading, 
+    createAgreement,
     updateAgreement, 
     deleteAgreement, 
     calculateStatus 
@@ -28,6 +30,7 @@ export const AgreementsManagement = () => {
   const [selectedAgreement, setSelectedAgreement] = useState<Agreement | null>(null);
   const [showImporter, setShowImporter] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showNewForm, setShowNewForm] = useState(false);
 
   const filteredAgreements = useMemo(() => {
     return agreements.filter(agreement => {
@@ -132,7 +135,7 @@ export const AgreementsManagement = () => {
                   <CardTitle>Convenios ({filteredAgreements.length})</CardTitle>
                   <CardDescription>Lista completa de convenios registrados</CardDescription>
                 </div>
-                <Button onClick={() => setShowImporter(true)}>
+                <Button onClick={() => setShowNewForm(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Nuevo Convenio
                 </Button>
@@ -209,6 +212,15 @@ export const AgreementsManagement = () => {
               onClose={() => setShowDetails(false)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showNewForm} onOpenChange={setShowNewForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <NewAgreementForm 
+            onCreate={createAgreement}
+            onClose={() => setShowNewForm(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

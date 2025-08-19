@@ -227,13 +227,25 @@ export const AgreementDetails = ({ agreement, onUpdate, onDelete, onClose }: Agr
               <div>
                 <Label>Fecha de Terminación</Label>
                 {isEditing ? (
-                  <Input
-                    type="date"
-                    value={editData.termination_date || ''}
-                    onChange={(e) => setEditData({...editData, termination_date: e.target.value})}
-                  />
+                  <div className="space-y-2">
+                    <Input
+                      type="date"
+                      value={editData.termination_date || ''}
+                      onChange={(e) => setEditData({...editData, termination_date: e.target.value})}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditData({...editData, termination_date: ''})}
+                    >
+                      Marcar como indefinido
+                    </Button>
+                  </div>
                 ) : (
-                  <div className="text-sm">{formatDate(agreement.termination_date)}</div>
+                  <div className="text-sm">
+                    {agreement.termination_date ? formatDate(agreement.termination_date) : 'Indefinido'}
+                  </div>
                 )}
               </div>
             </div>
@@ -244,8 +256,11 @@ export const AgreementDetails = ({ agreement, onUpdate, onDelete, onClose }: Agr
                 {isEditing ? (
                   <Input
                     type="number"
+                    step="0.5"
+                    min="0"
                     value={editData.duration_years || ''}
                     onChange={(e) => setEditData({...editData, duration_years: parseFloat(e.target.value) || undefined})}
+                    placeholder="Ej: 2, 3, 5 o indefinido"
                   />
                 ) : (
                   <div className="text-sm">{agreement.duration_years || 'No especificada'}</div>
@@ -255,6 +270,9 @@ export const AgreementDetails = ({ agreement, onUpdate, onDelete, onClose }: Agr
                 <Label>Estado de Vigencia</Label>
                 <div className="flex items-center gap-2">
                   {getStatusBadge(editData.termination_date)}
+                  {!editData.termination_date && (
+                    <span className="text-xs text-muted-foreground">(Indefinido)</span>
+                  )}
                 </div>
               </div>
             </div>
