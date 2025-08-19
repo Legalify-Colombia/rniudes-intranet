@@ -136,6 +136,42 @@ export type Database = {
           },
         ]
       }
+      agreement_audit_log: {
+        Row: {
+          action_type: string
+          agreement_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          new_status: string | null
+          previous_status: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          action_type: string
+          agreement_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          action_type?: string
+          agreement_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       agreement_comments: {
         Row: {
           agreement_id: string
@@ -195,6 +231,7 @@ export type Database = {
           faculty_id: string | null
           foreign_institution_name: string
           id: string
+          is_international: boolean | null
           modality: string | null
           object: string | null
           observations: string | null
@@ -221,6 +258,7 @@ export type Database = {
           faculty_id?: string | null
           foreign_institution_name: string
           id?: string
+          is_international?: boolean | null
           modality?: string | null
           object?: string | null
           observations?: string | null
@@ -247,6 +285,7 @@ export type Database = {
           faculty_id?: string | null
           foreign_institution_name?: string
           id?: string
+          is_international?: boolean | null
           modality?: string | null
           object?: string | null
           observations?: string | null
@@ -3390,6 +3429,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_agreement_observation: {
+        Args: { p_agreement_id: string; p_comment: string }
+        Returns: string
+      }
       calculate_report_completion: {
         Args: { report_id: string }
         Returns: number
