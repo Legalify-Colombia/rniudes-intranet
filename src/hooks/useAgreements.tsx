@@ -56,9 +56,19 @@ export const useAgreements = () => {
 
   const createAgreement = async (agreement: Pick<Agreement, 'country' | 'foreign_institution_name'> & Partial<Agreement>) => {
     try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData?.user) throw new Error('Usuario no autenticado');
+
+      // Asegurar trazabilidad y compatibilidad con RLS: siempre guardar created_by
+      const payload = {
+        ...agreement,
+        created_by: authData.user.id,
+      };
+
       const { data, error } = await supabase
         .from('agreements')
-        .insert([agreement])
+        .insert([payload])
         .select()
         .single();
 
@@ -80,7 +90,6 @@ export const useAgreements = () => {
       throw error;
     }
   };
-
   const updateAgreement = async (id: string, updates: Partial<Agreement>) => {
     try {
       const { data, error } = await supabase
