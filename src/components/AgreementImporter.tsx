@@ -14,6 +14,7 @@ export const AgreementImporter = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [previewData, setPreviewData] = useState<any[]>([]);
+  const [importResults, setImportResults] = useState<{success: number; errors: string[]; skipped: number} | null>(null);
 
   const parseCSV = (text: string) => {
     const lines = text.split('\n').filter(line => line.trim());
@@ -63,10 +64,16 @@ export const AgreementImporter = () => {
 
     try {
       setLoading(true);
-      await importAgreementsFromCSV(csvData);
-      setFile(null);
-      setCsvData([]);
-      setPreviewData([]);
+      setImportResults(null);
+      const results = await importAgreementsFromCSV(csvData);
+      setImportResults(results);
+      
+      // Clear form if import was successful or had only minor errors
+      if (results && results.success > 0) {
+        setFile(null);
+        setCsvData([]);
+        setPreviewData([]);
+      }
     } catch (err) {
       // Error is handled in the hook
     } finally {
@@ -135,6 +142,46 @@ CON001,Colombia,Universidad Nacional,Internacional,Intercambio académico,Marco,
                 Archivo seleccionado: {file.name} ({csvData.length} registros)
               </AlertDescription>
             </Alert>
+          )}
+
+          {importResults && (
+            <div className="space-y-2">
+              {importResults.success > 0 && (
+                <Alert>
+                  <AlertDescription>
+                    ✅ {importResults.success} convenios importados exitosamente
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {importResults.errors && importResults.errors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    <div className="space-y-1">
+                      <div className="font-medium">⚠️ Errores encontrados ({importResults.errors.length}):</div>
+                      <div className="text-sm max-h-40 overflow-y-auto">
+                        {importResults.errors.slice(0, 10).map((error, index) => (
+                          <div key={index} className="border-l-2 pl-2 mb-1">{error}</div>
+                        ))}
+                        {importResults.errors.length > 10 && (
+                          <div className="text-xs text-muted-foreground mt-2">
+                            ... y {importResults.errors.length - 10} errores más
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {importResults.skipped > 0 && (
+                <Alert>
+                  <AlertDescription>
+                    ⏭️ {importResults.skipped} filas omitidas por datos incompletos o errores
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
           )}
 
           {previewData.length > 0 && (

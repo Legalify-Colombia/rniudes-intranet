@@ -139,47 +139,181 @@ export const useAgreements = () => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Usuario no autenticado');
 
-      const agreementsToInsert = csvData
-        .filter((row: any) => {
-          const country = row.País || row.country;
-          const institutionName = row['Nombre de la Institución Extranjera'] || row.foreign_institution_name;
-          return country && institutionName; // Only include rows with required fields
-        })
-        .map((row: any) => ({
-          code: row.Código || row.code || null,
-          country: row.País || row.country,
-          foreign_institution_name: row['Nombre de la Institución Extranjera'] || row.foreign_institution_name,
-          agreement_nature: row['Naturaleza del Convenio'] || row.agreement_nature || null,
-          object: row.Objeto || row.object || null,
-          agreement_type: row['Tipo de Convenio'] || row.agreement_type || null,
-          modality: row.Modalidad || row.modality || null,
-          signature_date: row['Fecha de Firma/Inicio'] || row.signature_date || null,
-          termination_date: row['Fecha de Terminación'] || row.termination_date || null,
-          duration_years: parseFloat(row['Duración en años'] || row.duration_years) || null,
-          remaining_days: parseInt(row['Días Faltantes'] || row.remaining_days) || null,
-          status: row.Estado || row.status || null,
-          renewal_info: row.Renovación || row.renewal_info || null,
-          programs: typeof (row.Programas || row.programs) === 'string' 
-            ? (row.Programas || row.programs).split(',').map((p: string) => p.trim())
-            : row.Programas || row.programs || null,
-          observations: row.Observaciones || row.observations || null,
-          relation_date: row['Fecha de Relación'] || row.relation_date || null,
-          digital_folder_link: row['Enlace Carpeta Digital'] || row.digital_folder_link || null,
-          created_by: user.user.id
-        }));
+      const errors: string[] = [];
+      const agreementsToInsert: any[] = [];
+      let successCount = 0;
+      let skippedCount = 0;
 
-      const { error } = await supabase
-        .from('agreements')
-        .insert(agreementsToInsert);
+      // Process each row individually to track errors by row number
+      csvData.forEach((row: any, index: number) => {
+        const rowNumber = index + 2; // +2 because index starts at 0 and we skip header row
+        const country = row.País || row.country;
+        const institutionName = row['Nombre de la Institución Extranjera'] || row.foreign_institution_name;
 
-      if (error) throw error;
+        // Check for required fields
+        if (!country || !institutionName) {
+          if (!country && !institutionName) {
+            errors.push(`Fila ${rowNumber}: Faltan el país y el nombre de la institución`);
+          } else if (!country) {
+            errors.push(`Fila ${rowNumber}: Falta el país`);
+          } else if (!institutionName) {
+            errors.push(`Fila ${rowNumber}: Falta el nombre de la institución`);
+          }
+          skippedCount++;
+          return;
+        }
 
-      toast({
-        title: "Importación exitosa",
-        description: `Se importaron ${agreementsToInsert.length} convenios`,
+        try {
+          // Validate and process data
+          const agreementData = {
+            code: row.Código || row.code || null,
+            country: country.toString().trim(),
+            foreign_institution_name: institutionName.toString().trim(),
+            agreement_nature: row['Naturaleza del Convenio'] || row.agreement_nature || null,
+            object: row.Objeto || row.object || null,
+            agreement_type: row['Tipo de Convenio'] || row.agreement_type || null,
+            modality: row.Modalidad || row.modality || null,
+            signature_date: row['Fecha de Firma/Inicio'] || row.signature_date || null,
+            termination_date: row['Fecha de Terminación'] || row.termination_date || null,
+            duration_years: null as number | null,
+            remaining_days: null as number | null,
+            status: row.Estado || row.status || null,
+            renewal_info: row.Renovación || row.renewal_info || null,
+            programs: null as string[] | null,
+            observations: row.Observaciones || row.observations || null,
+            relation_date: row['Fecha de Relación'] || row.relation_date || null,
+            digital_folder_link: row['Enlace Carpeta Digital'] || row.digital_folder_link || null,
+            created_by: user.user.id
+          };
+
+          // Validate and parse duration_years
+          const durationStr = row['Duración en años'] || row.duration_years;
+          if (durationStr && durationStr.toString().trim() !== '') {
+            const duration = parseFloat(durationStr.toString());
+            if (isNaN(duration) || duration < 0) {
+              errors.push(`Fila ${rowNumber}: Duración en años debe ser un número válido (${durationStr})`);
+              skippedCount++;
+              return;
+            }
+            agreementData.duration_years = duration;
+          }
+
+          // Validate and parse remaining_days
+          const remainingStr = row['Días Faltantes'] || row.remaining_days;
+          if (remainingStr && remainingStr.toString().trim() !== '') {
+            const remaining = parseInt(remainingStr.toString());
+            if (isNaN(remaining)) {
+              errors.push(`Fila ${rowNumber}: Días faltantes debe ser un número entero (${remainingStr})`);
+              skippedCount++;
+              return;
+            }
+            agreementData.remaining_days = remaining;
+          }
+
+          // Process programs array
+          const programsStr = row.Programas || row.programs;
+          if (programsStr && typeof programsStr === 'string' && programsStr.trim() !== '') {
+            agreementData.programs = programsStr.split(',').map((p: string) => p.trim()).filter(p => p !== '');
+          } else if (Array.isArray(programsStr)) {
+            agreementData.programs = programsStr.filter(p => p && p.toString().trim() !== '');
+          }
+
+          // Validate dates
+          if (agreementData.signature_date && agreementData.signature_date !== '') {
+            const signatureDate = new Date(agreementData.signature_date);
+            if (isNaN(signatureDate.getTime())) {
+              errors.push(`Fila ${rowNumber}: Fecha de firma inválida (${agreementData.signature_date})`);
+              skippedCount++;
+              return;
+            }
+          }
+
+          if (agreementData.termination_date && agreementData.termination_date !== '') {
+            const terminationDate = new Date(agreementData.termination_date);
+            if (isNaN(terminationDate.getTime())) {
+              errors.push(`Fila ${rowNumber}: Fecha de terminación inválida (${agreementData.termination_date})`);
+              skippedCount++;
+              return;
+            }
+          }
+
+          agreementsToInsert.push(agreementData);
+          successCount++;
+
+        } catch (err: any) {
+          errors.push(`Fila ${rowNumber}: Error al procesar datos - ${err.message}`);
+          skippedCount++;
+        }
       });
 
-      await fetchAgreements();
+      // Insert valid agreements
+      if (agreementsToInsert.length > 0) {
+        const { error } = await supabase
+          .from('agreements')
+          .insert(agreementsToInsert);
+
+        if (error) {
+          // If batch insert fails, try individual inserts to identify specific errors
+          const insertErrors: string[] = [];
+          let insertedCount = 0;
+
+          for (let i = 0; i < agreementsToInsert.length; i++) {
+            try {
+              const { error: insertError } = await supabase
+                .from('agreements')
+                .insert([agreementsToInsert[i]]);
+
+              if (insertError) {
+                // Find the original row number for this agreement
+                const originalIndex = csvData.findIndex(row => {
+                  const country = row.País || row.country;
+                  const institutionName = row['Nombre de la Institución Extranjera'] || row.foreign_institution_name;
+                  return country === agreementsToInsert[i].country && 
+                         institutionName === agreementsToInsert[i].foreign_institution_name;
+                });
+                const rowNumber = originalIndex + 2;
+                insertErrors.push(`Fila ${rowNumber}: Error de base de datos - ${insertError.message}`);
+              } else {
+                insertedCount++;
+              }
+            } catch (insertErr: any) {
+              insertErrors.push(`Error en inserción individual: ${insertErr.message}`);
+            }
+          }
+
+          if (insertErrors.length > 0) {
+            errors.push(...insertErrors);
+          }
+          successCount = insertedCount;
+        }
+      }
+
+      // Show results
+      if (errors.length > 0) {
+        const errorMessage = errors.slice(0, 5).join('\n') + (errors.length > 5 ? `\n... y ${errors.length - 5} errores más` : '');
+        toast({
+          title: "Importación completada con errores",
+          description: `Procesados: ${successCount}, Omitidos: ${skippedCount}\n${errorMessage}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Importación exitosa",
+          description: `Se importaron ${successCount} convenios exitosamente`,
+        });
+      }
+
+      if (successCount > 0) {
+        await fetchAgreements();
+      }
+
+      // Return error details for the component to show
+      return {
+        success: successCount,
+        errors: errors,
+        skipped: skippedCount
+      };
+
     } catch (error: any) {
       toast({
         title: "Error en la importación",
