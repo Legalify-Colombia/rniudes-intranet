@@ -2,15 +2,20 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/hooks/useAuth";
+import { useAgreementStats } from "@/hooks/useAgreementStats";
 import { NotificationFeed } from "@/components/NotificationFeed";
 import { StrategicAxesProgress } from "@/components/StrategicAxesProgress";
-import { AdminDashboard } from "@/components/AdminDashboard"; // Asumo que este es el dashboard de admin
+import { AdminDashboard } from "@/components/AdminDashboard";
 import { useReports } from "@/hooks/useReports";
 import { 
   Target,
   TrendingUp,
   Package,
-  Activity
+  Activity,
+  FileText,
+  Globe,
+  MapPin,
+  AlertTriangle
 } from "lucide-react";
 
 // --- COMPONENTE REUTILIZABLE DE TARJETA DE ESTADÍSTICAS ---
@@ -34,6 +39,7 @@ export function Dashboard() {
   const { profile } = useAuth();
   const { fetchStrategicAxes, fetchActions, fetchProducts } = useSupabaseData();
   const { fetchManagerReportsByManager } = useReports();
+  const { stats: agreementStats, loading: agreementStatsLoading } = useAgreementStats();
   
   const [stats, setStats] = useState({
     totalAxes: 0,
@@ -138,6 +144,47 @@ export function Dashboard() {
           <StatCard icon={Activity} title="Acciones" value={stats.totalActions} subtitle="Acciones planificadas" colorClass="text-green-500" />
           <StatCard icon={Package} title="Productos" value={stats.totalProducts} subtitle="Productos esperados" colorClass="text-purple-500" />
           <StatCard icon={TrendingUp} title="Tu Progreso General" value={`${stats.overallProgress}%`} subtitle="Avance total" colorClass="text-orange-500" />
+        </div>
+
+        {/* Fila de Estadísticas de Convenios */}
+        <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard 
+            icon={FileText} 
+            title="Total Convenios" 
+            value={agreementStatsLoading ? "..." : agreementStats.total_agreements} 
+            subtitle="Convenios registrados" 
+            colorClass="text-blue-600" 
+          />
+          <StatCard 
+            icon={Activity} 
+            title="Convenios Activos" 
+            value={agreementStatsLoading ? "..." : agreementStats.active_agreements} 
+            subtitle="En vigencia" 
+            colorClass="text-green-600" 
+          />
+          <StatCard 
+            icon={AlertTriangle} 
+            title="Por Vencer" 
+            value={agreementStatsLoading ? "..." : agreementStats.expiring_soon} 
+            subtitle="Próximos 90 días" 
+            colorClass="text-orange-600" 
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard 
+              icon={Globe} 
+              title="Internacional" 
+              value={agreementStatsLoading ? "..." : agreementStats.international_agreements} 
+              subtitle="Convenios" 
+              colorClass="text-indigo-600" 
+            />
+            <StatCard 
+              icon={MapPin} 
+              title="Nacional" 
+              value={agreementStatsLoading ? "..." : agreementStats.national_agreements} 
+              subtitle="Convenios" 
+              colorClass="text-emerald-600" 
+            />
+          </div>
         </div>
 
         {/* Contenido Principal: Progreso y Notificaciones */}

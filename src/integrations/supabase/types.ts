@@ -3482,6 +3482,16 @@ export type Database = {
           admin_name: string
         }[]
       }
+      get_agreements_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active_agreements: number
+          expiring_soon: number
+          international_agreements: number
+          national_agreements: number
+          total_agreements: number
+        }[]
+      }
       get_available_plan_types_for_manager: {
         Args: { manager_profile_id: string }
         Returns: {

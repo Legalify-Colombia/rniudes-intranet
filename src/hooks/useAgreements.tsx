@@ -24,6 +24,7 @@ export interface Agreement {
   observations?: string;
   relation_date?: string;
   digital_folder_link?: string;
+  is_international?: boolean;
   created_at?: string;
   updated_at?: string;
   created_by?: string;
@@ -94,6 +95,7 @@ export const useAgreements = () => {
       throw error;
     }
   };
+  
   const updateAgreement = async (id: string, updates: Partial<Agreement>) => {
     try {
       const { data, error } = await supabase
@@ -147,180 +149,167 @@ export const useAgreements = () => {
     }
   };
 
+  const cleanField = (value: any): string | null => {
+    if (value === undefined || value === null || value === '') return null;
+    const cleaned = String(value).trim().replace(/^["']|["']$/g, '');
+    return cleaned === '' ? null : cleaned;
+  };
+
+  const determineIfInternational = (country: string | null): boolean => {
+    if (!country) return true; // Default to international if no country specified
+    const nationalCountries = ['colombia', 'co', 'col'];
+    return !nationalCountries.includes(country.toLowerCase());
+  };
+
+  const parseDate = (dateString: string): string | null => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    
+    // Clean the date string
+    let cleanDate = dateString.trim().replace(/['"]/g, '');
+    
+    // Try ISO format first (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+      return cleanDate;
+    }
+    
+    // Try DD/MM/YYYY or DD-MM-YYYY format
+    const ddmmyyMatch = cleanDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (ddmmyyMatch) {
+      const [, day, month, year] = ddmmyyMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try MM/DD/YYYY format 
+    const mmddyyMatch = cleanDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (mmddyyMatch) {
+      const [, month, day, year] = mmddyyMatch;
+      // Assume DD/MM if day > 12, otherwise try both interpretations
+      if (parseInt(day) > 12) {
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
+    
+    // Try YYYY/MM/DD format
+    const yyyymmddMatch = cleanDate.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (yyyymmddMatch) {
+      const [, year, month, day] = yyyymmddMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try DD-MM-AAAA or DD/MM/AAAA explicitly
+    const ddmmyyyyMatch = cleanDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (ddmmyyyyMatch) {
+      const [, day, month, year] = ddmmyyyyMatch;
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      
+      // Validate day and month ranges
+      if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12) {
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+    }
+    
+    // Try to parse with Date constructor as last resort
+    try {
+      const parsedDate = new Date(cleanDate);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().split('T')[0];
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    
+    return null;
+  };
+
   const importAgreementsFromCSV = async (csvData: any[]) => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('Usuario no autenticado');
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData?.user) throw new Error('Usuario no autenticado');
 
       const errors: string[] = [];
       const agreementsToInsert: any[] = [];
       let successCount = 0;
       let skippedCount = 0;
 
-      // Process each row individually to track errors by row number
-      csvData.forEach((row: any, index: number) => {
-        const rowNumber = index + 2; // +2 because index starts at 0 and we skip header row
-        const country = row.País || row.country;
-        const institutionName = row['Nombre de la Institución Extranjera'] || row.foreign_institution_name;
-
-        // Check for required fields
-        if (!country || !institutionName) {
-          if (!country && !institutionName) {
-            errors.push(`Fila ${rowNumber}: Faltan el país y el nombre de la institución`);
-          } else if (!country) {
-            errors.push(`Fila ${rowNumber}: Falta el país`);
-          } else if (!institutionName) {
-            errors.push(`Fila ${rowNumber}: Falta el nombre de la institución`);
-          }
+      csvData.forEach((csvAgreement: any, index: number) => {
+        const rowNumber = index + 2;
+        
+        // Validar campos requeridos
+        const country = cleanField(csvAgreement['País'] || csvAgreement.country);
+        const foreignInstitutionName = cleanField(csvAgreement['Nombre de la Institución Extranjera'] || csvAgreement.foreign_institution_name);
+        
+        if (!country || !foreignInstitutionName) {
+          errors.push(`Fila ${rowNumber}: Faltan campos requeridos (País y Nombre de Institución)`);
           skippedCount++;
           return;
         }
 
         try {
-          // Validate and process data
-          const agreementData = {
-            code: row.Código || row.code || null,
-            country: country.toString().trim(),
-            foreign_institution_name: institutionName.toString().trim(),
-            agreement_nature: row['Naturaleza del Convenio'] || row.agreement_nature || null,
-            object: row.Objeto || row.object || null,
-            agreement_type: row['Tipo de Convenio'] || row.agreement_type || null,
-            modality: row.Modalidad || row.modality || null,
-            signature_date: row['Fecha de Firma/Inicio'] || row.signature_date || null,
-            termination_date: row['Fecha de Terminación'] || row.termination_date || null,
-            duration_years: null as number | null,
-            remaining_days: null as number | null,
-            status: row.Estado || row.status || null,
-            renewal_info: row.Renovación || row.renewal_info || null,
-            programs: null as string[] | null,
-            observations: row.Observaciones || row.observations || null,
-            relation_date: row['Fecha de Relación'] || row.relation_date || null,
-            digital_folder_link: row['Enlace Carpeta Digital'] || row.digital_folder_link || null,
-            created_by: user.user.id
+          const mappedAgreement = {
+            country: cleanField(csvAgreement['País'] || csvAgreement.country),
+            foreign_institution_name: cleanField(csvAgreement['Nombre de la Institución Extranjera'] || csvAgreement.foreign_institution_name),
+            code: cleanField(csvAgreement['Código'] || csvAgreement.code),
+            agreement_nature: cleanField(csvAgreement['Naturaleza del Convenio'] || csvAgreement.agreement_nature),
+            object: cleanField(csvAgreement['Objeto'] || csvAgreement.object),
+            agreement_type: cleanField(csvAgreement['Tipo de Convenio'] || csvAgreement.agreement_type),
+            modality: cleanField(csvAgreement['Modalidad'] || csvAgreement.modality),
+            signature_date: parseDate(csvAgreement['Fecha de Firma/Inicio'] || csvAgreement.signature_date),
+            termination_date: parseDate(csvAgreement['Fecha de Terminación'] || csvAgreement.termination_date),
+            duration_years: parseFloat(cleanField(csvAgreement['Duración en años'] || csvAgreement.duration_years)) || null,
+            remaining_days: parseInt(cleanField(csvAgreement['Días Faltantes'] || csvAgreement.remaining_days)) || null,
+            status: cleanField(csvAgreement['Estado'] || csvAgreement.status),
+            renewal_info: cleanField(csvAgreement['Renovación'] || csvAgreement.renewal_info),
+            programs: csvAgreement['Programas'] || csvAgreement.programs ? 
+              String(csvAgreement['Programas'] || csvAgreement.programs).split(',').map(p => p.trim()).filter(Boolean) : 
+              [],
+            observations: cleanField(csvAgreement['Observaciones'] || csvAgreement.observations),
+            relation_date: parseDate(csvAgreement['Fecha de Relación'] || csvAgreement.relation_date),
+            digital_folder_link: cleanField(csvAgreement['Enlace Carpeta Digital'] || csvAgreement.digital_folder_link),
+            is_international: determineIfInternational(cleanField(csvAgreement['País'] || csvAgreement.country)),
+            created_by: authData.user.id
           };
 
-          // Validate and parse duration_years
-          const durationStr = row['Duración en años'] || row.duration_years;
-          if (durationStr && durationStr.toString().trim() !== '') {
-            const duration = parseFloat(durationStr.toString());
-            if (isNaN(duration) || duration < 0) {
-              errors.push(`Fila ${rowNumber}: Duración en años debe ser un número válido (${durationStr})`);
-              skippedCount++;
-              return;
-            }
-            agreementData.duration_years = duration;
-          }
-
-          // Validate and parse remaining_days
-          const remainingStr = row['Días Faltantes'] || row.remaining_days;
-          if (remainingStr && remainingStr.toString().trim() !== '') {
-            const remaining = parseInt(remainingStr.toString());
-            if (isNaN(remaining)) {
-              errors.push(`Fila ${rowNumber}: Días faltantes debe ser un número entero (${remainingStr})`);
-              skippedCount++;
-              return;
-            }
-            agreementData.remaining_days = remaining;
-          }
-
-          // Process programs array
-          const programsStr = row.Programas || row.programs;
-          if (programsStr && typeof programsStr === 'string' && programsStr.trim() !== '') {
-            agreementData.programs = programsStr.split(',').map((p: string) => p.trim()).filter(p => p !== '');
-          } else if (Array.isArray(programsStr)) {
-            agreementData.programs = programsStr.filter(p => p && p.toString().trim() !== '');
-          }
-
-          // Validate dates
-          if (agreementData.signature_date && agreementData.signature_date !== '') {
-            const signatureDate = new Date(agreementData.signature_date);
+          // Validaciones adicionales
+          if (mappedAgreement.signature_date) {
+            const signatureDate = new Date(mappedAgreement.signature_date);
             if (isNaN(signatureDate.getTime())) {
-              errors.push(`Fila ${rowNumber}: Fecha de firma inválida (${agreementData.signature_date})`);
+              errors.push(`Fila ${rowNumber}: Fecha de firma inválida`);
               skippedCount++;
               return;
             }
           }
 
-          if (agreementData.termination_date && agreementData.termination_date !== '') {
-            const terminationDate = new Date(agreementData.termination_date);
+          if (mappedAgreement.termination_date) {
+            const terminationDate = new Date(mappedAgreement.termination_date);
             if (isNaN(terminationDate.getTime())) {
-              errors.push(`Fila ${rowNumber}: Fecha de terminación inválida (${agreementData.termination_date})`);
+              errors.push(`Fila ${rowNumber}: Fecha de terminación inválida`);
               skippedCount++;
               return;
             }
           }
 
-          agreementsToInsert.push(agreementData);
+          agreementsToInsert.push(mappedAgreement);
           successCount++;
 
         } catch (err: any) {
-          errors.push(`Fila ${rowNumber}: Error al procesar datos - ${err.message}`);
+          errors.push(`Fila ${rowNumber}: Error al procesar - ${err.message}`);
           skippedCount++;
         }
       });
 
-      // Insert valid agreements
+      // Insertar convenios válidos
       if (agreementsToInsert.length > 0) {
         const { error } = await supabase
           .from('agreements')
           .insert(agreementsToInsert);
 
-        if (error) {
-          // If batch insert fails, try individual inserts to identify specific errors
-          const insertErrors: string[] = [];
-          let insertedCount = 0;
-
-          for (let i = 0; i < agreementsToInsert.length; i++) {
-            try {
-              const { error: insertError } = await supabase
-                .from('agreements')
-                .insert([agreementsToInsert[i]]);
-
-              if (insertError) {
-                // Find the original row number for this agreement
-                const originalIndex = csvData.findIndex(row => {
-                  const country = row.País || row.country;
-                  const institutionName = row['Nombre de la Institución Extranjera'] || row.foreign_institution_name;
-                  return country === agreementsToInsert[i].country && 
-                         institutionName === agreementsToInsert[i].foreign_institution_name;
-                });
-                const rowNumber = originalIndex + 2;
-                insertErrors.push(`Fila ${rowNumber}: Error de base de datos - ${insertError.message}`);
-              } else {
-                insertedCount++;
-              }
-            } catch (insertErr: any) {
-              insertErrors.push(`Error en inserción individual: ${insertErr.message}`);
-            }
-          }
-
-          if (insertErrors.length > 0) {
-            errors.push(...insertErrors);
-          }
-          successCount = insertedCount;
-        }
+        if (error) throw error;
       }
 
-      // Show results
-      if (errors.length > 0) {
-        const errorMessage = errors.slice(0, 5).join('\n') + (errors.length > 5 ? `\n... y ${errors.length - 5} errores más` : '');
-        toast({
-          title: "Importación completada con errores",
-          description: `Procesados: ${successCount}, Omitidos: ${skippedCount}\n${errorMessage}`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Importación exitosa",
-          description: `Se importaron ${successCount} convenios exitosamente`,
-        });
-      }
-
-      if (successCount > 0) {
-        await fetchAgreements();
-      }
-
-      // Return error details for the component to show
+      await fetchAgreements();
+      
       return {
         success: successCount,
         errors: errors,
