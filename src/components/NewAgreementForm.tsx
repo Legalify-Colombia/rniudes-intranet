@@ -13,26 +13,28 @@ import { Globe, Calendar, FileText, Save, X } from 'lucide-react';
 interface NewAgreementFormProps {
   onCreate: (agreement: Pick<Agreement, 'country' | 'foreign_institution_name'> & Partial<Agreement>) => Promise<any>;
   onClose: () => void;
+  agreement?: Agreement;
+  isEditing?: boolean;
 }
 
-export const NewAgreementForm = ({ onCreate, onClose }: NewAgreementFormProps) => {
+export const NewAgreementForm = ({ onCreate, onClose, agreement, isEditing = false }: NewAgreementFormProps) => {
   const [loading, setLoading] = useState(false);
-  const [isIndefinite, setIsIndefinite] = useState(false);
+  const [isIndefinite, setIsIndefinite] = useState(agreement ? !agreement.termination_date : false);
   const [formData, setFormData] = useState({
-    code: '',
-    country: '',
-    foreign_institution_name: '',
-    agreement_nature: '',
-    agreement_type: '',
-    modality: '',
-    object: '',
-    signature_date: '',
-    termination_date: '',
-    duration_years: '',
-    renewal_info: '',
-    observations: '',
-    digital_folder_link: '',
-    programs: [] as string[]
+    code: agreement?.code || '',
+    country: agreement?.country || '',
+    foreign_institution_name: agreement?.foreign_institution_name || '',
+    agreement_nature: agreement?.agreement_nature || '',
+    agreement_type: agreement?.agreement_type || '',
+    modality: agreement?.modality || '',
+    object: agreement?.object || '',
+    signature_date: agreement?.signature_date || '',
+    termination_date: agreement?.termination_date || '',
+    duration_years: agreement?.duration_years?.toString() || '',
+    renewal_info: agreement?.renewal_info || '',
+    observations: agreement?.observations || '',
+    digital_folder_link: agreement?.digital_folder_link || '',
+    programs: agreement?.programs || [] as string[]
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,7 +73,7 @@ export const NewAgreementForm = ({ onCreate, onClose }: NewAgreementFormProps) =
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Globe className="w-5 h-5" />
-          Nuevo Convenio
+          {isEditing ? 'Editar Convenio' : 'Nuevo Convenio'}
         </DialogTitle>
       </DialogHeader>
 
@@ -297,7 +299,7 @@ export const NewAgreementForm = ({ onCreate, onClose }: NewAgreementFormProps) =
           </Button>
           <Button type="submit" disabled={loading || !formData.country || !formData.foreign_institution_name}>
             <Save className="w-4 h-4 mr-2" />
-            {loading ? 'Guardando...' : 'Crear Convenio'}
+            {loading ? 'Guardando...' : (isEditing ? 'Actualizar Convenio' : 'Crear Convenio')}
           </Button>
         </div>
       </form>

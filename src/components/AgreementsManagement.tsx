@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAgreements, Agreement } from "@/hooks/useAgreements";
 import { AgreementImporter } from "./AgreementImporter";
 import { AgreementDetails } from "./AgreementDetails";
@@ -32,6 +33,8 @@ export const AgreementsManagement = () => {
   const [showImporter, setShowImporter] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [agreementToDelete, setAgreementToDelete] = useState<Agreement | null>(null);
 
   const filteredAgreements = useMemo(() => {
     return agreements.filter(agreement => {
@@ -143,6 +146,28 @@ export const AgreementsManagement = () => {
           >
             <Eye className="w-4 h-4 mr-1" />
             Ver
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedAgreement(item);
+              setShowEditForm(true);
+            }}
+          >
+            <Edit2 className="w-4 h-4 mr-1" />
+            Editar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => {
+              setAgreementToDelete(item);
+            }}
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            Eliminar
           </Button>
         </div>
       ) : null
@@ -273,6 +298,47 @@ export const AgreementsManagement = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedAgreement && (
+            <NewAgreementForm 
+              agreement={selectedAgreement}
+              onCreate={async (agreementData) => {
+                const { id, ...updates } = { ...selectedAgreement, ...agreementData };
+                return updateAgreement(id, updates);
+              }}
+              onClose={() => setShowEditForm(false)}
+              isEditing
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!agreementToDelete} onOpenChange={() => setAgreementToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar convenio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El convenio "{agreementToDelete?.foreign_institution_name}" será eliminado permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (agreementToDelete) {
+                  await deleteAgreement(agreementToDelete.id);
+                  setAgreementToDelete(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
