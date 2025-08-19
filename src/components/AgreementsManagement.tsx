@@ -34,6 +34,9 @@ export const AgreementsManagement = () => {
 
   const filteredAgreements = useMemo(() => {
     return agreements.filter(agreement => {
+      // Filtrar elementos null o undefined
+      if (!agreement) return false;
+      
       const matchesSearch = !searchTerm || 
         agreement.foreign_institution_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         agreement.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -79,12 +82,12 @@ export const AgreementsManagement = () => {
     { 
       key: 'termination_date', 
       label: 'Estado',
-      render: (item: Agreement) => getStatusBadge(item.termination_date)
+      render: (item: Agreement) => item ? getStatusBadge(item.termination_date) : <Badge variant="outline">-</Badge>
     },
     {
       key: 'actions',
       label: 'Acciones',
-      render: (item: Agreement) => (
+      render: (item: Agreement) => item ? (
         <Button
           variant="outline"
           size="sm"
@@ -96,7 +99,7 @@ export const AgreementsManagement = () => {
           <Eye className="w-4 h-4 mr-2" />
           Ver Detalles
         </Button>
-      )
+      ) : null
     }
   ];
 
