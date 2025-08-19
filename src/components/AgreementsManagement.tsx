@@ -11,14 +11,15 @@ import { AgreementImporter } from "./AgreementImporter";
 import { AgreementDetails } from "./AgreementDetails";
 import { NewAgreementForm } from "./NewAgreementForm";
 import { PaginatedTable } from "./PaginatedTable";
-import { Upload, Eye, Plus } from 'lucide-react';
+import { Upload, Eye, Plus, Edit2, Trash2, CheckCircle, XCircle, Pause, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
 
 export const AgreementsManagement = () => {
   const { 
     agreements, 
     loading, 
     createAgreement,
-    updateAgreement, 
+    updateAgreement,
+    updateAgreementStatus,
     deleteAgreement, 
     calculateStatus 
   } = useAgreements();
@@ -62,7 +63,50 @@ export const AgreementsManagement = () => {
     [agreements]
   );
 
-  const getStatusBadge = (terminationDate?: string) => {
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800 border-green-200';
+      case 'expired': return 'bg-red-100 text-red-800 border-red-200';
+      case 'suspended': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'under_review': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'renewed': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'terminated': return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'active': return <CheckCircle className="w-4 h-4" />;
+      case 'expired': return <XCircle className="w-4 h-4" />;
+      case 'suspended': return <Pause className="w-4 h-4" />;
+      case 'under_review': return <Clock className="w-4 h-4" />;
+      case 'renewed': return <RefreshCw className="w-4 h-4" />;
+      case 'terminated': return <XCircle className="w-4 h-4" />;
+      default: return <AlertTriangle className="w-4 h-4" />;
+    }
+  };
+
+  const getStatusBadge = (terminationDate?: string, currentStatus?: string) => {
+    if (currentStatus) {
+      const statusLabels = {
+        'active': 'Activo',
+        'expired': 'Vencido',
+        'suspended': 'Suspendido',
+        'under_review': 'En revisión',
+        'renewed': 'Renovado',
+        'terminated': 'Terminado'
+      };
+      
+      return (
+        <Badge className={`${getStatusColor(currentStatus)} flex items-center gap-1`}>
+          {getStatusIcon(currentStatus)}
+          {statusLabels[currentStatus as keyof typeof statusLabels] || 'Desconocido'}
+        </Badge>
+      );
+    }
+    
+    // Fallback al cálculo basado en fecha de terminación
     const status = calculateStatus(terminationDate);
     const variants = {
       'Vigente': 'default',
@@ -82,23 +126,25 @@ export const AgreementsManagement = () => {
     { 
       key: 'termination_date', 
       label: 'Estado',
-      render: (item: Agreement) => item ? getStatusBadge(item.termination_date) : <Badge variant="outline">-</Badge>
+      render: (item: Agreement) => item ? getStatusBadge(item.termination_date, item.current_status) : <Badge variant="outline">-</Badge>
     },
     {
       key: 'actions',
       label: 'Acciones',
       render: (item: Agreement) => item ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setSelectedAgreement(item);
-            setShowDetails(true);
-          }}
-        >
-          <Eye className="w-4 h-4 mr-2" />
-          Ver Detalles
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedAgreement(item);
+              setShowDetails(true);
+            }}
+          >
+            <Eye className="w-4 h-4 mr-1" />
+            Ver
+          </Button>
+        </div>
       ) : null
     }
   ];
@@ -208,12 +254,13 @@ export const AgreementsManagement = () => {
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedAgreement && (
-            <AgreementDetails 
-              agreement={selectedAgreement}
-              onUpdate={updateAgreement}
-              onDelete={deleteAgreement}
-              onClose={() => setShowDetails(false)}
-            />
+          <AgreementDetails 
+            agreement={selectedAgreement}
+            onUpdate={updateAgreement}
+            onUpdateStatus={updateAgreementStatus}
+            onDelete={deleteAgreement}
+            onClose={() => setShowDetails(false)}
+          />
           )}
         </DialogContent>
       </Dialog>

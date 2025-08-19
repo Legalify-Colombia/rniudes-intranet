@@ -16,6 +16,7 @@ export interface Agreement {
   duration_years?: number;
   remaining_days?: number;
   status?: string;
+  current_status?: 'active' | 'expired' | 'suspended' | 'under_review' | 'renewed' | 'terminated';
   renewal_info?: string;
   campus_id?: string;
   faculty_id?: string;
@@ -42,7 +43,10 @@ export const useAgreements = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAgreements(data || []);
+      setAgreements((data || []).map(agreement => ({
+        ...agreement,
+        current_status: agreement.current_status as Agreement['current_status'] || 'active'
+      })));
     } catch (error: any) {
       toast({
         title: "Error al cargar convenios",
@@ -346,6 +350,62 @@ export const useAgreements = () => {
     return 'Vigente';
   };
 
+  const updateAgreementStatus = async (id: string, newStatus: string, comment?: string) => {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData?.user) throw new Error('Usuario no autenticado');
+
+      // Obtener el estado actual
+      const { data: currentAgreement, error: fetchError } = await supabase
+        .from('agreements')
+        .select('current_status')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Actualizar el estado del convenio
+      const { data, error } = await supabase
+        .from('agreements')
+        .update({ current_status: newStatus })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Agregar comentario del cambio de estado si se proporciona
+      if (comment) {
+        await supabase
+          .from('agreement_comments')
+          .insert([{
+            agreement_id: id,
+            user_id: authData.user.id,
+            comment_text: comment,
+            comment_type: 'status_change',
+            old_status: currentAgreement?.current_status || null,
+            new_status: newStatus
+          }]);
+      }
+
+      toast({
+        title: "Estado actualizado",
+        description: "El estado del convenio se ha actualizado exitosamente",
+      });
+
+      await fetchAgreements();
+      return data;
+    } catch (error: any) {
+      toast({
+        title: "Error al actualizar estado",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchAgreements();
   }, []);
@@ -357,6 +417,7 @@ export const useAgreements = () => {
     createAgreement,
     updateAgreement,
     deleteAgreement,
+    updateAgreementStatus,
     importAgreementsFromCSV,
     calculateStatus
   };

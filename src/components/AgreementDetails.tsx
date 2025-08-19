@@ -15,11 +15,12 @@ import { es } from 'date-fns/locale';
 interface AgreementDetailsProps {
   agreement: Agreement;
   onUpdate: (id: string, updates: Partial<Agreement>) => Promise<any>;
+  onUpdateStatus: (id: string, newStatus: string, comment?: string) => Promise<any>;
   onDelete: (id: string) => Promise<void>;
   onClose: () => void;
 }
 
-export const AgreementDetails = ({ agreement, onUpdate, onDelete, onClose }: AgreementDetailsProps) => {
+export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete, onClose }: AgreementDetailsProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(agreement);
   const [loading, setLoading] = useState(false);

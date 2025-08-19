@@ -136,6 +136,50 @@ export type Database = {
           },
         ]
       }
+      agreement_comments: {
+        Row: {
+          agreement_id: string
+          comment_text: string
+          comment_type: string | null
+          created_at: string | null
+          id: string
+          new_status: string | null
+          old_status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agreement_id: string
+          comment_text: string
+          comment_type?: string | null
+          created_at?: string | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agreement_id?: string
+          comment_text?: string
+          comment_type?: string | null
+          created_at?: string | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreement_comments_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "agreements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agreements: {
         Row: {
           agreement_nature: string | null
@@ -145,6 +189,7 @@ export type Database = {
           country: string
           created_at: string | null
           created_by: string | null
+          current_status: string | null
           digital_folder_link: string | null
           duration_years: number | null
           faculty_id: string | null
@@ -170,6 +215,7 @@ export type Database = {
           country: string
           created_at?: string | null
           created_by?: string | null
+          current_status?: string | null
           digital_folder_link?: string | null
           duration_years?: number | null
           faculty_id?: string | null
@@ -195,6 +241,7 @@ export type Database = {
           country?: string
           created_at?: string | null
           created_by?: string | null
+          current_status?: string | null
           digital_folder_link?: string | null
           duration_years?: number | null
           faculty_id?: string | null
