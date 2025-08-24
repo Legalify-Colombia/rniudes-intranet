@@ -1,5 +1,5 @@
 
-import { Calendar, Users, Building, UserCheck, BarChart3, FileText, CheckSquare, ClipboardList } from "lucide-react"
+import { Calendar, Users, Building, UserCheck, BarChart3, FileText, CheckSquare, ClipboardList, TrendingUp } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -99,6 +99,16 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         bgColor: "bg-green-50",
         borderColor: "border-green-200",
         hoverColor: "hover:bg-green-100"
+      },
+      {
+        title: "Módulo de Estadísticas",
+        url: "statistics",
+        icon: TrendingUp,
+        roles: ["Administrador", "Coordinador"],
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+        borderColor: "border-blue-200",
+        hoverColor: "hover:bg-blue-100"
       }
     ];
 

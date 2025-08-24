@@ -6,6 +6,7 @@ import { useAgreementStats } from "@/hooks/useAgreementStats";
 import { NotificationFeed } from "@/components/NotificationFeed";
 import { StrategicAxesProgress } from "@/components/StrategicAxesProgress";
 import { AdminDashboard } from "@/components/AdminDashboard";
+import { StatisticsModule } from "@/components/StatisticsModule";
 import { useReports } from "@/hooks/useReports";
 import { 
   Target,

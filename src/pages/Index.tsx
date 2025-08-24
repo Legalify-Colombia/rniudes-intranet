@@ -14,6 +14,7 @@ import { WorkPlanApproval } from "@/components/WorkPlanApproval";
 import { MyReport } from "@/components/MyReport";
 import { SniesManagement } from "@/components/SniesManagement";
 import { AgreementsManagement } from "@/components/AgreementsManagement";
+import { StatisticsModule } from "@/components/StatisticsModule";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +45,8 @@ const Index = () => {
         return <SniesManagement />;
       case "agreements":
         return <AgreementsManagement />;
+      case "statistics":
+        return <StatisticsModule />;
       default:
         return <Dashboard />;
     }
