@@ -2395,6 +2395,39 @@ export type Database = {
           },
         ]
       }
+      role_change_audit: {
+        Row: {
+          changed_at: string | null
+          changed_by: string
+          id: string
+          ip_address: string | null
+          new_role: string
+          old_role: string | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by: string
+          id?: string
+          ip_address?: string | null
+          new_role: string
+          old_role?: string | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string
+          id?: string
+          ip_address?: string | null
+          new_role?: string
+          old_role?: string | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       snies_biological_sex: {
         Row: {
           created_at: string | null
@@ -3449,6 +3482,10 @@ export type Database = {
         Args: { admin_id: string; target_campus_id: string }
         Returns: boolean
       }
+      change_user_role: {
+        Args: { new_role: string; reason?: string; target_user_id: string }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_message: string
@@ -3546,6 +3583,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_managers_by_coordinator_campus: {
         Args: { coordinator_id: string }
         Returns: {
@@ -3592,6 +3633,10 @@ export type Database = {
       }
       is_campus_coordinator: {
         Args: { user_id: string }
+        Returns: boolean
+      }
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       is_period_active: {
