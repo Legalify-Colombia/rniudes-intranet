@@ -100,10 +100,25 @@ export class PDFExporter {
     Object.entries(data).forEach(([key, value]) => {
       const placeholder = `<${key}>`;
       const regex = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-      processedTemplate = processedTemplate.replace(regex, String(value));
+      // Sanitize the value to prevent XSS
+      const sanitizedValue = this.sanitizeValue(String(value));
+      processedTemplate = processedTemplate.replace(regex, sanitizedValue);
     });
 
     return processedTemplate;
+  }
+
+  static sanitizeValue(value: string): string {
+    // Remove potentially dangerous HTML tags and scripts
+    return value
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+      .replace(/<embed\b[^<]*>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .replace(/&lt;script/gi, '')
+      .replace(/&lt;\/script/gi, '');
   }
 
   static async exportToPDF(template: string, data: ExportData, fileName: string): Promise<void> {
@@ -113,7 +128,11 @@ export class PDFExporter {
 
       // Crear un elemento temporal para renderizar el contenido
       const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = processedContent;
+      // Use textContent instead of innerHTML to prevent XSS
+      // Only basic HTML formatting is allowed
+      const allowedTags = /<\/?(?:p|br|strong|b|em|i|u|h[1-6]|div|span|table|tr|td|th|thead|tbody|ul|ol|li)\b[^>]*>/gi;
+      const safeContent = processedContent.replace(/(<(?!\/?)(?!(?:p|br|strong|b|em|i|u|h[1-6]|div|span|table|tr|td|th|thead|tbody|ul|ol|li)\b)[^>]*>)/gi, '');
+      tempDiv.innerHTML = safeContent;
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
       tempDiv.style.width = '210mm'; // Ancho A4
