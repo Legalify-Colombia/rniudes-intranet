@@ -38,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { EmailConfigurationForm } from "./EmailConfigurationForm";
+import { EmailNotificationTest } from "./EmailNotificationTest";
 import {
   Plus,
   Edit,
@@ -270,10 +271,11 @@ export function EmailNotificationManagement() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="configuration" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="configuration">Configuración</TabsTrigger>
           <TabsTrigger value="templates">Plantillas</TabsTrigger>
           <TabsTrigger value="history">Historial</TabsTrigger>
+          <TabsTrigger value="test">Pruebas</TabsTrigger>
         </TabsList>
         
         <TabsContent value="configuration">
@@ -398,6 +400,10 @@ export function EmailNotificationManagement() {
       </CardContent>
     </Card>
   </TabsContent>
+        
+        <TabsContent value="test">
+          <EmailNotificationTest />
+        </TabsContent>
 </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
