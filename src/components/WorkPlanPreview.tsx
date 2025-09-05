@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
+import { WorkPlanPDFExporter } from "./WorkPlanPDFExporter";
+import { WorkPlanPrintView } from "./WorkPlanPrintView";
 
 interface WorkPlanPreviewProps {
   workPlanId: string;
@@ -125,6 +127,17 @@ export function WorkPlanPreview({ workPlanId }: WorkPlanPreviewProps) {
 
   return (
     <div className="space-y-6">
+      <div className="no-print flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Vista Previa del Plan</h2>
+        <WorkPlanPDFExporter 
+          workPlan={workPlan} 
+          assignments={assignments}
+          className="no-print"
+        />
+      </div>
+
+      <WorkPlanPrintView workPlan={workPlan} assignments={assignments} />
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

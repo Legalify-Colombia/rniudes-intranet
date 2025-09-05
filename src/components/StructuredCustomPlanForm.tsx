@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { ArrowLeft, Save, Send } from "lucide-react";
+import { ArrowLeft, Save, Send, FileDown, Printer } from "lucide-react";
+import { WorkPlanPDFExporter } from "./WorkPlanPDFExporter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface StructuredCustomPlanFormProps {
@@ -357,21 +358,51 @@ export function StructuredCustomPlanForm({ planId, planTypeId, onSave }: Structu
         </CardContent>
       </Card>
 
-      {!isReadOnly && (
+      <div className="flex gap-4 justify-between">
         <div className="flex gap-4">
-          <Button onClick={handleSave} disabled={isLoading || !title.trim() || getTotalHours() > maxTotalHours}>
-            <Save className="h-4 w-4 mr-2" />
-            {isLoading ? 'Guardando...' : 'Guardar'}
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isLoading || !title.trim() || getTotalHours() > maxTotalHours}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
-          </Button>
+          {!isReadOnly && (
+            <>
+              <Button onClick={handleSave} disabled={isLoading || !title.trim() || getTotalHours() > maxTotalHours}>
+                <Save className="h-4 w-4 mr-2" />
+                {isLoading ? 'Guardando...' : 'Guardar'}
+              </Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={isLoading || !title.trim() || getTotalHours() > maxTotalHours}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isLoading ? 'Enviando...' : 'Enviar para Revisión'}
+              </Button>
+            </>
+          )}
         </div>
-      )}
+        
+        {plan && (
+          <WorkPlanPDFExporter 
+            workPlan={{
+              ...plan,
+              plan_type: planType,
+              manager: {
+                full_name: profile?.full_name,
+                email: profile?.email,
+                position: profile?.position,
+                weekly_hours: profile?.weekly_hours,
+                total_hours: profile?.total_hours,
+                campus: { name: 'N/A' }, // Se podría obtener del perfil
+                program: { name: 'N/A' },
+                faculty: { name: 'N/A' }
+              }
+            }} 
+            assignments={availableProducts
+              .filter(product => assignments[product.id] > 0)
+              .map(product => ({
+                product: product,
+                assigned_hours: assignments[product.id]
+              }))}
+            className="no-print"
+          />
+        )}
+      </div>
       
       {getTotalHours() > maxTotalHours && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
