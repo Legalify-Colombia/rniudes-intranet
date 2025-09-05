@@ -7,7 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { usePlanTypes } from "@/hooks/usePlanTypes";
-import { Eye, Edit, Plus, Settings } from "lucide-react";
+import { Eye, Edit, Plus, Settings, Printer, FileDown } from "lucide-react";
+import { WorkPlanPDFExporter } from "./WorkPlanPDFExporter";
+import { WorkPlanPrintView } from "./WorkPlanPrintView";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CustomPlanForm } from "./CustomPlanForm";
 import { CustomPlanSelector } from "./CustomPlanSelector";
@@ -24,7 +26,8 @@ export function CustomPlanManagement() {
   
   const { profile } = useAuth();
   const { toast } = useToast();
-  const { fetchWorkPlans } = useSupabaseData();
+  const { fetchWorkPlans, fetchCustomPlanAssignments } = useSupabaseData();
+  const [planAssignments, setPlanAssignments] = useState<{[key: string]: any[]}>({});
 
   useEffect(() => {
     loadPlans();
@@ -58,9 +61,21 @@ export function CustomPlanManagement() {
     }
   };
 
-  const openPlanDetails = (plan: any) => {
+  const openPlanDetails = async (plan: any) => {
     setSelectedPlan(plan);
-    setSelectedPlanType(plan.plan_type_id); // Asegurar que el planTypeId se pase correctamente
+    setSelectedPlanType(plan.plan_type_id);
+    
+    // Cargar asignaciones del plan para exportación
+    try {
+      const { data: assignments } = await fetchCustomPlanAssignments(plan.id);
+      setPlanAssignments(prev => ({
+        ...prev,
+        [plan.id]: assignments || []
+      }));
+    } catch (error) {
+      console.error('Error loading plan assignments:', error);
+    }
+    
     setViewMode('form');
   };
 
@@ -184,6 +199,7 @@ export function CustomPlanManagement() {
                           size="sm" 
                           variant="outline" 
                           onClick={() => openPlanDetails(plan)}
+                          title="Ver detalles"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -192,9 +208,44 @@ export function CustomPlanManagement() {
                             size="sm" 
                             variant="outline" 
                             onClick={() => openPlanDetails(plan)}
+                            title="Editar plan"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                        )}
+                        
+                        {/* Botones de imprimir y PDF solo para el gestor propietario */}
+                        {profile?.id === plan.manager_id && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.print()}
+                              title="Imprimir Plan"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </Button>
+                            
+                            <div className="flex">
+                              <WorkPlanPDFExporter 
+                                workPlan={{
+                                  ...plan,
+                                  manager: {
+                                    full_name: plan.manager?.full_name,
+                                    email: plan.manager?.email,
+                                    position: plan.manager?.position,
+                                    weekly_hours: plan.manager?.weekly_hours,
+                                    total_hours: plan.manager?.total_hours,
+                                    campus: { name: 'N/A' },
+                                    program: { name: 'N/A' },
+                                    faculty: { name: 'N/A' }
+                                  }
+                                }} 
+                                assignments={planAssignments[plan.id] || []}
+                                className="flex"
+                              />
+                            </div>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -211,6 +262,27 @@ export function CustomPlanManagement() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Vista de impresión oculta */}
+      {plans.map((plan) => (
+        <WorkPlanPrintView 
+          key={`print-${plan.id}`}
+          workPlan={{
+            ...plan,
+            manager: {
+              full_name: plan.manager?.full_name,
+              email: plan.manager?.email,
+              position: plan.manager?.position,
+              weekly_hours: plan.manager?.weekly_hours,
+              total_hours: plan.manager?.total_hours,
+              campus: { name: 'N/A' },
+              program: { name: 'N/A' },
+              faculty: { name: 'N/A' }
+            }
+          }} 
+          assignments={planAssignments[plan.id] || []}
+        />
+      ))}
     </div>
   );
 }

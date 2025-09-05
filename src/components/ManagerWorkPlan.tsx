@@ -5,17 +5,20 @@ import { CustomPlanForm } from "./CustomPlanForm";
 import { StructuredWorkPlanForm } from "./StructuredWorkPlanForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, FileText, Clock, CheckCircle, Edit } from "lucide-react";
+import { AlertCircle, FileText, Clock, CheckCircle, Edit, Printer, FileDown } from "lucide-react";
+import { WorkPlanPDFExporter } from "./WorkPlanPDFExporter";
+import { WorkPlanPrintView } from "./WorkPlanPrintView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export function ManagerWorkPlan() {
   const { profile } = useAuth();
-  const { fetchManagers, fetchWorkPlans, fetchPlanTypes } = useSupabaseData();
+  const { fetchManagers, fetchWorkPlans, fetchPlanTypes, fetchCustomPlanAssignments } = useSupabaseData();
   const [managerData, setManagerData] = useState<any>(null);
   const [assignedPlans, setAssignedPlans] = useState<any[]>([]);
   const [planTypes, setPlanTypes] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [planAssignments, setPlanAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,8 +64,17 @@ export function ManagerWorkPlan() {
     }
   };
 
-  const handleEditPlan = (plan: any) => {
+  const handleEditPlan = async (plan: any) => {
     setSelectedPlan(plan);
+    
+    // Cargar asignaciones del plan para exportación
+    try {
+      const { data: assignments } = await fetchCustomPlanAssignments(plan.id);
+      setPlanAssignments(assignments || []);
+    } catch (error) {
+      console.error('Error loading plan assignments:', error);
+      setPlanAssignments([]);
+    }
   };
   
   const handleBackToList = () => {
@@ -192,11 +204,11 @@ export function ManagerWorkPlan() {
                         </div>
                       )}
 
-                      <div className="pt-4">
+                      <div className="flex gap-2">
                         {(plan.status === 'draft' || plan.status === 'rejected') ? (
                           <Button 
                             onClick={() => handleEditPlan(plan)}
-                            className="w-full"
+                            className="flex-1"
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             {plan.status === 'rejected' ? 'Editar y Reenviar Plan' : 'Editar Plan'}
@@ -205,11 +217,41 @@ export function ManagerWorkPlan() {
                           <Button 
                             variant="outline"
                             onClick={() => handleEditPlan(plan)}
-                            className="w-full"
+                            className="flex-1"
                           >
                             Ver Plan
                           </Button>
                         )}
+                        
+                        {/* Botones de imprimir y PDF */}
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.print()}
+                            title="Imprimir Plan"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                          
+                          <WorkPlanPDFExporter 
+                            workPlan={{
+                              ...plan,
+                              manager: {
+                                full_name: managerData?.full_name,
+                                email: managerData?.email,
+                                position: managerData?.position,
+                                weekly_hours: managerData?.weekly_hours,
+                                total_hours: managerData?.total_hours,
+                                campus: { name: 'N/A' },
+                                program: { name: 'N/A' },
+                                faculty: { name: 'N/A' }
+                              }
+                            }} 
+                            assignments={planAssignments}
+                            className="flex"
+                          />
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -219,6 +261,27 @@ export function ManagerWorkPlan() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Vista de impresión oculta */}
+      {assignedPlans.map((plan) => (
+        <WorkPlanPrintView 
+          key={`print-${plan.id}`}
+          workPlan={{
+            ...plan,
+            manager: {
+              full_name: managerData?.full_name,
+              email: managerData?.email,
+              position: managerData?.position,
+              weekly_hours: managerData?.weekly_hours,
+              total_hours: managerData?.total_hours,
+              campus: { name: 'N/A' },
+              program: { name: 'N/A' },
+              faculty: { name: 'N/A' }
+            }
+          }} 
+          assignments={planAssignments}
+        />
+      ))}
     </div>
   );
 }
