@@ -146,7 +146,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "work-plan-approval",
         icon: CheckSquare,
         roles: ["Administrador", "Coordinador"],
-        positions: ["Coordinador de Campus", "Director de Programa"], // Incluir directores de programa
+        positions: [], // Permitir a todos los coordinadores
         color: "text-teal-600",
         bgColor: "bg-teal-50",
         borderColor: "border-teal-200",
@@ -195,20 +195,12 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
     return allItems.filter(item => {
       // Verificar rol
       const hasRole = profile && item.roles.includes(profile.role);
-      
       // Si no hay posiciones especificadas, permitir acceso basado solo en rol
       if (item.positions.length === 0) {
         return hasRole;
       }
-      
       // Si hay posiciones especificadas, verificar tanto rol como posición
       const hasPosition = profile && item.positions.includes(profile.position);
-      
-      // Para directores de programa con rol Coordinador, permitir acceso solo a elementos específicos
-      if (profile?.position === 'Director de Programa' && profile?.role === 'Coordinador') {
-        return hasRole && (item.positions.includes('Director de Programa') || item.positions.length === 0);
-      }
-      
       return hasRole && hasPosition;
     });
   };
