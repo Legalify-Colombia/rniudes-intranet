@@ -162,9 +162,26 @@ export function WorkPlanPrintView({ workPlan, assignments }: WorkPlanPrintViewPr
   return (
     <div className="print-view" style={{ display: 'none' }}>
       <div className="print-header">
-        <div className="print-title">PLAN DE TRABAJO</div>
-        <div className="print-subtitle">{workPlan?.plan_type?.name || 'Plan Personalizado'}</div>
-        <div style={{ fontSize: '12pt', marginTop: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+          <img 
+            src="/logo.png" 
+            alt="Logo" 
+            style={{ 
+              height: '60px', 
+              marginRight: '20px',
+              objectFit: 'contain'
+            }}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+          <div style={{ textAlign: 'center' }}>
+            <div className="print-title">PLAN DE TRABAJO</div>
+            <div className="print-subtitle">{workPlan?.plan_type?.name || 'Plan Personalizado'}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: '12pt', textAlign: 'center' }}>
           {workPlan?.title || 'Sin título'}
         </div>
       </div>

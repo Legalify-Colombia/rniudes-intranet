@@ -224,34 +224,23 @@ export function ManagerWorkPlan() {
                         )}
                         
                         {/* Botones de imprimir y PDF */}
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.print()}
-                            title="Imprimir Plan"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          
-                          <WorkPlanPDFExporter 
-                            workPlan={{
-                              ...plan,
-                              manager: {
-                                full_name: managerData?.full_name,
-                                email: managerData?.email,
-                                position: managerData?.position,
-                                weekly_hours: managerData?.weekly_hours,
-                                total_hours: managerData?.total_hours,
-                                campus: { name: 'N/A' },
-                                program: { name: 'N/A' },
-                                faculty: { name: 'N/A' }
-                              }
-                            }} 
-                            assignments={planAssignments}
-                            className="flex"
-                          />
-                        </div>
+                        <WorkPlanPDFExporter 
+                          workPlan={{
+                            ...plan,
+                            manager: {
+                              full_name: managerData?.full_name,
+                              email: managerData?.email,
+                              position: managerData?.position,
+                              weekly_hours: managerData?.weekly_hours,
+                              total_hours: managerData?.total_hours,
+                              campus: { name: 'N/A' },
+                              program: { name: 'N/A' },
+                              faculty: { name: 'N/A' }
+                            }
+                          }} 
+                          assignments={planAssignments}
+                          className="flex gap-1"
+                        />
                       </div>
                     </div>
                   </CardContent>

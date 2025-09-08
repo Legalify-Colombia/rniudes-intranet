@@ -170,6 +170,9 @@ export function WorkPlanPDFExporter({ workPlan, assignments, className }: WorkPl
       const data = extractWorkPlanData();
       const fileName = `plan_trabajo_${workPlan.manager?.full_name?.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
       
+      // Pequeña pausa para mostrar el estado de carga
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       await PDFExporter.exportToPDF(template.content, data, fileName);
       
       toast({
@@ -178,11 +181,12 @@ export function WorkPlanPDFExporter({ workPlan, assignments, className }: WorkPl
       });
       
       setIsDialogOpen(false);
+      setSelectedTemplate(""); // Reset template selection
     } catch (error) {
       console.error("Error exporting PDF:", error);
       toast({
         title: "Error",
-        description: "No se pudo generar el PDF",
+        description: error instanceof Error ? error.message : "No se pudo generar el PDF",
         variant: "destructive",
       });
     } finally {

@@ -217,34 +217,23 @@ export function CustomPlanManagement() {
                         {/* Botones de imprimir y PDF solo para el gestor propietario */}
                         {profile?.id === plan.manager_id && (
                           <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.print()}
-                              title="Imprimir Plan"
-                            >
-                              <Printer className="w-4 h-4" />
-                            </Button>
-                            
-                            <div className="flex">
-                              <WorkPlanPDFExporter 
-                                workPlan={{
-                                  ...plan,
-                                  manager: {
-                                    full_name: plan.manager?.full_name,
-                                    email: plan.manager?.email,
-                                    position: plan.manager?.position,
-                                    weekly_hours: plan.manager?.weekly_hours,
-                                    total_hours: plan.manager?.total_hours,
-                                    campus: { name: 'N/A' },
-                                    program: { name: 'N/A' },
-                                    faculty: { name: 'N/A' }
-                                  }
-                                }} 
-                                assignments={planAssignments[plan.id] || []}
-                                className="flex"
-                              />
-                            </div>
+                            <WorkPlanPDFExporter 
+                              workPlan={{
+                                ...plan,
+                                manager: {
+                                  full_name: plan.manager?.full_name,
+                                  email: plan.manager?.email,
+                                  position: plan.manager?.position,
+                                  weekly_hours: plan.manager?.weekly_hours,
+                                  total_hours: plan.manager?.total_hours,
+                                  campus: { name: 'N/A' },
+                                  program: { name: 'N/A' },
+                                  faculty: { name: 'N/A' }
+                                }
+                              }} 
+                              assignments={planAssignments[plan.id] || []}
+                              className="flex gap-1"
+                            />
                           </>
                         )}
                       </div>
