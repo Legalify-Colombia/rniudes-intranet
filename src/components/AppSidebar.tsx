@@ -52,6 +52,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "dashboard",
         icon: BarChart3,
         roles: ["Administrador", "Coordinador", "Gestor"],
+        positions: [], // Available to all positions
         color: "text-emerald-600",
         bgColor: "bg-emerald-50",
         borderColor: "border-emerald-200",
@@ -65,6 +66,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "users",
         icon: Users,
         roles: ["Administrador"],
+        positions: [],
         color: "text-blue-600",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
@@ -75,6 +77,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "programs",
         icon: Building,
         roles: ["Administrador"],
+        positions: [],
         color: "text-purple-600",
         bgColor: "bg-purple-50",
         borderColor: "border-purple-200",
@@ -85,6 +88,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "strategic",
         icon: CheckSquare,
         roles: ["Administrador"],
+        positions: [],
         color: "text-red-600",
         bgColor: "bg-red-50",
         borderColor: "border-red-200",
@@ -95,6 +99,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "agreements",
         icon: FileText,
         roles: ["Administrador", "Coordinador"],
+        positions: ["Coordinador de Campus"], // Excluir a directores de programa
         color: "text-green-600",
         bgColor: "bg-green-50",
         borderColor: "border-green-200",
@@ -105,6 +110,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "statistics",
         icon: TrendingUp,
         roles: ["Administrador", "Coordinador"],
+        positions: ["Coordinador de Campus"], // Excluir a directores de programa
         color: "text-blue-600",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
@@ -118,6 +124,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "managers",
         icon: UserCheck,
         roles: ["Administrador", "Coordinador"],
+        positions: ["Coordinador de Campus"], // Excluir a directores de programa
         color: "text-amber-600",
         bgColor: "bg-amber-50",
         borderColor: "border-amber-200",
@@ -128,6 +135,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "manager-reports",
         icon: FileText,
         roles: ["Administrador", "Coordinador"],
+        positions: ["Coordinador de Campus", "Director de Programa"], // Incluir directores de programa
         color: "text-cyan-600",
         bgColor: "bg-cyan-50",
         borderColor: "border-cyan-200",
@@ -138,6 +146,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "work-plan-approval",
         icon: CheckSquare,
         roles: ["Administrador", "Coordinador"],
+        positions: ["Coordinador de Campus", "Director de Programa"], // Incluir directores de programa
         color: "text-teal-600",
         bgColor: "bg-teal-50",
         borderColor: "border-teal-200",
@@ -151,6 +160,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "manager-work-plan",
         icon: Calendar,
         roles: ["Gestor"],
+        positions: [],
         color: "text-pink-600",
         bgColor: "bg-pink-50",
         borderColor: "border-pink-200",
@@ -161,6 +171,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "my-report",
         icon: FileText,
         roles: ["Gestor"],
+        positions: [],
         color: "text-indigo-600",
         bgColor: "bg-indigo-50",
         borderColor: "border-indigo-200",
@@ -171,6 +182,7 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
         url: "snies",
         icon: ClipboardList,
         roles: ["Administrador", "Coordinador", "Gestor"],
+        positions: ["Coordinador de Campus"], // Excluir a directores de programa
         color: "text-orange-600",
         bgColor: "bg-orange-50",
         borderColor: "border-orange-200",
@@ -180,9 +192,25 @@ export function AppSidebar({ activeView, setActiveView }: AppSidebarProps) {
 
     const allItems = [...baseItems, ...adminItems, ...coordinatorItems, ...managerItems];
     
-    return allItems.filter(item => 
-      profile && item.roles.includes(profile.role)
-    );
+    return allItems.filter(item => {
+      // Verificar rol
+      const hasRole = profile && item.roles.includes(profile.role);
+      
+      // Si no hay posiciones especificadas, permitir acceso basado solo en rol
+      if (item.positions.length === 0) {
+        return hasRole;
+      }
+      
+      // Si hay posiciones especificadas, verificar tanto rol como posición
+      const hasPosition = profile && item.positions.includes(profile.position);
+      
+      // Para directores de programa con rol Coordinador, permitir acceso solo a elementos específicos
+      if (profile?.position === 'Director de Programa' && profile?.role === 'Coordinador') {
+        return hasRole && (item.positions.includes('Director de Programa') || item.positions.length === 0);
+      }
+      
+      return hasRole && hasPosition;
+    });
   };
 
   const menuItems = getMenuItems();
