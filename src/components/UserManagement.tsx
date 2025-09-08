@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 export function UserManagement() {
   const [users, setUsers] = useState<any[]>([]);
   const [campuses, setCampuses] = useState<any[]>([]);
+  const [faculties, setFaculties] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<any[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +37,8 @@ export function UserManagement() {
     number_of_weeks: '16',
     total_hours: '',
     campus_id: '',
+    faculty_id: '',
+    program_id: '',
     managed_campus_ids: [] as string[]
   });
 
@@ -73,6 +77,30 @@ export function UserManagement() {
           campus.id.trim().length > 0
         );
         setCampuses(validCampuses);
+      }
+
+      // Load faculties
+      const { data: facultiesData, error: facultiesError } = await supabase
+        .from('faculties')
+        .select('*')
+        .order('name');
+      
+      if (facultiesError) {
+        console.error('Error loading faculties:', facultiesError);
+      } else {
+        setFaculties(facultiesData || []);
+      }
+
+      // Load programs
+      const { data: programsData, error: programsError } = await supabase
+        .from('academic_programs')
+        .select('*, faculty:faculties(name)')
+        .order('name');
+      
+      if (programsError) {
+        console.error('Error loading programs:', programsError);
+      } else {
+        setPrograms(programsData || []);
       }
 
       // For super admin, load all users. For campus admin, load only their managed campuses
@@ -143,27 +171,38 @@ export function UserManagement() {
       return;
     }
 
+    if (userForm.position === 'Director de Programa' && (!userForm.faculty_id || !userForm.program_id)) {
+      toast({
+        title: "Error de validación",
+        description: "Para directores de programa, la facultad y el programa son obligatorios",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
       
-      const userData = {
+      const requestData = {
         email: userForm.email,
         password: userForm.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: userForm.full_name,
-          document_number: userForm.document_number,
-          position: userForm.position,
-          role: userForm.role,
-          weekly_hours: userForm.weekly_hours ? parseInt(userForm.weekly_hours) : null,
-          number_of_weeks: parseInt(userForm.number_of_weeks),
-          total_hours: userForm.total_hours ? parseInt(userForm.total_hours) : null,
-          campus_id: userForm.campus_id || null,
-          managed_campus_ids: userForm.role === 'Administrador' ? userForm.managed_campus_ids : null
-        }
+        full_name: userForm.full_name,
+        document_number: userForm.document_number,
+        position: userForm.position,
+        role: userForm.role,
+        weekly_hours: userForm.weekly_hours ? parseInt(userForm.weekly_hours) : undefined,
+        number_of_weeks: parseInt(userForm.number_of_weeks),
+        total_hours: userForm.total_hours ? parseInt(userForm.total_hours) : undefined,
+        campus_id: userForm.campus_id || undefined,
+        faculty_id: userForm.faculty_id || undefined,
+        program_id: userForm.program_id || undefined,
+        managed_campus_ids: userForm.role === 'Administrador' ? userForm.managed_campus_ids : undefined
       };
 
-      const { data, error } = await supabase.auth.admin.createUser(userData);
+      // Call the Edge Function
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: requestData
+      });
 
       if (error) {
         console.error("Error creating user:", error);
@@ -191,6 +230,8 @@ export function UserManagement() {
         number_of_weeks: '16',
         total_hours: '',
         campus_id: '',
+        faculty_id: '',
+        program_id: '',
         managed_campus_ids: []
       });
       
@@ -423,6 +464,48 @@ export function UserManagement() {
                         </SelectContent>
                       </Select>
                     </div>
+                  )}
+
+                  {userForm.position === 'Director de Programa' && (
+                    <>
+                      <div>
+                        <Label htmlFor="faculty_id">Facultad</Label>
+                        <Select onValueChange={(value) => {
+                          setUserForm(prev => ({ ...prev, faculty_id: value, program_id: '' }));
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar facultad" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {faculties.map(faculty => (
+                              <SelectItem key={faculty.id} value={faculty.id}>
+                                {faculty.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {userForm.faculty_id && (
+                        <div>
+                          <Label htmlFor="program_id">Programa Académico</Label>
+                          <Select onValueChange={(value) => setUserForm(prev => ({ ...prev, program_id: value }))}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar programa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {programs
+                                .filter(program => program.faculty_id === userForm.faculty_id)
+                                .map(program => (
+                                  <SelectItem key={program.id} value={program.id}>
+                                    {program.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
                   )}
                   
                   {userForm.role === 'Gestor' && (
