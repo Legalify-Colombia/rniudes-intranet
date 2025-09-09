@@ -28,6 +28,7 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
   const [loading, setLoading] = useState(false);
   const [showObservationDialog, setShowObservationDialog] = useState(false);
   const [observationText, setObservationText] = useState('');
+  const [expandedEntries, setExpandedEntries] = useState<string[]>([]);
   
   const { 
     auditLog, 
@@ -126,7 +127,7 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
                 Editar
               </Button>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   size="sm" 
                   onClick={handleSave} 
@@ -161,7 +162,7 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Código</Label>
                     {isEditing ? (
@@ -198,7 +199,7 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Naturaleza del Convenio</Label>
                     {isEditing ? (
@@ -245,7 +246,7 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Fecha de Firma/Inicio</Label>
                     {isEditing ? (
@@ -284,7 +285,7 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Duración (años)</Label>
                     {isEditing ? (
@@ -331,7 +332,7 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
             <CardHeader>
               <CardTitle>Objeto del Convenio</CardTitle>
             </CardHeader>
-            <CardContent>
+              <CardContent>
               {isEditing ? (
                 <Textarea
                   value={editData.object || ''}
@@ -441,34 +442,47 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
               ) : auditLog.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay registros en la bitácora</p>
               ) : (
-                <div className="space-y-4 max-h-96 overflow-y-auto">
+                <div className="space-y-4 max-h-72 sm:max-h-96 overflow-y-auto">
                   {auditLog.map((entry) => (
                     <div key={entry.id} className="border-l-2 border-primary/20 pl-4 py-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs">
-                          {getActionTypeLabel(entry.action_type)}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {formatAuditDate(entry.created_at)}
-                        </span>
-                      </div>
-                      <div className="mt-1">
-                        <p className="text-sm font-medium flex items-center gap-2">
-                          <User className="w-3 h-3" />
-                          {entry.user_name || 'Usuario'}
-                        </p>
-                        {entry.action_type === 'status_change' && (
-                          <p className="text-xs text-muted-foreground">
-                            {entry.previous_status && `De: ${entry.previous_status}`} 
-                            {entry.new_status && ` → A: ${entry.new_status}`}
-                          </p>
-                        )}
-                        {entry.comment && (
-                          <p className="text-sm mt-1 bg-muted/50 p-2 rounded text-muted-foreground">
-                            {entry.comment}
-                          </p>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const exists = expandedEntries.includes(entry.id);
+                          setExpandedEntries(prev => exists ? prev.filter(id => id !== entry.id) : [...prev, entry.id]);
+                        }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {getActionTypeLabel(entry.action_type)}
+                            </Badge>
+                            <p className="text-sm font-medium flex items-center gap-2">
+                              <User className="w-3 h-3" />
+                              {entry.user_name || 'Usuario'}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatAuditDate(entry.created_at)}
+                          </span>
+                        </div>
+                      </button>
+                      {expandedEntries.includes(entry.id) && (
+                        <div className="mt-2 pl-2">
+                          {entry.action_type === 'status_change' && (
+                            <p className="text-xs text-muted-foreground">
+                              {entry.previous_status && `De: ${entry.previous_status}`} 
+                              {entry.new_status && ` → A: ${entry.new_status}`}
+                            </p>
+                          )}
+                          {entry.comment && (
+                            <p className="text-sm mt-1 bg-muted/50 p-2 rounded text-muted-foreground">
+                              {entry.comment}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
