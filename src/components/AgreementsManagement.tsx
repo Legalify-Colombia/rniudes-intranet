@@ -90,35 +90,44 @@ export const AgreementsManagement = () => {
     }
   };
 
+  // Normalizar y traducir estados (acepta valores en inglés desde la BD)
+  const translateStatus = (status?: string) => {
+    if (!status) return null;
+    const key = String(status).trim().toLowerCase().replace(/[-\s]/g, '_');
+    const mapping: Record<string, string> = {
+      active: 'Activo',
+      expired: 'Vencido',
+      suspended: 'Suspendido',
+      under_review: 'En revisión',
+      renewed: 'Renovado',
+      terminated: 'Terminado'
+    };
+    return mapping[key] || null;
+  };
+
   const getStatusBadge = (terminationDate?: string, currentStatus?: string) => {
+    // Si existe estado explícito (desde BD), traducir y mostrar
     if (currentStatus) {
-      const statusLabels = {
-        'active': 'Activo',
-        'expired': 'Vencido',
-        'suspended': 'Suspendido',
-        'under_review': 'En revisión',
-        'renewed': 'Renovado',
-        'terminated': 'Terminado'
-      };
-      
+      const translated = translateStatus(currentStatus);
+      const key = String(currentStatus).trim().toLowerCase().replace(/[-\s]/g, '_');
       return (
-        <Badge className={`${getStatusColor(currentStatus)} flex items-center gap-1`}>
-          {getStatusIcon(currentStatus)}
-          {statusLabels[currentStatus as keyof typeof statusLabels] || 'Desconocido'}
+        <Badge className={`${getStatusColor(key)} flex items-center gap-1`}>
+          {getStatusIcon(key)}
+          {translated || 'Desconocido'}
         </Badge>
       );
     }
-    
+
     // Fallback al cálculo basado en fecha de terminación
     const status = calculateStatus(terminationDate);
     const variants = {
-      'Vigente': 'default',
-      'Próximo a vencer': 'secondary', 
-      'Vencido': 'destructive',
-      'Sin fecha': 'outline'
+      'Vigente': 'bg-green-100 text-green-800 border-green-200',
+      'Próximo a vencer': 'bg-yellow-100 text-yellow-800 border-yellow-200', 
+      'Vencido': 'bg-red-100 text-red-800 border-red-200',
+      'Sin fecha': 'bg-gray-100 text-gray-800 border-gray-200'
     } as const;
-    
-    return <Badge variant={variants[status as keyof typeof variants] || 'outline'}>{status}</Badge>;
+
+    return <Badge className={`${variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>{status}</Badge>;
   };
 
   const columns = [
