@@ -290,15 +290,39 @@ export function StatisticsModule() {
       }
     ];
 
-    // Series de tiempo (mockup para demostración)
-    const timeSeriesData = [
-      { month: 'Ene', plans: 12, reports: 8, progress: 65 },
-      { month: 'Feb', plans: 19, reports: 15, progress: 70 },
-      { month: 'Mar', plans: 25, reports: 22, progress: 75 },
-      { month: 'Abr', plans: 30, reports: 28, progress: 78 },
-      { month: 'May', plans: 35, reports: 32, progress: 82 },
-      { month: 'Jun', plans: 42, reports: 38, progress: 85 }
-    ];
+    // Series de tiempo reales agrupadas por mes de creación
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const plansByMonth: { [key: string]: number } = {};
+    const reportsByMonth: { [key: string]: number } = {};
+    // Agrupar planes por mes
+    filteredPlans.forEach(plan => {
+      if (plan.created_at) {
+        const date = new Date(plan.created_at);
+        const key = `${months[date.getMonth()]}-${date.getFullYear()}`;
+        plansByMonth[key] = (plansByMonth[key] || 0) + 1;
+      }
+    });
+    // Agrupar reportes por mes
+    filteredReports.forEach(report => {
+      if (report.created_at) {
+        const date = new Date(report.created_at);
+        const key = `${months[date.getMonth()]}-${date.getFullYear()}`;
+        reportsByMonth[key] = (reportsByMonth[key] || 0) + 1;
+      }
+    });
+    // Unir meses presentes en ambos
+    const allKeys = Array.from(new Set([...Object.keys(plansByMonth), ...Object.keys(reportsByMonth)])).sort((a, b) => {
+      // Ordenar por año y mes
+      const [ma, ya] = a.split('-');
+      const [mb, yb] = b.split('-');
+      if (ya !== yb) return parseInt(ya) - parseInt(yb);
+      return months.indexOf(ma) - months.indexOf(mb);
+    });
+    const timeSeriesData = allKeys.map(key => ({
+      month: key,
+      plans: plansByMonth[key] || 0,
+      reports: reportsByMonth[key] || 0
+    }));
 
     setProcessedData({
       campusStats,
