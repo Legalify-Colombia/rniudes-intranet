@@ -103,242 +103,95 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
       setLoading(false);
     }
   };
-
   return (
     <div className="space-y-6">
       <DialogHeader>
-        <div className="flex items-center justify-between">
-          <DialogTitle className="flex items-center gap-2">
-            <Building className="w-5 h-5" />
-            {agreement.foreign_institution_name}
-            <Badge variant={agreement.is_international ? "default" : "secondary"} className="ml-2">
-              {agreement.is_international ? "Internacional" : "Nacional"}
-            </Badge>
-          </DialogTitle>
-          <div className="flex items-center gap-2">
-            {getStatusBadge(agreement.termination_date)}
-            {!isEditing ? (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Editar
-              </Button>
-            ) : (
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button 
-                  size="sm" 
-                  onClick={handleSave} 
-                  disabled={loading}
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Guardar
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Building className="w-6 h-6 text-primary" />
+            <div>
+              <h3 className="text-lg font-semibold">{agreement.foreign_institution_name}</h3>
+              <p className="text-sm text-muted-foreground">{agreement.code ? `Código: ${agreement.code}` : 'Sin código'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block">{getStatusBadge(agreement.termination_date)}</div>
+            <div className="flex items-center gap-2">
+              {!isEditing ? (
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleCancel}
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancelar
-                </Button>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={handleSave} disabled={loading}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Guardar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCancel}>
+                    <X className="w-4 h-4 mr-2" />
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </DialogHeader>
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Información principal - una sola columna */}
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="w-4 h-4" />
-                  Información General
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label>Código</Label>
-                    {isEditing ? (
-                      <Input
-                        value={editData.code || ''}
-                        onChange={(e) => setEditData({...editData, code: e.target.value})}
-                      />
-                    ) : (
-                      <div className="text-sm font-medium">{agreement.code || 'No especificado'}</div>
-                    )}
-                  </div>
-                  <div>
-                    <Label>País</Label>
-                    {isEditing ? (
-                      <Input
-                        value={editData.country}
-                        onChange={(e) => setEditData({...editData, country: e.target.value})}
-                      />
-                    ) : (
-                      <div className="text-sm font-medium">{agreement.country}</div>
-                    )}
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main column: detalles y contenido textual */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Globe className="w-4 h-4"/> Información general</CardTitle>
+              <CardDescription className="ml-0">Datos principales del convenio</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Institución</Label>
+                {isEditing ? (
+                  <Input value={editData.foreign_institution_name} onChange={(e) => setEditData({...editData, foreign_institution_name: e.target.value})} />
+                ) : (
+                  <div className="text-sm font-medium">{agreement.foreign_institution_name}</div>
+                )}
+              </div>
+              <div>
+                <Label>País</Label>
+                {isEditing ? (
+                  <Input value={editData.country || ''} onChange={(e) => setEditData({...editData, country: e.target.value})} />
+                ) : (
+                  <div className="text-sm">{agreement.country || 'No especificado'}</div>
+                )}
+              </div>
 
-                <div>
-                  <Label>Institución Extranjera</Label>
-                  {isEditing ? (
-                    <Input
-                      value={editData.foreign_institution_name}
-                      onChange={(e) => setEditData({...editData, foreign_institution_name: e.target.value})}
-                    />
-                  ) : (
-                    <div className="text-sm font-medium">{agreement.foreign_institution_name}</div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label>Naturaleza del Convenio</Label>
-                    {isEditing ? (
-                      <Input
-                        value={editData.agreement_nature || ''}
-                        onChange={(e) => setEditData({...editData, agreement_nature: e.target.value})}
-                      />
-                    ) : (
-                      <div className="text-sm">{agreement.agreement_nature || 'No especificada'}</div>
-                    )}
-                  </div>
-                  <div>
-                    <Label>Tipo de Convenio</Label>
-                    {isEditing ? (
-                      <Input
-                        value={editData.agreement_type || ''}
-                        onChange={(e) => setEditData({...editData, agreement_type: e.target.value})}
-                      />
-                    ) : (
-                      <div className="text-sm">{agreement.agreement_type || 'No especificado'}</div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Modalidad</Label>
-                  {isEditing ? (
-                    <Input
-                      value={editData.modality || ''}
-                      onChange={(e) => setEditData({...editData, modality: e.target.value})}
-                    />
-                  ) : (
-                    <div className="text-sm">{agreement.modality || 'No especificada'}</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Fechas y Vigencia
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label>Fecha de Firma/Inicio</Label>
-                    {isEditing ? (
-                      <Input
-                        type="date"
-                        value={editData.signature_date || ''}
-                        onChange={(e) => setEditData({...editData, signature_date: e.target.value})}
-                      />
-                    ) : (
-                      <div className="text-sm">{formatDate(agreement.signature_date)}</div>
-                    )}
-                  </div>
-                  <div>
-                    <Label>Fecha de Terminación</Label>
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <Input
-                          type="date"
-                          value={editData.termination_date || ''}
-                          onChange={(e) => setEditData({...editData, termination_date: e.target.value})}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditData({...editData, termination_date: ''})}
-                        >
-                          Marcar como indefinido
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-sm">
-                        {agreement.termination_date ? formatDate(agreement.termination_date) : 'Indefinido'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <Label>Duración (años)</Label>
-                    {isEditing ? (
-                      <Input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        value={editData.duration_years || ''}
-                        onChange={(e) => setEditData({...editData, duration_years: parseFloat(e.target.value) || undefined})}
-                        placeholder="Ej: 2, 3, 5 o indefinido"
-                      />
-                    ) : (
-                      <div className="text-sm">{agreement.duration_years || 'No especificada'}</div>
-                    )}
-                  </div>
-                  <div>
-                    <Label>Estado de Vigencia</Label>
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(editData.termination_date)}
-                      {!editData.termination_date && (
-                        <span className="text-xs text-muted-foreground">(Indefinido)</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Información de Renovación</Label>
-                  {isEditing ? (
-                    <Textarea
-                      value={editData.renewal_info || ''}
-                      onChange={(e) => setEditData({...editData, renewal_info: e.target.value})}
-                      rows={2}
-                    />
-                  ) : (
-                    <div className="text-sm">{agreement.renewal_info || 'No especificada'}</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              <div>
+                <Label>Tipo</Label>
+                {isEditing ? (
+                  <Input value={editData.agreement_type || ''} onChange={(e) => setEditData({...editData, agreement_type: e.target.value})} />
+                ) : (
+                  <div className="text-sm">{agreement.agreement_type || 'No especificado'}</div>
+                )}
+              </div>
+              <div>
+                <Label>Modalidad</Label>
+                {isEditing ? (
+                  <Input value={editData.modality || ''} onChange={(e) => setEditData({...editData, modality: e.target.value})} />
+                ) : (
+                  <div className="text-sm">{agreement.modality || 'No especificada'}</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Objeto del Convenio</CardTitle>
+              <CardTitle>Objeto del convenio</CardTitle>
             </CardHeader>
-              <CardContent>
+            <CardContent>
               {isEditing ? (
-                <Textarea
-                  value={editData.object || ''}
-                  onChange={(e) => setEditData({...editData, object: e.target.value})}
-                  rows={3}
-                />
+                <Textarea value={editData.object || ''} onChange={(e) => setEditData({...editData, object: e.target.value})} rows={4} />
               ) : (
                 <div className="text-sm whitespace-pre-wrap">{agreement.object || 'No especificado'}</div>
               )}
@@ -348,12 +201,12 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
           {agreement.programs && agreement.programs.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Programas Relacionados</CardTitle>
+                <CardTitle>Programas relacionados</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {agreement.programs.map((program, index) => (
-                    <Badge key={index} variant="secondary">{program}</Badge>
+                  {agreement.programs.map((p, i) => (
+                    <Badge key={i} className="bg-slate-100 text-slate-800">{p}</Badge>
                   ))}
                 </div>
               </CardContent>
@@ -363,20 +216,12 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
           <Card>
             <CardHeader>
               <CardTitle>Observaciones</CardTitle>
-              <CardDescription>Notas y comentarios adicionales sobre el convenio</CardDescription>
             </CardHeader>
             <CardContent>
               {isEditing ? (
-                <Textarea
-                  value={editData.observations || ''}
-                  onChange={(e) => setEditData({...editData, observations: e.target.value})}
-                  rows={4}
-                  placeholder="Agregar observaciones..."
-                />
+                <Textarea value={editData.observations || ''} onChange={(e) => setEditData({...editData, observations: e.target.value})} rows={4} />
               ) : (
-                <div className="text-sm whitespace-pre-wrap">
-                  {agreement.observations || 'Sin observaciones'}
-                </div>
+                <div className="text-sm whitespace-pre-wrap">{agreement.observations || 'Sin observaciones'}</div>
               )}
             </CardContent>
           </Card>
@@ -384,28 +229,15 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
           {agreement.digital_folder_link && (
             <Card>
               <CardHeader>
-                <CardTitle>Enlaces y Documentos</CardTitle>
+                <CardTitle>Enlaces y documentos</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <Label>Carpeta Digital</Label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   {isEditing ? (
-                    <Input
-                      value={editData.digital_folder_link || ''}
-                      onChange={(e) => setEditData({...editData, digital_folder_link: e.target.value})}
-                      placeholder="https://..."
-                    />
+                    <Input value={editData.digital_folder_link || ''} onChange={(e) => setEditData({...editData, digital_folder_link: e.target.value})} />
                   ) : (
-                    <Button 
-                      variant="outline" 
-                      asChild 
-                      className="flex items-center gap-2"
-                    >
-                      <a 
-                        href={agreement.digital_folder_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
+                    <Button variant="outline" asChild>
+                      <a href={agreement.digital_folder_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                         <ExternalLink className="w-4 h-4" />
                         Acceder a Carpeta Digital
                       </a>
@@ -415,81 +247,93 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
               </CardContent>
             </Card>
           )}
-        </div>
 
-        {/* Bitácora - 1 columna */}
-        <div className="space-y-6">
+          {/* Bitácora como timeline */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  Bitácora del Convenio
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowObservationDialog(true)}
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Agregar Observación
-                </Button>
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2"><Clock className="w-4 h-4"/> Bitácora</CardTitle>
+              <CardDescription>Registros de acciones y observaciones</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="flex justify-end mb-3">
+                <Button variant="outline" size="sm" onClick={() => setShowObservationDialog(true)}>
+                  <MessageSquare className="w-4 h-4 mr-2" />Agregar observación
+                </Button>
+              </div>
+
               {auditLoading ? (
                 <p className="text-sm text-muted-foreground">Cargando bitácora...</p>
               ) : auditLog.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No hay registros en la bitácora</p>
               ) : (
-                <div className="space-y-4 max-h-72 sm:max-h-96 overflow-y-auto">
+                <ul className="space-y-4">
                   {auditLog.map((entry) => (
-                    <div key={entry.id} className="border-l-2 border-primary/20 pl-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const exists = expandedEntries.includes(entry.id);
-                          setExpandedEntries(prev => exists ? prev.filter(id => id !== entry.id) : [...prev, entry.id]);
-                        }}
-                        className="w-full text-left"
-                      >
+                    <li key={entry.id} className="flex items-start gap-4">
+                      <div className="flex flex-col items-center">
+                        <span className="w-3 h-3 rounded-full bg-primary mt-1" />
+                        <span className="h-full w-px bg-gray-200" />
+                      </div>
+                      <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {getActionTypeLabel(entry.action_type)}
-                            </Badge>
-                            <p className="text-sm font-medium flex items-center gap-2">
-                              <User className="w-3 h-3" />
-                              {entry.user_name || 'Usuario'}
-                            </p>
+                          <div className="flex items-center gap-3">
+                            <Badge className="text-xs" variant="outline">{getActionTypeLabel(entry.action_type)}</Badge>
+                            <div className="text-sm font-medium">{entry.user_name || 'Usuario'}</div>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {formatAuditDate(entry.created_at)}
-                          </span>
+                          <div className="text-xs text-muted-foreground">{formatAuditDate(entry.created_at)}</div>
                         </div>
-                      </button>
-                      {expandedEntries.includes(entry.id) && (
-                        <div className="mt-2 pl-2">
+                        <div className="mt-2">
                           {entry.action_type === 'status_change' && (
-                            <p className="text-xs text-muted-foreground">
-                              {entry.previous_status && `De: ${entry.previous_status}`} 
-                              {entry.new_status && ` → A: ${entry.new_status}`}
-                            </p>
+                            <div className="text-sm text-muted-foreground">{entry.previous_status && `De: ${entry.previous_status}`} {entry.new_status && `→ ${entry.new_status}`}</div>
                           )}
                           {entry.comment && (
-                            <p className="text-sm mt-1 bg-muted/50 p-2 rounded text-muted-foreground">
-                              {entry.comment}
-                            </p>
+                            <div className="mt-2 p-3 rounded bg-muted/50 text-sm text-muted-foreground">{entry.comment}</div>
                           )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Right column: tarjeta resumen y acciones rápidas */}
+        <aside className="space-y-4">
+          <Card className="sticky top-4">
+            <CardHeader>
+              <CardTitle>Resumen</CardTitle>
+              <CardDescription>Información rápida</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Estado</div>
+                <div>{getStatusBadge(agreement.termination_date)}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Firma</div>
+                <div className="text-sm">{agreement.signature_date ? formatDate(agreement.signature_date) : 'No'}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Terminación</div>
+                <div className="text-sm">{agreement.termination_date ? formatDate(agreement.termination_date) : 'Indefinido'}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Duración</div>
+                <div className="text-sm">{agreement.duration_years || 'No especificada'}</div>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Button variant="ghost" className="w-full justify-start" onClick={() => { navigator.clipboard?.writeText(agreement.digital_folder_link || ''); }}>
+                  <ExternalLink className="w-4 h-4 mr-2"/> Copiar enlace
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => onClose()}>
+                  Cerrar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
       </div>
 
       {/* Dialog para agregar observación */}
@@ -497,25 +341,14 @@ export const AgreementDetails = ({ agreement, onUpdate, onUpdateStatus, onDelete
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Agregar Observación</DialogTitle>
-            <DialogDescription>
-              Agregue una observación o comentario sobre este convenio.
-            </DialogDescription>
+            <DialogDescription>Agregue una observación o comentario sobre este convenio.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Textarea
-              placeholder="Escriba su observación aquí..."
-              value={observationText}
-              onChange={(e) => setObservationText(e.target.value)}
-              rows={4}
-            />
+            <Textarea placeholder="Escriba su observación aquí..." value={observationText} onChange={(e) => setObservationText(e.target.value)} rows={4} />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowObservationDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddObservation} disabled={loading || !observationText.trim()}>
-              {loading ? 'Guardando...' : 'Agregar Observación'}
-            </Button>
+            <Button variant="outline" onClick={() => setShowObservationDialog(false)}>Cancelar</Button>
+            <Button onClick={handleAddObservation} disabled={loading || !observationText.trim()}>{loading ? 'Guardando...' : 'Agregar Observación'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
